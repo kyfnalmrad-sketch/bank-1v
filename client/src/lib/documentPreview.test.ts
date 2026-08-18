@@ -12,7 +12,7 @@ describe("reference document previews", () => {
   });
 
   it("keeps statement preview rows to the 20 transactions permitted per page", () => {
-    const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, closing: 20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT${index + 1}`, debit: 0, credit: 1, balance: index + 1 })) });
+    const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P1 of 2", closing: -20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT260815${String.fromCharCode(65 + (index % 20))}AA`, debit: 0, credit: 1, balance: index === 0 ? -1 : index + 1 })) });
     expect((html.match(/data-operation=/g) || [])).toHaveLength(20);
     expect(html).toContain("END OF REPORT");
     expect(html).toContain("Account Currency:</b> USD");
@@ -20,5 +20,9 @@ describe("reference document previews", () => {
     expect(html).not.toContain("Period:</b>");
     expect(html).not.toContain("Statement Ref:</b>");
     expect(html).not.toContain("PAGE 1/2");
+    expect(html).toContain("1.00 DR");
+    expect(html).toContain("20.00 DR");
+    expect(html).toContain("width:56mm;height:9.2mm");
+    expect(html).toContain("REF P1 of 2");
   });
 });

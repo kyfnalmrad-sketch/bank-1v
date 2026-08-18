@@ -67,12 +67,23 @@ function asNumber(value: unknown) {
   return negative ? -Math.abs(parsed) : parsed;
 }
 
-function formatImportedDate(value: unknown) {
+export function formatImportedDate(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     const epoch = new Date(Date.UTC(1899, 11, 30) + value * 86_400_000);
-    return `${String(epoch.getUTCDate()).padStart(2, "0")}/${String(epoch.getUTCMonth() + 1).padStart(2, "0")}/${epoch.getUTCFullYear()}`;
+    return `${epoch.getUTCFullYear()}-${String(epoch.getUTCMonth() + 1).padStart(2, "0")}-${String(epoch.getUTCDate()).padStart(2, "0")}`;
   }
-  return String(value ?? "").trim();
+  const text = String(value ?? "").trim();
+  const iso = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, "0")}-${String(iso[3]).padStart(2, "0")}`;
+  const display = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (display) return `${display[3]}-${String(display[2]).padStart(2, "0")}-${String(display[1]).padStart(2, "0")}`;
+  return text;
+}
+
+export function displayStatementDate(value: unknown) {
+  const text = String(value ?? "").trim();
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : text;
 }
 
 function fieldForHeader(value: unknown): StatementColumnKey | undefined {
@@ -172,12 +183,12 @@ function extractNamedParty(description: string) {
 
 export function reviewDescription(input: unknown) {
   const description = String(input ?? "").trim().replace(/\s+/g, " ");
-  if (!description) return { accepted: false, description, reason: "الوصف فارغ ولا يمكن إدراجه في كشف الحساب." };
-  if (forbiddenDescription.test(description)) return { accepted: false, description, reason: "الوصف مصنف كغير مقبول في نسخة Staging." };
+  if (!description) return { accepted: false, description, reason: "Description is blank and cannot be included in the account statement." };
+  if (forbiddenDescription.test(description)) return { accepted: false, description, reason: "Description is not accepted in this Staging edition." };
   const personName = extractNamedParty(description);
-  if (genericTransfer.test(description)) return { accepted: false, description, reason: "التحويل يحتاج اسم الشخص أو الجهة ضمن الوصف.", personName };
+  if (genericTransfer.test(description)) return { accepted: false, description, reason: "Transfer description requires the name of a person or organisation.", personName };
   if (/(family\s*transfer|family\s*transfers|incoming(?:\s*transfer)?|personal\s*transfer|تحويل\s*عائلي|تحويل\s*وارد|استلام(?:\s*تحويل)?)/i.test(description) && !personName) {
-    return { accepted: false, description, reason: "الوصف يحتاج اسم الشخص أو الجهة لتجنب سجل مبهم.", personName };
+    return { accepted: false, description, reason: "Description requires a person or organisation name to avoid an ambiguous transaction.", personName };
   }
   const suggestedDescription = /haseb|حاسب/i.test(description)
     ? "Payment via Haseb"
@@ -197,11 +208,44 @@ function getCell(row: unknown[], index: number | undefined) {
   return index === undefined ? undefined : row[index];
 }
 
-function operationNumber(index: number) {
-  return `FT${String(index + 1).padStart(6, "0")}`;
+function operationDateCode(value: string) {
+  const iso = value.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (iso) return `${iso[1].slice(-2)}${String(iso[2]).padStart(2, "0")}${String(iso[3]).padStart(2, "0")}`;
+  const display = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (display) return `${display[3].slice(-2)}${String(display[2]).padStart(2, "0")}${String(display[1]).padStart(2, "0")}`;
+  return "000000";
+}
+
+function threeLetters(seed: string) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let hash = 2_166_136_261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  let result = "";
+  for (let index = 0; index < 3; index += 1) {
+    hash ^= hash >>> 13;
+    hash = Math.imul(hash, 1_103_515_245) + 12_345;
+    result += alphabet[Math.abs(hash) % alphabet.length];
+  }
+  return result;
+}
+
+function operationNumber(date: string, seed: string, used: Set<string>) {
+  const prefix = `FT${operationDateCode(date)}`;
+  let collision = 0;
+  let reference = `${prefix}${threeLetters(seed)}`;
+  while (used.has(reference)) {
+    collision += 1;
+    reference = `${prefix}${threeLetters(`${seed}|${collision}`)}`;
+  }
+  used.add(reference);
+  return reference;
 }
 
 export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap): ImportedTransaction[] {
+  const usedOperationNumbers = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""))
     .map((row, index) => {
@@ -213,15 +257,18 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const debit = map.debit === undefined ? derivedDebit : Math.abs(asNumber(getCell(row, map.debit)));
       const credit = map.credit === undefined ? derivedCredit : Math.abs(asNumber(getCell(row, map.credit)));
       const balanceCell = getCell(row, map.balance);
+      const date = formatImportedDate(getCell(row, map.date));
+      const balance = balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell);
+      const internalOperationNumber = operationNumber(date, `${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
       return {
         rowNumber: index + 1,
-        date: formatImportedDate(getCell(row, map.date)),
+        date,
         description: review.description,
         debit,
         credit,
-        balance: balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell),
+        balance,
         externalReference: String(getCell(row, map.reference) ?? "").trim(),
-        operationNumber: operationNumber(index),
+        operationNumber: internalOperationNumber,
         rejected: !review.accepted,
         rejectionReason: review.reason,
         personName: review.personName,
@@ -243,12 +290,12 @@ export function statementReferenceFromTransactions(transactions: Pick<ImportedTr
 }
 
 export const statementFieldLabels: Record<StatementColumnKey, string> = {
-  date: "التاريخ",
-  description: "الوصف",
-  debit: "المدين",
-  credit: "الدائن",
-  balance: "الرصيد",
-  reference: "المرجع الخارجي",
-  amount: "المبلغ",
-  direction: "نوع الحركة",
+  date: "Date",
+  description: "Description",
+  debit: "Debit",
+  credit: "Credit",
+  balance: "Balance",
+  reference: "External Reference",
+  amount: "Amount",
+  direction: "Transaction Type",
 };

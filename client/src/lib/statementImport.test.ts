@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import * as XLSX from "xlsx";
-import { buildImportedTransactions, discoverStatementHeader, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
+import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
 
 describe("statement Excel import", () => {
   it("selects the actual Arabic heading row after preface rows without inventing columns", () => {
@@ -47,6 +47,27 @@ describe("statement Excel import", () => {
   it("derives a stable statement reference from the imported date instead of the external transaction reference", () => {
     const reference = statementReferenceFromTransactions([{ date: "2026-02-15" }], "1504452");
     expect(reference).toBe("BAK-ACCT-20260215-4452");
+  });
+
+  it("generates date-based non-sequential FT operation numbers without using the Excel reference", () => {
+    const transactions = buildImportedTransactions([
+      ["04/02/2026", "Cash deposit", "EXCEL-REF-ONE", "", 100, 100],
+      ["04/02/2026", "ATM withdrawal", "EXCEL-REF-TWO", 25, "", 75],
+    ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 });
+    expect(transactions.map((transaction) => transaction.operationNumber)).toEqual(expect.arrayContaining([expect.stringMatching(/^FT260204[A-Z]{3}$/)]));
+    expect(transactions[0].operationNumber).not.toBe(transactions[1].operationNumber);
+    expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("EXCEL-REF");
+    expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("FT000001");
+  });
+
+  it("stores imported Excel dates in ISO format for native date editing", () => {
+    expect(formatImportedDate(46057)).toBe("2026-02-04");
+    expect(formatImportedDate("04/08/2026")).toBe("2026-08-04");
+    expect(formatImportedDate("2026/08/04")).toBe("2026-08-04");
+  });
+
+  it("renders ISO transaction dates separately as an English statement date", () => {
+    expect(displayStatementDate("2026-08-04")).toBe("04/08/2026");
   });
 
   const suppliedFiles = [
