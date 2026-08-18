@@ -1,6 +1,38 @@
 import type { Express } from "express";
 import { ENV } from "./env";
 
+const WEB_STATIC_ASSET_ORIGIN = "https://bankkarimi-m62zu5vg.manus.space";
+const WEB_STATIC_ASSET_KEYS = new Set([
+  "kuraimi-logo-reference_17f98fb5.png",
+  "kuraimi-statement-page-background_e5a7a2d4.png",
+  "kuraimi-central-logo-reference_d0d5afe2.jpeg",
+  "kuraimi-header-strip_ff07f269.png",
+  "kuraimi-footer-strip_74a0236b.png",
+  "kuraimi-qr-logo-reference_e6a47e2c.png",
+]);
+
+export function isWebStaticAssetKey(key: string) {
+  return WEB_STATIC_ASSET_KEYS.has(key);
+}
+
+export function getWebStaticAssetUrl(key: string) {
+  return `${WEB_STATIC_ASSET_ORIGIN}/manus-storage/${encodeURIComponent(key)}`;
+}
+
+async function proxyWebStaticAsset(key: string, res: Parameters<Express["get"]>[1] extends (...args: infer T) => unknown ? T[1] : never) {
+  const upstream = await fetch(getWebStaticAssetUrl(key));
+  if (!upstream.ok) {
+    res.status(502).send("Static asset backend error");
+    return;
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+  res.set("Content-Type", contentType);
+  res.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+  res.set("Cross-Origin-Resource-Policy", "cross-origin");
+  res.status(200).send(Buffer.from(await upstream.arrayBuffer()));
+}
+
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
@@ -9,12 +41,17 @@ export function registerStorageProxy(app: Express) {
       return;
     }
 
-    if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
-      return;
-    }
-
     try {
+      if (isWebStaticAssetKey(key)) {
+        await proxyWebStaticAsset(key, res);
+        return;
+      }
+
+      if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+        res.status(500).send("Storage proxy not configured");
+        return;
+      }
+
       const forgeUrl = new URL(
         "v1/storage/presign/get",
         ENV.forgeApiUrl.replace(/\/+$/, "") + "/",
