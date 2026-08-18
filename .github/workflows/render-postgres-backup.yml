@@ -1,0 +1,42 @@
+name: Encrypted Render Postgres Backup
+
+on:
+  schedule:
+    - cron: "17 1 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export-and-replace-latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RENDER_POSTGRES_URL: ${{ secrets.RENDER_POSTGRES_URL }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create encrypted logical export
+        run: |
+          set -euo pipefail
+          test -n "$RENDER_POSTGRES_URL"
+          test -n "$BACKUP_ENCRYPTION_PASSPHRASE"
+          umask 077
+          pg_dump --dbname="$RENDER_POSTGRES_URL" --format=custom --no-owner --no-privileges --file=render-postgres-staging-latest.dump
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 \
+            -in render-postgres-staging-latest.dump \
+            -out render-postgres-staging-latest.dump.enc \
+            -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+          sha256sum render-postgres-staging-latest.dump.enc > render-postgres-staging-latest.dump.enc.sha256
+          rm -f render-postgres-staging-latest.dump
+
+      - name: Store only the latest encrypted export in the private repository release
+        run: |
+          set -euo pipefail
+          gh release view staging-db-backup >/dev/null 2>&1 || \
+            gh release create staging-db-backup --title "Staging database backup" --notes "Encrypted latest logical export for the Render Staging database."
+          gh release upload staging-db-backup render-postgres-staging-latest.dump.enc render-postgres-staging-latest.dump.enc.sha256 --clobber
