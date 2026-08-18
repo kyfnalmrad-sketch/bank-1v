@@ -101,6 +101,7 @@ export function discoverStatementHeader(matrix: unknown[][]): HeaderDiscovery | 
 
   const best = candidates[0];
   if (!best) return null;
+  if (candidates[1]?.score === best.score) return null;
   const mappedFields = (Object.keys(best.map) as StatementColumnKey[])
     .filter((key) => best.map[key] !== undefined)
     .map((key) => ({ key, source: best.headers[best.map[key]!] }));

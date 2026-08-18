@@ -10,6 +10,13 @@ describe("statement Excel import", () => {
     expect(discovered?.map).toMatchObject({ date: 0, description: 1, debit: 2, credit: 3, reference: 4 });
   });
 
+  it("ignores One, Two and Three headings and rejects an ambiguous duplicate heading row", () => {
+    const oneTwoThree = [["One", "Two", "Three", "Date", "Description", "Amount", "Type"], ["ignored", "ignored", "ignored", "2026-02-15", "Cash deposit", "10", "Credit"]];
+    expect(discoverStatementHeader(oneTwoThree)?.headers).toEqual(["Date", "Description", "Amount", "Type"]);
+    const ambiguous = [["Date", "Description", "Debit", "Credit"], ["Date", "Description", "Debit", "Credit"]];
+    expect(discoverStatementHeader(ambiguous)).toBeNull();
+  });
+
   it("reads a signed amount plus type without presenting fictional debit or credit columns", () => {
     const matrix = [["Bank Al Karimi Account Activity", "", "", "", ""], ["Posting Date", "Narration", "Amount", "Type", "Ref No"], ["2026-02-01", "Cash deposit", "1,250.50", "Credit", "EXT-A"], ["2026-02-02", "ATM withdrawal", "(500.00)", "Debit", "EXT-B"]];
     const discovered = discoverStatementHeader(matrix);
