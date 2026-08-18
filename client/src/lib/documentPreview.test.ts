@@ -15,7 +15,10 @@ describe("reference document previews", () => {
     const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, closing: 20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT${index + 1}`, debit: 0, credit: 1, balance: index + 1 })) });
     expect((html.match(/data-operation=/g) || [])).toHaveLength(20);
     expect(html).toContain("END OF REPORT");
-    expect(html).toContain("PAGE 1/2");
-    expect(html).toContain("BAK-ACCT-20260801-0001");
+    expect(html).toContain("Account Currency:</b> USD");
+    expect(html).toContain("Date:</b> 15/08/2026");
+    expect(html).not.toContain("Period:</b>");
+    expect(html).not.toContain("Statement Ref:</b>");
+    expect(html).not.toContain("PAGE 1/2");
   });
 });
