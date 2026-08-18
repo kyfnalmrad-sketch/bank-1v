@@ -58,6 +58,11 @@ describe("Home applied transaction register", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apply Register Changes" }));
     fireEvent.click(screen.getByRole("button", { name: "Review & Export" }));
 
+    fireEvent.click(screen.getByRole("button", { name: "View Account Statement" }));
+    const preview = await screen.findByTitle("Account Statement print preview");
+    expect(preview.getAttribute("srcdoc")).toContain("header-art");
+    expect(preview.getAttribute("srcdoc")).toContain("05/08/2026");
+
     fireEvent.click(screen.getByRole("button", { name: "Print Account Status / Save PDF" }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(1));
     expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("<title>Account Status Statement</title>"));

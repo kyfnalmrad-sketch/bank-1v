@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   FileSpreadsheet,
   FileText,
+  Download,
   LoaderCircle,
   Printer,
   RefreshCcw,
@@ -22,7 +23,7 @@ import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
-import { assemblePrintableStatementHtml, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
+import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
   discoverStatementHeader,
@@ -79,6 +80,12 @@ function initialTab(): TabId {
   return tabs.some((tab) => tab.id === requested) ? requested as TabId : "account";
 }
 
+function initialReviewPreview(): PrintDocumentKind | null {
+  if (typeof window === "undefined") return null;
+  const requested = new URLSearchParams(window.location.search).get("preview");
+  return requested === "accountStatus" || requested === "accountStatement" ? requested : null;
+}
+
 function loadLocalList(key: string) {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(key) || "[]");
@@ -106,6 +113,8 @@ export default function Home() {
   const [barcodeSources, setBarcodeSources] = useState<string[]>([]);
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-descriptions"));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-names"));
+  const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
+  const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
 
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(client.opening)), [appliedTransactions, client.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
@@ -287,6 +296,20 @@ export default function Home() {
     }
   };
 
+  const downloadPdf = async (kind: PrintDocumentKind) => {
+    const selected = selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
+    setDownloadingDocument(kind);
+    try {
+      const downloaded = await downloadDocumentPdf(kind, selected.html, client.issueDate);
+      setImportNote(downloaded ? `${selected.title} PDF downloaded successfully.` : "The PDF could not be created. Please try again.");
+    } catch (error) {
+      console.error("Direct PDF generation failed", error);
+      setImportNote("The PDF could not be created. Please try again after confirming the preview is fully visible.");
+    } finally {
+      setDownloadingDocument(null);
+    }
+  };
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -401,13 +424,14 @@ export default function Home() {
       {activeTab === "training" && <section className="panel statement-preview-panel">
         <div className="panel-heading"><div><h2>Account Status Statement</h2><p className="hint">HTML preview based on the Prototype 0.5.1 reference rules without redesign.</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
         <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
-        <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button></div>
+        <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Creating PDF…" : "Download Account Status PDF"}</button></div>
       </section>}
 
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><h2>Review & Export</h2><p className="hint">Review inputs before printing one document at a time.</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && client.momaizNo ? "Ready for review" : "Customer details required"}</strong><small>Customer name and Momaiz No. are required on the statement.</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>20 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / 20))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
-        <div className="actions document-actions"><button type="button" onClick={() => setActiveTab("training")}><FileText size={17} /> View Account Status Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
+        <div className="actions document-actions"><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Creating PDF…" : "Download Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Creating PDF…" : "Download Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
+        {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">Review the original artwork, QR code, values, and page arrangement before printing or downloading.</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
 
       <footer className="app-footer"><img src={referenceAssets.footerStrip} alt="Original footer reference"/><span>Independent Web Staging edition — Prototype 0.5.1 reference remains unchanged.</span></footer>

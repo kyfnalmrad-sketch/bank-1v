@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { assemblePrintableStatementHtml, openPrintWindow, selectPrintableDocument } from "./printDocument";
+import { assemblePrintableStatementHtml, directPdfFilename, openPrintWindow, selectPrintableDocument, withPrintTitle } from "./printDocument";
 
 describe("separate document printing", () => {
   it("combines only pages of the same account statement for a separate print job", () => {
@@ -20,9 +20,17 @@ describe("separate document printing", () => {
       expect(openPrintWindow("<html><head></head><body>statement</body></html>", title, host)).toBe(true);
       expect(host.open).toHaveBeenCalledTimes(1);
       expect(write).toHaveBeenCalledWith(expect.stringContaining(`<title>${title}</title>`));
+      expect(write).toHaveBeenCalledWith(expect.stringContaining("print-asset-preservation"));
       expect(focus).toHaveBeenCalledTimes(1);
       expect(print).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it("preserves the opener origin as the base for original logos and backgrounds in the print window", () => {
+    const html = withPrintTitle("<html><head></head><body><img src=\"/manus-storage/logo.png\"></body></html>", "Account Statement", "https://bank-karimi-web-staging.onrender.com/");
+    expect(html).toContain('<base href="https://bank-karimi-web-staging.onrender.com/">');
+    expect(html).toContain("-webkit-print-color-adjust:exact");
+    expect(html).toContain("print-color-adjust:exact");
   });
 
   it("selects only the requested document HTML and preserves the statement header artifact", () => {
@@ -31,5 +39,10 @@ describe("separate document printing", () => {
     expect(selectPrintableDocument("accountStatus", accountStatus, accountStatement)).toEqual({ html: accountStatus, title: "Account Status Statement" });
     expect(selectPrintableDocument("accountStatement", accountStatus, accountStatement)).toEqual({ html: accountStatement, title: "Account Statement" });
     expect(selectPrintableDocument("accountStatement", accountStatus, accountStatement).html).toContain("header-art");
+  });
+
+  it("builds separate stable filenames for direct PDF downloads", () => {
+    expect(directPdfFilename("accountStatus", "2026-08-15")).toBe("Account-Status-Statement-20260815.pdf");
+    expect(directPdfFilename("accountStatement", "15/08/2026")).toBe("Account-Statement-15082026.pdf");
   });
 });
