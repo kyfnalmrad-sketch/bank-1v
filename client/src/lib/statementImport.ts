@@ -26,7 +26,7 @@ export type HeaderDiscovery = {
 
 const aliases: Record<StatementColumnKey, readonly string[]> = {
   date: ["date", "posting date", "transaction date", "value date", "تاريخ", "تاريخ الحركة"],
-  description: ["description", "movement description", "narration", "details", "وصف العملية", "الوصف", "بيان الحركة"],
+  description: ["description", "movement description", "narration", "details", "particular", "particulars", "وصف العملية", "الوصف", "بيان الحركة"],
   debit: ["debit", "debit amount", "withdrawal", "مدين", "مبلغ مدين"],
   credit: ["credit", "credit amount", "deposit", "دائن", "مبلغ دائن"],
   balance: ["balance", "running balance", "الرصيد", "الرصيد الجاري"],
@@ -81,22 +81,79 @@ function fieldForHeader(value: unknown): StatementColumnKey | undefined {
   return (Object.keys(normalizedAliases) as StatementColumnKey[]).find((key) => normalizedAliases[key].includes(header));
 }
 
+function isNumericCell(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value);
+  const cleaned = String(value ?? "").trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[٬,\s()]/g, "");
+  return /^-?\d+(\.\d+)?$/.test(cleaned);
+}
+
+function isDateCell(value: unknown) {
+  if (typeof value === "number") return value >= 30_000 && value <= 80_000;
+  const text = String(value ?? "").trim();
+  return /^(?:\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}[\/-]\d{1,2}[\/-]\d{4})$/.test(text);
+}
+
+function isReferenceCell(value: unknown) {
+  const text = String(value ?? "").trim();
+  return /^(?:[A-Z]{2,}[A-Z0-9-]{4,}|[A-Z]{1,}\d[A-Z0-9-]{3,})$/i.test(text);
+}
+
+type ColumnProfile = { index: number; date: number; reference: number; numeric: number; text: number; nonEmpty: number };
+
+function inferMapFromSamples(matrix: unknown[][], headerRowIndex: number, initialMap: StatementColumnMap) {
+  const samples = matrix.slice(headerRowIndex + 1).filter((row) => row.some((cell) => String(cell ?? "").trim())).slice(0, 12);
+  const width = Math.max(0, ...samples.map((row) => row.length));
+  const profiles: ColumnProfile[] = Array.from({ length: width }, (_, index) => ({ index, date: 0, reference: 0, numeric: 0, text: 0, nonEmpty: 0 }));
+  for (const row of samples) {
+    for (const profile of profiles) {
+      const value = row[profile.index];
+      if (String(value ?? "").trim() === "") continue;
+      profile.nonEmpty += 1;
+      if (isDateCell(value)) profile.date += 1;
+      if (isReferenceCell(value)) profile.reference += 1;
+      if (isNumericCell(value)) profile.numeric += 1;
+      if (!isDateCell(value) && !isReferenceCell(value) && !isNumericCell(value)) profile.text += 1;
+    }
+  }
+  const ratio = (profile: ColumnProfile, key: keyof Omit<ColumnProfile, "index" | "nonEmpty">) => profile.nonEmpty ? profile[key] / profile.nonEmpty : 0;
+  const result: StatementColumnMap = { ...initialMap };
+  const claimed = () => new Set(Object.values(result).filter((value): value is number => value !== undefined));
+  const choose = (predicate: (profile: ColumnProfile) => boolean, after = -1) => profiles.find((profile) => profile.index > after && !claimed().has(profile.index) && predicate(profile))?.index;
+
+  if (result.date === undefined) result.date = choose((profile) => ratio(profile, "date") >= 0.6);
+  if (result.description === undefined && result.date !== undefined) {
+    result.description = choose((profile) => ratio(profile, "text") >= 0.55, result.date);
+  }
+  if (result.reference === undefined && result.description !== undefined) {
+    result.reference = choose((profile) => ratio(profile, "reference") >= 0.55, result.description);
+  }
+  const numericColumns = profiles
+    .filter((profile) => !claimed().has(profile.index) && ratio(profile, "numeric") >= 0.45)
+    .map((profile) => profile.index)
+    .filter((index) => index > (result.description ?? -1));
+  if (result.debit === undefined && numericColumns.length) result.debit = numericColumns.shift();
+  if (result.credit === undefined && numericColumns.length) result.credit = numericColumns.shift();
+  if (result.balance === undefined && numericColumns.length) result.balance = numericColumns.shift();
+  return result;
+}
+
 export function discoverStatementHeader(matrix: unknown[][]): HeaderDiscovery | null {
   const candidates = matrix.map((row, rowIndex) => {
     const map: StatementColumnMap = {};
-    const headers: string[] = [];
+    const headers = row.map((cell) => String(cell ?? "").trim());
     row.forEach((cell, columnIndex) => {
       const source = String(cell ?? "").trim();
       const field = fieldForHeader(source);
       if (field !== undefined && map[field] === undefined) {
         map[field] = columnIndex;
-        headers[columnIndex] = source;
       }
     });
-    const hasAmounts = map.debit !== undefined || map.credit !== undefined || (map.amount !== undefined && map.direction !== undefined);
-    const isUsable = map.date !== undefined && map.description !== undefined && hasAmounts;
-    const score = Object.keys(map).length + (isUsable ? 100 : 0);
-    return { rowIndex, headers, map, isUsable, score };
+    const inferredMap = inferMapFromSamples(matrix, rowIndex, map);
+    const hasAmounts = inferredMap.debit !== undefined || inferredMap.credit !== undefined || (inferredMap.amount !== undefined && inferredMap.direction !== undefined);
+    const headerPlausible = Object.keys(map).length > 0 || headers.filter(Boolean).length >= 3;
+    const isUsable = headerPlausible && inferredMap.date !== undefined && inferredMap.description !== undefined && hasAmounts;
+    const score = Object.keys(map).length * 10 + Object.keys(inferredMap).length + (isUsable ? 100 : 0);
+    return { rowIndex, headers, map: inferredMap, isUsable, score };
   }).filter((candidate) => candidate.isUsable).sort((left, right) => right.score - left.score || left.rowIndex - right.rowIndex);
 
   const best = candidates[0];
@@ -104,12 +161,12 @@ export function discoverStatementHeader(matrix: unknown[][]): HeaderDiscovery | 
   if (candidates[1]?.score === best.score) return null;
   const mappedFields = (Object.keys(best.map) as StatementColumnKey[])
     .filter((key) => best.map[key] !== undefined)
-    .map((key) => ({ key, source: best.headers[best.map[key]!] }));
-  return { headerRowIndex: best.rowIndex, headers: best.headers.filter(Boolean), map: best.map, mappedFields };
+    .map((key) => ({ key, source: best.headers[best.map[key]!] || `Column ${best.map[key]! + 1}` }));
+  return { headerRowIndex: best.rowIndex, headers: mappedFields.map((field) => field.source), map: best.map, mappedFields };
 }
 
 function extractNamedParty(description: string) {
-  const matched = description.match(/(?:from|to|via|من|إلى|الى|عبر|:|\-|—)\s*([A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s'.]{2,})/i);
+  const matched = description.match(/(?:from|to|via|من|إلى|الى|عبر|:|\-|—)\s*([A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s'.-]{2,})/i);
   return matched?.[1]?.trim().replace(/[.،,;]+$/, "") || undefined;
 }
 
@@ -125,9 +182,11 @@ export function reviewDescription(input: unknown) {
   const suggestedDescription = /haseb|حاسب/i.test(description)
     ? "Payment via Haseb"
     : personName
-      ? /family\s*transfer|family\s*transfers|تحويل\s*عائلي/i.test(description)
-        ? `Family transfer from ${personName}`
-        : /incoming|personal\s*transfer|تحويل\s*وارد|استلام/i.test(description)
+      ? /^family\s*:|family\s*transfer|family\s*transfers|تحويل\s*عائلي/i.test(description)
+        ? `Family transfer — ${personName}`
+        : /^personal\s*:|personal\s*transfer/i.test(description)
+          ? `Personal transfer — ${personName}`
+          : /incoming|تحويل\s*وارد|استلام/i.test(description)
           ? `Incoming transfer from ${personName}`
           : undefined
       : undefined;

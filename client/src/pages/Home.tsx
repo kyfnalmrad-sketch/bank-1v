@@ -47,9 +47,16 @@ const defaultClient = {
   branch: "",
   accountNumber: "",
   customerSince: "",
+  dateOfBirth: "",
   accountType: "Current Account",
   currency: "USD",
   opening: "0.00",
+  issueDate: "",
+  issueDateHijri: "",
+  printTime: "",
+  correspondenceDate: "",
+  periodStart: "",
+  periodEnd: "",
 };
 
 function money(value: unknown) {
@@ -102,12 +109,20 @@ export default function Home() {
   const excelStatementReference = useMemo(() => transactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [transactions]);
   const statementReference = referenceSource === "excel" && excelStatementReference ? excelStatementReference : internalStatementReference;
   const visibleMappedFields = useMemo(() => mappedFields.filter((field) => referenceSource === "excel" || field.key !== "reference"), [mappedFields, referenceSource]);
+  const firstTransactionDate = acceptedRows.find((transaction) => transaction.date)?.date || "";
+  const lastTransactionDate = [...acceptedRows].reverse().find((transaction) => transaction.date)?.date || "";
+  const issueDate = client.issueDate || lastTransactionDate || firstTransactionDate || "PENDING";
+  const periodStart = client.periodStart || firstTransactionDate || "PENDING";
+  const periodEnd = client.periodEnd || lastTransactionDate || issueDate;
+  const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / 20));
   const accountStatusHtml = useMemo(() => renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
     qrUri: qrSource || referenceAssets.qrLogo,
     customerName: client.name,
     momaizNo: client.momaizNo,
     passport: client.passport,
+    dateOfBirth: client.dateOfBirth,
+    customerSince: client.customerSince,
     accountType: client.accountType,
     accountNumber: client.accountNumber,
     branchName: client.branch,
@@ -116,10 +131,14 @@ export default function Home() {
     credit: totalCredit,
     debit: totalDebit,
     closing,
-    enclosurePages: Math.max(1, Math.ceil(acceptedRows.length / 20)),
+    issueDate,
+    issueDateHijri: client.issueDateHijri,
+    printTime: client.printTime,
+    correspondenceDate: client.correspondenceDate,
+    enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [acceptedRows.length, client, closing, qrSource, statementReference, totalCredit, totalDebit]);
-  const statementHtml = useMemo(() => renderStatementPreview({
+  }), [client, closing, issueDate, qrSource, statementPageCount, statementReference, totalCredit, totalDebit]);
+  const statementPageHtml = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => renderStatementPreview({
     headerUri: referenceAssets.headerStrip,
     qrUri: qrSource || referenceAssets.qrLogo,
     customerName: client.name,
@@ -127,10 +146,15 @@ export default function Home() {
     momaizNo: client.momaizNo,
     branchName: client.branch,
     currency: client.currency,
-    issueDate: transactions.find((transaction) => transaction.date)?.date || "PENDING",
+    issueDate,
+    periodStart,
+    periodEnd,
+    statementReference,
+    pageNumber: pageIndex + 1,
+    pageCount: statementPageCount,
     closing,
-    transactions: acceptedRows.map((row) => ({ date: row.date, description: row.description, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  }), [acceptedRows, client, closing, qrSource, transactions]);
+    transactions: acceptedRows.slice(pageIndex * 20, (pageIndex + 1) * 20).map((row) => ({ date: row.date, description: row.description, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
+  })), [acceptedRows, client, closing, issueDate, periodEnd, periodStart, qrSource, statementPageCount, statementReference]);
 
   useEffect(() => {
     const payload = `ISSUER=BAK|DOC=WEBSTAGING|REF=${statementReference}|ACCOUNT=${client.accountNumber || "PENDING"}|COUNT=${acceptedRows.length}|CURRENCY=${client.currency}|CLOSING=${closing.toFixed(2)}`;
@@ -254,7 +278,28 @@ export default function Home() {
             <label>رقم جواز السفر <span className="field-note">اختياري</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>عميل منذ<input value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
+            <label>تاريخ الميلاد <span className="field-note">اختياري</span><input type="date" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
+            <label>نوع الحساب<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
             <label>رقم الحساب<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
+          </div>
+        </section>
+        <section className="panel">
+          <h2>حقول بيان الحالة</h2>
+          <p className="hint">هذه الحقول تظهر في بيان الحالة فقط، بينما يعتمد إجمالي الأرصدة وعدد الصفحات على ملف الحركات المستورد.</p>
+          <div className="grid">
+            <label>تاريخ إصدار البيان<input type="date" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
+            <label>تاريخ الإصدار الهجري<input dir="rtl" value={client.issueDateHijri} onChange={(event) => updateClient("issueDateHijri", event.target.value)} placeholder="مثال: 02 صفر 1448 هـ" /></label>
+            <label>وقت الطباعة<input type="time" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
+            <label>تاريخ المراسلة<input type="date" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
+          </div>
+        </section>
+        <section className="panel">
+          <h2>حقول كشف الحساب</h2>
+          <p className="hint">اترك تاريخ البداية والنهاية فارغين ليُستنتجا من أول وآخر حركة مقبولة في ملف Excel.</p>
+          <div className="grid">
+            <label>بداية فترة الكشف<input type="date" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
+            <label>نهاية فترة الكشف<input type="date" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
+            <div className="computed-field"><span>عدد صفحات الكشف</span><strong>{statementPageCount}</strong><small>20 حركة كحد أقصى لكل صفحة.</small></div>
           </div>
         </section>
         <section className="panel">
@@ -309,9 +354,9 @@ export default function Home() {
       </section>}
 
       {activeTab === "printing" && <section className="panel printing-panel">
-        <div className="panel-heading"><div><h2>طباعة ملف موحد</h2><p className="hint">تسلسل المعاينة المرجعي: بيان الحالة أولًا ثم كشف الحساب. يعرض كشف الحساب أول 20 حركة للصفحة.</p></div><Printer size={26} className="heading-icon" /></div>
-        <div className="document-sequence"><div><span className="document-order">1</span><h3>Account Status Statement</h3><div className="document-frame-wrap"><iframe className="document-frame" title="Combined preview account status" srcDoc={accountStatusHtml} /></div></div><div><span className="document-order">2</span><h3>Statement — page 1</h3><div className="document-frame-wrap"><iframe className="document-frame" title="Combined preview statement" srcDoc={statementHtml} /></div></div></div>
-        <div className="print-note"><ShieldCheck size={19} /> معاينة الويب تحفظ ترتيب المستندين وقاعدة 20 حركة. تصدير PDF الفعلي يبقى خطوة اختبار منفصلة قبل اعتماده للمراجعة.</div>
+        <div className="panel-heading"><div><h2>طباعة ملف موحد</h2><p className="hint">تسلسل منظم للمعاينة: بيان الحالة أولًا ثم {statementPageCount} صفحة من كشف الحساب، بحد أقصى 20 حركة في كل صفحة.</p></div><Printer size={26} className="heading-icon" /></div>
+        <div className="document-sequence"><div><span className="document-order">1</span><h3>Account Status Statement</h3><div className="document-frame-wrap"><iframe className="document-frame" title="Combined preview account status" srcDoc={accountStatusHtml} /></div></div>{statementPageHtml.map((html, pageIndex) => <div key={`statement-page-${pageIndex}`}><span className="document-order">{pageIndex + 2}</span><h3>Statement — page {pageIndex + 1} of {statementPageCount}</h3><div className="document-frame-wrap"><iframe className="document-frame" title={`Combined preview statement page ${pageIndex + 1}`} srcDoc={html} /></div></div>)}</div>
+        <div className="print-note"><ShieldCheck size={19} /> المعاينة تعرض تسلسل الصفحات كما سيُستخدم في ملف الطباعة الموحد. تصدير PDF الفعلي يبقى خطوة اختبار منفصلة قبل اعتماده للمراجعة.</div>
       </section>}
 
       <footer className="app-footer"><img src={referenceAssets.footerStrip} alt="Original footer reference"/><span>نسخة ويب Staging مستقلة — لا تعدّل Prototype 0.5.1 المرجعي.</span></footer>
