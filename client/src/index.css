@@ -10,7 +10,7 @@ button { cursor: pointer; }
 .app-shell { width: min(1100px, calc(100% - 36px)); margin: 0 auto; padding: 28px 0 46px; }
 .app-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 16px; padding: 0 2px; }
 .brand-row { display: flex; gap: 16px; align-items: center; min-width: 0; }
-.reference-logo { display: block; width: 86px; height: 58px; object-fit: contain; object-position: center; }
+.reference-logo { display: block; width: 150px; height: 58px; object-fit: contain; object-position: center; }
 .eyebrow { margin: 0 0 5px; color: #64748b; font-size: .8rem; font-weight: 700; letter-spacing: .01em; }
 h1 { margin: 0; color: #123b5d; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.25; }
 .bank-name { margin: 4px 0 0; color: #6b5297; font-weight: 700; font-size: .9rem; direction: ltr; text-align: left; }
