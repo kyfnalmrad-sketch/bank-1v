@@ -9,4 +9,10 @@ describe("Render static asset fallback", () => {
       "https://bankkarimi-m62zu5vg.manus.space/manus-storage/kuraimi-logo-reference_17f98fb5.png",
     );
   });
+
+  it("keeps the fallback scope limited to the immutable identity assets", () => {
+    expect(isWebStaticAssetKey("kuraimi-footer-strip_74a0236b.png")).toBe(true);
+    expect(isWebStaticAssetKey("kuraimi-footer-strip.png")).toBe(false);
+    expect(isWebStaticAssetKey("../../account-data.csv")).toBe(false);
+  });
 });

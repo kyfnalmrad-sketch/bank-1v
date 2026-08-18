@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { ENV } from "./env";
 
 const WEB_STATIC_ASSET_ORIGIN = "https://bankkarimi-m62zu5vg.manus.space";
@@ -10,6 +10,7 @@ const WEB_STATIC_ASSET_KEYS = new Set([
   "kuraimi-footer-strip_74a0236b.png",
   "kuraimi-qr-logo-reference_e6a47e2c.png",
 ]);
+const webStaticAssetCache = new Map<string, { body: Buffer; contentType: string }>();
 
 export function isWebStaticAssetKey(key: string) {
   return WEB_STATIC_ASSET_KEYS.has(key);
@@ -19,7 +20,16 @@ export function getWebStaticAssetUrl(key: string) {
   return `${WEB_STATIC_ASSET_ORIGIN}/manus-storage/${encodeURIComponent(key)}`;
 }
 
-async function proxyWebStaticAsset(key: string, res: Parameters<Express["get"]>[1] extends (...args: infer T) => unknown ? T[1] : never) {
+async function proxyWebStaticAsset(key: string, res: Response) {
+  const cached = webStaticAssetCache.get(key);
+  if (cached) {
+    res.set("Content-Type", cached.contentType);
+    res.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    res.status(200).send(cached.body);
+    return;
+  }
+
   const upstream = await fetch(getWebStaticAssetUrl(key));
   if (!upstream.ok) {
     res.status(502).send("Static asset backend error");
@@ -27,10 +37,12 @@ async function proxyWebStaticAsset(key: string, res: Parameters<Express["get"]>[
   }
 
   const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+  const body = Buffer.from(await upstream.arrayBuffer());
+  webStaticAssetCache.set(key, { body, contentType });
   res.set("Content-Type", contentType);
   res.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
   res.set("Cross-Origin-Resource-Policy", "cross-origin");
-  res.status(200).send(Buffer.from(await upstream.arrayBuffer()));
+  res.status(200).send(body);
 }
 
 export function registerStorageProxy(app: Express) {
