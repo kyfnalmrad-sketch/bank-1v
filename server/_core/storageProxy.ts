@@ -26,6 +26,7 @@ async function proxyWebStaticAsset(key: string, res: Response) {
     res.set("Content-Type", cached.contentType);
     res.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
     res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    res.set("X-Bank-Asset-Cache", "HIT");
     res.status(200).send(cached.body);
     return;
   }
@@ -42,6 +43,7 @@ async function proxyWebStaticAsset(key: string, res: Response) {
   res.set("Content-Type", contentType);
   res.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
   res.set("Cross-Origin-Resource-Policy", "cross-origin");
+  res.set("X-Bank-Asset-Cache", "MISS");
   res.status(200).send(body);
 }
 

@@ -15,4 +15,8 @@ describe("Render static asset fallback", () => {
     expect(isWebStaticAssetKey("kuraimi-footer-strip.png")).toBe(false);
     expect(isWebStaticAssetKey("../../account-data.csv")).toBe(false);
   });
+
+  it("does not treat dynamically named files as cacheable identity assets", () => {
+    expect(isWebStaticAssetKey("kuraimi-logo-reference_runtime.png")).toBe(false);
+  });
 });
