@@ -86,6 +86,17 @@ export function displayStatementDate(value: unknown) {
   return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : text;
 }
 
+export function formatEnglishGregorianDate(value: unknown) {
+  const normalized = formatImportedDate(value);
+  const date = parseGregorianDate(normalized);
+  if (!date) return String(value ?? "").trim();
+  try {
+    return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+  } catch {
+    return displayStatementDate(value);
+  }
+}
+
 function parseGregorianDate(value: unknown) {
   const match = String(value ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return null;

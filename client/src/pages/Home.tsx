@@ -2,7 +2,7 @@
  * Design reference: mirror the Prototype 0.5.1 workflow and palette.
  * This web shell uses only original reference assets; it does not alter PDF templates.
  */
-import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   FileText,
   Download,
+  Database,
   LoaderCircle,
   Printer,
   RefreshCcw,
@@ -32,12 +33,34 @@ import {
   reviewDescription,
   displayStatementDate,
   formatHijriDate,
+  formatEnglishGregorianDate,
   type ImportedTransaction,
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
 type TabId = "account" | "transactions" | "training" | "review";
 type Transaction = ImportedTransaction;
+type SnapshotPayload = {
+  schemaVersion: 1;
+  client: typeof defaultClient;
+  referenceSource: "internal" | "excel";
+  fileName: string;
+  columnMap: StatementColumnMap;
+  mappedFields: Array<{ key: keyof typeof statementFieldLabels; source: string }>;
+  transactions: Transaction[];
+  appliedTransactions: Transaction[];
+};
+
+const snapshotWorkspaceStorageKey = "bak-web-staging-workspace-key";
+
+function getWorkspaceKey() {
+  if (typeof window === "undefined") return "server-preview-workspace";
+  const existing = window.localStorage.getItem(snapshotWorkspaceStorageKey);
+  if (existing) return existing;
+  const generated = window.crypto?.randomUUID?.() || `workspace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.localStorage.setItem(snapshotWorkspaceStorageKey, generated);
+  return generated;
+}
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "account", label: "Account Details" },
@@ -117,6 +140,11 @@ export default function Home() {
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-names"));
   const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
   const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
+  const workspaceKey = useMemo(() => getWorkspaceKey(), []);
+  const [snapshotState, setSnapshotState] = useState<"loading" | "restored" | "saved" | "error">("loading");
+  const snapshotRestored = useRef(false);
+  const snapshotQuery = trpc.staging.loadSnapshot.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false });
+  const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
 
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(client.opening)), [appliedTransactions, client.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
@@ -155,8 +183,8 @@ export default function Home() {
     customerName: client.name,
     momaizNo: client.momaizNo,
     passport: client.passport,
-    dateOfBirth: displayStatementDate(client.dateOfBirth),
-    customerSince: displayStatementDate(client.customerSince),
+    dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth),
+    customerSince: formatEnglishGregorianDate(client.customerSince),
     accountType: client.accountType,
     accountNumber: client.accountNumber,
     branchName: client.branch,
@@ -165,13 +193,62 @@ export default function Home() {
     credit: totalCredit,
     debit: totalDebit,
     closing,
-    issueDate: documentIssueDate,
+    issueDate: formatEnglishGregorianDate(issueDate),
     issueDateHijri: formatHijriDate(issueDate),
     printTime: client.printTime,
-    correspondenceDate: displayStatementDate(client.correspondenceDate),
+    correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, closing, documentIssueDate, statusQrSource, statementPageCount, statementReference, totalCredit, totalDebit]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, fileName, columnMap, mappedFields, transactions, appliedTransactions }), [appliedTransactions, client, columnMap, fileName, mappedFields, referenceSource, transactions]);
+
+  useEffect(() => {
+    if (snapshotQuery.isLoading || snapshotRestored.current) return;
+    snapshotRestored.current = true;
+    const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
+    if (payload?.schemaVersion !== 1 || !payload.client) {
+      setSnapshotState(snapshotQuery.isError ? "error" : "restored");
+      return;
+    }
+    setClient({ ...defaultClient, ...payload.client });
+    setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
+    setFileName(typeof payload.fileName === "string" ? payload.fileName : "");
+    setColumnMap(payload.columnMap && typeof payload.columnMap === "object" ? payload.columnMap : {});
+    setMappedFields(Array.isArray(payload.mappedFields) ? payload.mappedFields : []);
+    setTransactions(Array.isArray(payload.transactions) ? payload.transactions : []);
+    setAppliedTransactions(Array.isArray(payload.appliedTransactions) ? payload.appliedTransactions : []);
+    setSnapshotState("restored");
+  }, [snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
+
+  useEffect(() => {
+    if (!snapshotRestored.current || snapshotState === "loading") return;
+    const timer = window.setTimeout(() => {
+      saveSnapshotMutation.mutate({ workspaceKey, payload: snapshotPayload }, {
+        onSuccess: (result) => setSnapshotState(result.saved ? "saved" : "error"),
+        onError: () => setSnapshotState("error"),
+      });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [saveSnapshotMutation, snapshotPayload, snapshotState, workspaceKey]);
+
+  const saveCurrentSnapshot = async () => {
+    setSnapshotState("loading");
+    try {
+      const result = await saveSnapshotMutation.mutateAsync({ workspaceKey, payload: snapshotPayload });
+      setSnapshotState(result.saved ? "saved" : "error");
+    } catch {
+      setSnapshotState("error");
+    }
+  };
+
+  const snapshotStatusLabel = snapshotQuery.isLoading || snapshotState === "loading"
+    ? "Saving or restoring…"
+    : snapshotState === "saved"
+      ? "Saved to database"
+      : snapshotState === "error"
+        ? "Database unavailable"
+        : "Restored from database";
+
   const statementPageHtml = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => renderStatementPreview({
     headerUri: referenceAssets.headerStrip,
     qrUri: statementQrSources[pageIndex] || referenceAssets.qrLogo,
@@ -196,7 +273,7 @@ export default function Home() {
 
   useEffect(() => {
     const firstSummary = statementPageSummaries[0];
-    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit, totalCredit, openingBalance: money(client.opening), currency: client.currency, closing, issueDate: documentIssueDate, issueDateHijri: formatHijriDate(issueDate) });
+    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit, totalCredit, openingBalance: money(client.opening), currency: client.currency, closing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
     QRCode.toDataURL(statusPayload, { width: 260, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then(setStatusQrSource)
       .catch(() => setStatusQrSource(""));
@@ -371,6 +448,7 @@ export default function Home() {
             <label>Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
             <label>Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
           </div>
+          <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button><span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
         <section className="panel">
           <h2>Customer & Account Details</h2>

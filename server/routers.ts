@@ -2,7 +2,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { ensureRenderStagingSchema } from "./renderPg";
+import { ensureRenderStagingSchema, getRenderSnapshot, saveRenderSnapshot } from "./renderPg";
+import { z } from "zod";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -23,6 +24,12 @@ export const appRouter = router({
       const schema = await ensureRenderStagingSchema();
       return { database: "ready" as const, tableCount: schema.tableCount };
     }),
+    loadSnapshot: publicProcedure
+      .input(z.object({ workspaceKey: z.string().min(16).max(160) }))
+      .query(({ input }) => getRenderSnapshot(input.workspaceKey)),
+    saveSnapshot: publicProcedure
+      .input(z.object({ workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) }))
+      .mutation(({ input }) => saveRenderSnapshot(input.workspaceKey, input.payload)),
   }),
 
   // TODO: add feature routers here, e.g.

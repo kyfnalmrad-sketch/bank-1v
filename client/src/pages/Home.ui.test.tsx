@@ -7,7 +7,11 @@ import * as XLSX from "xlsx";
 const qrDataUrl = "data:image/png;base64,QR";
 
 vi.mock("@/lib/trpc", () => ({
-  trpc: { staging: { health: { useQuery: () => ({ isLoading: false, data: { tableCount: 7 } }) } } },
+  trpc: { staging: {
+    health: { useQuery: () => ({ isLoading: false, data: { tableCount: 8 } }) },
+    loadSnapshot: { useQuery: () => ({ isLoading: false, isError: false, data: null }) },
+    saveSnapshot: { useMutation: () => ({ mutate: vi.fn((_input, options) => options?.onSuccess?.({ saved: true })), mutateAsync: vi.fn(async () => ({ saved: true })) }) },
+  } },
 }));
 vi.mock("qrcode", () => ({ default: { toDataURL: vi.fn(async () => qrDataUrl) } }));
 vi.mock("jsbarcode", () => ({ default: vi.fn((svg: SVGElement) => svg.setAttribute("data-generated", "barcode")) }));

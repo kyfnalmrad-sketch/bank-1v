@@ -87,6 +87,13 @@ const schemaStatements = [
     event_detail JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `CREATE TABLE IF NOT EXISTS staging_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    workspace_key VARCHAR(160) NOT NULL UNIQUE,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
 ];
 
 export async function ensureRenderStagingSchema() {
@@ -100,4 +107,30 @@ export async function ensureRenderStagingSchema() {
   } finally {
     client.release();
   }
+}
+
+export type RenderSnapshotPayload = Record<string, unknown>;
+
+export async function getRenderSnapshot(workspaceKey: string) {
+  if (!process.env.RENDER_POSTGRES_URL) return null;
+  await ensureRenderStagingSchema();
+  const result = await getRenderPool().query<{ payload: RenderSnapshotPayload; updated_at: string }>(
+    "SELECT payload, updated_at FROM staging_snapshots WHERE workspace_key = $1 LIMIT 1",
+    [workspaceKey],
+  );
+  const row = result.rows[0];
+  return row ? { payload: row.payload, updatedAt: row.updated_at } : null;
+}
+
+export async function saveRenderSnapshot(workspaceKey: string, payload: RenderSnapshotPayload) {
+  if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
+  await ensureRenderStagingSchema();
+  await getRenderPool().query(
+    `INSERT INTO staging_snapshots (workspace_key, payload, updated_at)
+     VALUES ($1, $2::jsonb, NOW())
+     ON CONFLICT (workspace_key)
+     DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+    [workspaceKey, JSON.stringify(payload)],
+  );
+  return { saved: true as const };
 }
