@@ -95,7 +95,8 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     @page{size:A4 portrait;margin:0}
     *{box-sizing:border-box}
     html,body{width:210mm;height:297mm;margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#111}
-    .page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#fff url('${escapeHtml(data.backgroundUri)}') center/100% 100% no-repeat}
+    .page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#fff}
+    .background-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:1}
     .correspondence{position:absolute;left:13mm;top:68mm;z-index:3;border:.7pt solid #6b5297;background:rgba(255,255,255,.94);padding:1.3mm 2mm;font-size:8.5pt;line-height:1.35}
     .correspondence div{white-space:nowrap}
     .qr-wrap{position:absolute;right:13mm;top:60mm;width:27mm;height:27mm;padding:1mm;background:#fff;z-index:3}
@@ -115,8 +116,10 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     .balance th{width:43%;text-align:left;padding-left:3mm}
     .customer-request-notice{margin:8mm 0 0;padding:2.4mm 2.6mm;border-top:.8pt solid #bcaed1;border-bottom:.8pt solid #bcaed1;background:rgba(255,255,255,.72);font-size:8.6pt;line-height:1.45;font-weight:600;text-align:justify}
     .disclaimer{position:absolute;left:17mm;right:17mm;bottom:20mm;font-size:7.7pt;line-height:1.4;color:#6b1f1f;text-align:center;border-top:.6pt solid #bcaed1;padding-top:2mm;z-index:2}
-  </style></head><body><section class="page">
-    <div class="correspondence"><div><b>Date:</b> ${value(data.correspondenceDate || data.issueDate)}</div><div><b>Enclosures:</b> Statement PDF — ${Math.max(1, data.enclosurePages)} page</div></div>
+    </style></head><body><section class="page">
+    <img class="background-art" src="${escapeHtml(data.backgroundUri)}" alt="Original statement background">
+    <div class="correspondence"><div><b>Date:</b> ${value(data.correspondenceDate || data.issueDate)}</div>
+<div><b>Enclosures:</b> Statement PDF — ${Math.max(1, data.enclosurePages)} page</div></div>
     <div class="qr-wrap"><img class="qr" src="${escapeHtml(data.qrUri)}" alt="Verification QR">${data.qrLogoUri ? `<img class="qr-mark" src="${escapeHtml(data.qrLogoUri)}" alt="Logo">` : ""}</div>
     <div class="meta"><b>Document Date:</b> ${value(data.issueDate)} &nbsp; <b>Print Time:</b> ${value(data.printTime)}</div>
     <div class="hijri" dir="rtl" lang="ar">التاريخ الهجري: ${value(data.issueDateHijri)}</div>

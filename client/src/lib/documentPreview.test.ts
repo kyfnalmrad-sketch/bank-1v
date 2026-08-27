@@ -9,6 +9,7 @@ describe("reference document previews", () => {
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("issued at the customer’s request");
     expect(html).toContain("th,td{border:1pt solid #6b5297;padding:1.5mm 1.3mm;vertical-align:middle;font-weight:700}");
+    expect(html).toContain('class="background-art" src="/background.png"');
     expect(html).toContain("02 صفر 1448 هـ");
   });
 
