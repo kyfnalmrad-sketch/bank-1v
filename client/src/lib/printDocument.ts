@@ -33,18 +33,24 @@ function waitForImage(image: HTMLImageElement) {
 }
 
 function printAfterAssetsLoad(printWindow: PrintableWindow) {
-  const images = printWindow.document.querySelectorAll
-    ? Array.from(printWindow.document.querySelectorAll("img"))
-    : [];
   const print = () => {
     printWindow.focus();
     printWindow.print();
   };
-  if (!images.length) {
+  const frameDocument = printWindow.document as unknown as Document;
+  if (!printWindow.document.querySelectorAll) {
     print();
     return;
   }
-  void Promise.all(images.map(waitForImage)).then(print);
+  void inlineFrameAssets(frameDocument)
+    .catch((error) => {
+      console.warn("Unable to inline one or more document assets before printing", error);
+    })
+    .then(() => {
+      const images = Array.from(frameDocument.querySelectorAll("img"));
+      return Promise.all(images.map(waitForImage));
+    })
+    .then(print);
 }
 
 export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref()) {

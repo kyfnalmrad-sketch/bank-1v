@@ -48,27 +48,63 @@ export type VerificationQrInput = {
 };
 
 const qrMoney = (value: number | undefined) => Number(value ?? 0).toFixed(2);
-const qrDigits = (value: number | undefined) => String(value ?? 0).replace(/[0-9]/g, (digit) => "٠١٢٣٤٥٦٧٨٩"[Number(digit)]);
-const qrText = (value: string | undefined) => value?.trim() || "—";
+const qrText = (value: string | undefined) => value?.trim() || "N/A";
+const qrNumber = (value: number | undefined) => String(value ?? 0);
+
+const hijriMonthNames: Record<string, string> = {
+  "محرم": "Muharram",
+  "صفر": "Safar",
+  "ربيع الأول": "Rabi al-Awwal",
+  "ربيع الآخر": "Rabi al-Thani",
+  "جمادى الأولى": "Jumada al-Awwal",
+  "جمادى الآخرة": "Jumada al-Thani",
+  "رجب": "Rajab",
+  "شعبان": "Sha'ban",
+  "رمضان": "Ramadan",
+  "شوال": "Shawwal",
+  "ذو القعدة": "Dhu al-Qi'dah",
+  "ذو الحجة": "Dhu al-Hijjah",
+};
+
+function formatHijriForQr(value: string | undefined) {
+  if (!value) return "";
+  const latinDigits = value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/هـ/g, "AH");
+  return Object.entries(hijriMonthNames).reduce((result, [arabic, english]) => result.replace(arabic, english), latinDigits);
+}
+
+function verificationChecksum(value: string) {
+  let hash = 2166136261;
+  for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return (hash >>> 0).toString(16).toUpperCase().slice(-8).padStart(8, "0");
+}
 
 export function buildVerificationQrPayload(input: VerificationQrInput) {
-  const typeLabel = input.documentType === "status" ? "بيان حالة" : "كشف حساب";
-  const dateLine = input.issueDateHijri
-    ? `التاريخ: ${qrText(input.issueDate)} | التاريخ الهجري: ${qrText(input.issueDateHijri)}`
-    : `التاريخ: ${qrText(input.issueDate)}`;
-  return [
-    "الكريمي | عينة تدريبية غير رسمية",
-    `الوثيقة: ${typeLabel}`,
-    `الصفحة: ${qrDigits(input.pageNumber)}/${qrDigits(input.pageCount)}`,
-    `العميل: ${qrText(input.customerName)}`,
-    `الحساب: ${qrText(input.accountNumber)}`,
-    `الفترة: ${qrText(input.periodStart)} - ${qrText(input.periodEnd)}`,
-    dateLine,
-    `العملة: ${qrText(input.currency)}`,
-    `أول مرجع: ${qrText(input.firstReference)}`,
-    `آخر مرجع: ${qrText(input.lastReference)}`,
-    `العمليات: ${qrDigits(input.transactionCount)} | سحب: ${qrDigits(input.debitCount)} (${qrMoney(input.totalDebit)}) | إيداع: ${qrDigits(input.creditCount)} (${qrMoney(input.totalCredit)})`,
-    `رصيد البداية: ${qrMoney(input.openingBalance)} | رصيد النهاية: ${qrMoney(input.closing)}`,
-    `مرجع التحقق: ${qrText(input.reference)}`,
-  ].join("\n");
+  const typeLabel = input.documentType === "status" ? "ACCOUNT STATUS" : "ACCOUNT STATEMENT";
+  const lines = [
+    "KURAIMI TRAINING DOC",
+    `TYPE=${typeLabel}`,
+    `PAGE=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
+    `CLIENT=${qrText(input.customerName)}`,
+    `ACCT=${qrText(input.accountNumber)}`,
+    `PERIOD=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
+    `DATE=${qrText(input.issueDate)}`,
+    `CUR=${qrText(input.currency)}`,
+    `REF1=${qrText(input.firstReference)}`,
+    `REFN=${qrText(input.lastReference)}`,
+    `TX=${qrNumber(input.transactionCount)}`,
+    `DEBIT=${qrNumber(input.debitCount)};${qrMoney(input.totalDebit)}`,
+    `CREDIT=${qrNumber(input.creditCount)};${qrMoney(input.totalCredit)}`,
+    `OPEN=${qrMoney(input.openingBalance)}`,
+    `CLOSE=${qrMoney(input.closing)}`,
+    `VERIFY=${qrText(input.reference)}`,
+  ];
+  const hijriDate = formatHijriForQr(input.issueDateHijri);
+  if (hijriDate) lines.splice(7, 0, `HIJRI=${hijriDate}`);
+  return lines.join("\n");
+}
+
+export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number) {
+  const normalizedReference = qrText(reference).replace(/\s+/g, "-");
+  const core = `KIMB|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
+  return `${core}|CHK=${verificationChecksum(core)}`;
 }

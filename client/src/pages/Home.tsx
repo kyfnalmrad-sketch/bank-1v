@@ -22,7 +22,7 @@ import {
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
-import { buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
+import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
@@ -207,7 +207,7 @@ export default function Home() {
   }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
 
   useEffect(() => {
-    const values = Array.from({ length: statementPageCount }, (_, pageIndex) => `BAK ${statementReference} P${pageIndex + 1} OF ${statementPageCount}`);
+    const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount));
     const generated = values.map((value) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       JsBarcode(svg, value, { format: "CODE128", width: 1, height: 24, displayValue: false, margin: 0, lineColor: "#6b5297", background: "#ffffff" });

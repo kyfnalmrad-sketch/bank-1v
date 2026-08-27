@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildVerificationQrPayload, synchronizeDocumentData } from "./documentSync";
+import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "./documentSync";
 
 describe("applied transaction register synchronization", () => {
   it("uses the applied register as the only source for totals, balances and QR payload", () => {
@@ -14,9 +14,20 @@ describe("applied transaction register synchronization", () => {
     expect(synced.statementRows.map((row) => row.balance)).toEqual([150, 125]);
     expect(synced.closing).toBe(125);
     const payload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "statement", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", firstReference: "FT260804ABC", lastReference: "FT260805DEF", transactionCount: synced.acceptedRows.length, debitCount: 1, creditCount: 1, totalDebit: synced.totalDebit, totalCredit: synced.totalCredit, openingBalance: 50, currency: "USD", closing: synced.closing, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
-    expect(payload).toContain("الصفحة: ١/١");
-    expect(payload).toContain("العمليات: ٢ | سحب: ١ (25.00) | إيداع: ١ (100.00)");
-    expect(payload).toContain("أول مرجع: FT260804ABC");
-    expect(payload).toContain("رصيد البداية: 50.00 | رصيد النهاية: 125.00");
+    expect(payload).toContain("TYPE=ACCOUNT STATEMENT");
+    expect(payload).toContain("PAGE=1/1");
+    expect(payload).toContain("TX=2");
+    expect(payload).toContain("DEBIT=1;25.00");
+    expect(payload).toContain("CREDIT=1;100.00");
+    expect(payload).toContain("REF1=FT260804ABC");
+    expect(payload).toContain("OPEN=50.00");
+    expect(payload).toContain("CLOSE=125.00");
+    expect(payload).not.toContain("٢٢ محرم");
+    const statusPayload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "status", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", transactionCount: 2, debitCount: 1, creditCount: 1, totalDebit: 25, totalCredit: 100, openingBalance: 50, currency: "USD", closing: 125, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
+    expect(statusPayload).toContain("TYPE=ACCOUNT STATUS");
+    expect(statusPayload).toContain("HIJRI=22 Muharram 1448 AH");
+    const barcode = buildVerificationBarcodePayload("BAK-ACCT-20260804-0001", 1, 3);
+    expect(barcode.startsWith("KIMB|VERIFY|STMT|REF=BAK-ACCT-20260804-0001|PAGE=1/3|CHK=")).toBe(true);
+    expect(barcode.slice(-8)).toMatch(/^[0-9A-F]{8}$/);
   });
 });

@@ -26,11 +26,11 @@ describe("reference document previews", () => {
     expect(html).not.toContain("20.00 DR");
     expect(html).toContain("width:56mm;height:9.2mm");
     expect(html).toContain("REF P1 of 2");
-    expect(html).toContain("grid-template-columns:106mm 72.8mm;column-gap:8mm");
+    expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
     expect(html).toContain("clip-path:inset(0 0 22% 0)");
     expect(html).toContain("border:.6pt solid #6d6d86;border-radius:4mm");
     expect(html).toContain('class="right-meta"');
-    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:31mm minmax(0,1fr);column-gap:3mm");
+    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:33mm minmax(0,1fr);column-gap:2mm");
     expect(html).toContain('class="meta-row branch-row"><b>Branch Name:</b><span class="meta-value">HADDAH</span>');
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
     expect(html).toContain('class="meta-row date-row"><b>Date:</b><span class="meta-value">15/08/2026</span>');
