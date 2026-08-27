@@ -9,4 +9,5 @@ export const referenceAssets = {
   headerStrip: "/manus-storage/kuraimi-header-strip_ff07f269.png",
   footerStrip: "/manus-storage/kuraimi-footer-strip_74a0236b.png",
   qrLogo: "/manus-storage/kuraimi-qr-logo-reference_e6a47e2c.png",
+  qrBrandLogo: "/assets/qr-brand-logo-transparent.png",
 } as const;

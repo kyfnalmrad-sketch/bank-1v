@@ -5,7 +5,6 @@ import { chromium } from "playwright-core";
 
 const outputDir = resolve(import.meta.dirname, "..", "tmp-direct-download-test");
 mkdirSync(outputDir, { recursive: true });
-
 const rows = [["Date", "Description", "Reference", "Debit", "Credit", "Balance"]];
 for (let index = 1; index <= 21; index += 1) {
   const day = String(index).padStart(2, "0");
@@ -29,12 +28,32 @@ try {
   await page.getByRole("button", { name: "Review & Export" }).click();
   await page.getByText("Current estimate: 2 statement page(s).").waitFor({ timeout: 10_000 });
 
-  const downloadPromise = page.waitForEvent("download", { timeout: 45_000 });
-  await page.getByRole("button", { name: "Download Account Statement PDF" }).click();
-  const download = await downloadPromise;
-  const target = resolve(outputDir, "Account-Statement-multipage.pdf");
-  await download.saveAs(target);
-  console.log(JSON.stringify({ target, filename: download.suggestedFilename() }));
+  const popupPromise = page.waitForEvent("popup", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Print / Save Account Statement PDF" }).click();
+  const popup = await popupPromise;
+  await popup.waitForLoadState("load");
+  await popup.evaluate(() => document.fonts?.ready);
+  const pageCount = await popup.locator(".page").count();
+  const operationCount = await popup.locator("[data-operation]").count();
+  const firstPageOperationCount = await popup.locator(".page").nth(0).locator("[data-operation]").count();
+  const secondPageOperationCount = await popup.locator(".page").nth(1).locator("[data-operation]").count();
+  const firstPageText = await popup.locator(".page").nth(0).textContent();
+  const lastPageText = await popup.locator(".page").nth(1).textContent();
+  const finalText = await popup.locator("body").textContent();
+  const firstPageHasFinalNotice = firstPageText?.includes("Please review this statement") || firstPageText?.includes("END OF REPORT");
+  const lastPageHasFinalNotice = lastPageText?.includes("Please review this statement") && lastPageText.includes("END OF REPORT");
+  if (pageCount !== 2 || operationCount !== 21 || firstPageOperationCount !== 19 || secondPageOperationCount !== 2 || firstPageHasFinalNotice || !lastPageHasFinalNotice || !finalText?.includes("END OF REPORT")) {
+    throw new Error(JSON.stringify({ pageCount, operationCount, firstPageOperationCount, secondPageOperationCount, firstPageHasFinalNotice, lastPageHasFinalNotice }));
+  }
+  await popup.pdf({
+    path: resolve(outputDir, "Account-Statement-multipage-native.pdf"),
+    format: "A4",
+    printBackground: true,
+    preferCSSPageSize: true,
+    margin: { top: "0", right: "0", bottom: "0", left: "0" },
+  });
+  console.log(JSON.stringify({ target: resolve(outputDir, "Account-Statement-multipage-native.pdf"), pageCount, operationCount, firstPageOperationCount, secondPageOperationCount, firstPageHasFinalNotice, lastPageHasFinalNotice, nativePrint: true }));
+  await popup.close();
 } finally {
   await browser.close();
 }

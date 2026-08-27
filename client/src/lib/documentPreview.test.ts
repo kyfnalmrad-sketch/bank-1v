@@ -12,10 +12,11 @@ describe("reference document previews", () => {
     expect(html).toContain("02 صفر 1448 هـ");
   });
 
-  it("keeps statement preview rows to the 20 transactions permitted per page", () => {
+  it("keeps statement preview rows to the 19 transactions permitted per page", () => {
     const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P1 of 2", closing: -20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT260815${String.fromCharCode(65 + (index % 20))}AA`, debit: 0, credit: 1, balance: index === 0 ? -1 : index + 1 })) });
-    expect((html.match(/data-operation=/g) || [])).toHaveLength(20);
+    expect((html.match(/data-operation=/g) || [])).toHaveLength(19);
     expect(html).not.toContain("END OF REPORT");
+    expect(html).not.toContain("Please review this statement");
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
     expect(html).toContain('class="meta-row date-row"><b>Date:</b><span class="meta-value">15/08/2026</span>');
     expect(html).not.toContain("Period:</b>");
@@ -25,19 +26,23 @@ describe("reference document previews", () => {
     expect(html).not.toContain("20.00 DR");
     expect(html).toContain("width:56mm;height:9.2mm");
     expect(html).toContain("REF P1 of 2");
-    expect(html).toContain("grid-template-columns:86mm 64.8mm;column-gap:35mm");
+    expect(html).toContain("grid-template-columns:106mm 72.8mm;column-gap:8mm");
+    expect(html).toContain("clip-path:inset(0 0 22% 0)");
+    expect(html).toContain("border:.6pt solid #6d6d86;border-radius:4mm");
     expect(html).toContain('class="right-meta"');
-    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:28mm minmax(0,1fr);column-gap:2mm");
+    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:31mm minmax(0,1fr);column-gap:3mm");
     expect(html).toContain('class="meta-row branch-row"><b>Branch Name:</b><span class="meta-value">HADDAH</span>');
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
     expect(html).toContain('class="meta-row date-row"><b>Date:</b><span class="meta-value">15/08/2026</span>');
-    expect(html).toContain("<b>Customer Name:</b> Client");
-    expect(html).toContain(".notice{width:149.01mm;min-height:7.2mm");
+    expect(html).toContain('<div class="meta-field"><b>Customer Name:</b><span class="field-value">Client</span></div>');
+    expect(html).toContain(".left-meta{display:grid;grid-template-rows:auto auto auto;align-content:start;gap:1mm");
+    expect(html).toContain(".notice{width:149.01mm;min-height:7.2mm;margin:2.4mm 0 0 43.95mm");
     const finalPage = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 2, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P2 of 2", closing: -20, transactions: [{ date: "16/08/2026", description: "Cash deposit by customer", operationNumber: "FT260816UAA", debit: 0, credit: 20, balance: -20 }] });
     expect(finalPage).toContain("END OF REPORT");
+    expect(finalPage).toContain("Please review this statement");
     expect(finalPage).toContain("20.00 DR");
     expect(finalPage).toContain(".end{width:149.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060");
-    expect(finalPage.indexOf('<p class="notice">')).toBeLessThan(finalPage.indexOf('<section class="end">'));
+    expect(finalPage.indexOf('<section class="end">')).toBeLessThan(finalPage.indexOf('<p class="notice">'));
     const printable = assemblePrintableStatementHtml([html, finalPage]);
     expect((printable.match(/class="page"/g) || [])).toHaveLength(2);
     expect((printable.match(/data-operation="FT260816UAA"/g) || [])).toHaveLength(1);

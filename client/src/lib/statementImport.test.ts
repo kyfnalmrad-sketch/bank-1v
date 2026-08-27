@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import * as XLSX from "xlsx";
-import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
+import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
 
 describe("statement Excel import", () => {
   it("selects the actual Arabic heading row after preface rows without inventing columns", () => {
@@ -68,6 +68,11 @@ describe("statement Excel import", () => {
 
   it("renders ISO transaction dates separately as an English statement date", () => {
     expect(displayStatementDate("2026-08-04")).toBe("04/08/2026");
+  });
+
+  it("converts a Gregorian issue date to an Um Al-Qura Hijri date with the هـ suffix", () => {
+    expect(formatHijriDate("2026-08-04")).toBe("٢١ صفر ١٤٤٨ هـ");
+    expect(formatHijriDate("not-a-date")).toBe("");
   });
 
   const suppliedFiles = [

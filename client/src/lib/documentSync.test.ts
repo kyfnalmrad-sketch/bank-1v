@@ -13,6 +13,10 @@ describe("applied transaction register synchronization", () => {
     expect(synced.totalDebit).toBe(25);
     expect(synced.statementRows.map((row) => row.balance)).toEqual([150, 125]);
     expect(synced.closing).toBe(125);
-    expect(buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", transactionCount: synced.acceptedRows.length, currency: "USD", closing: synced.closing })).toContain("COUNT=2|CURRENCY=USD|CLOSING=125.00");
+    const payload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "statement", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", firstReference: "FT260804ABC", lastReference: "FT260805DEF", transactionCount: synced.acceptedRows.length, debitCount: 1, creditCount: 1, totalDebit: synced.totalDebit, totalCredit: synced.totalCredit, openingBalance: 50, currency: "USD", closing: synced.closing, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
+    expect(payload).toContain("الصفحة: ١/١");
+    expect(payload).toContain("العمليات: ٢ | سحب: ١ (25.00) | إيداع: ١ (100.00)");
+    expect(payload).toContain("أول مرجع: FT260804ABC");
+    expect(payload).toContain("رصيد البداية: 50.00 | رصيد النهاية: 125.00");
   });
 });

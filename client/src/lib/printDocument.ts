@@ -9,7 +9,7 @@ export type PrintHost = { open: (url?: string, target?: string) => PrintableWind
 export type PrintDocumentKind = "accountStatus" | "accountStatement";
 
 const safeTitle = (title: string) => title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const printAssetStyles = "<style id=\"print-asset-preservation\">@media print{html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{print-color-adjust:exact!important}}}</style>";
+const printAssetStyles = "<style id=\"print-asset-preservation\">@media print{html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style>";
 
 function currentBaseHref() {
   if (typeof window === "undefined") return "http://localhost/";
@@ -131,46 +131,12 @@ async function inlineFrameAssets(frameDocument: Document) {
   await Promise.all(Array.from(frameDocument.querySelectorAll<HTMLImageElement>("img")).map(waitForImage));
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, issueDate?: string) {
-  if (!html || typeof document === "undefined") return false;
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string) {
+  if (!html || typeof window === "undefined") return false;
   const selected = selectPrintableDocument(kind, html, html);
-  const frame = document.createElement("iframe");
-  frame.title = `${selected.title} PDF renderer`;
-  frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;background:#fff;pointer-events:none;";
-  document.body.appendChild(frame);
-  try {
-    const loaded = waitForFrameLoad(frame);
-    frame.srcdoc = withPrintTitle(selected.html, selected.title);
-    await loaded;
-    const frameDocument = frame.contentDocument;
-    if (!frameDocument) throw new Error("PDF preview document is unavailable.");
-    await frameDocument.fonts?.ready;
-    await inlineFrameAssets(frameDocument);
-    const pages = Array.from(frameDocument.querySelectorAll<HTMLElement>(".page"));
-    if (!pages.length) throw new Error("No printable document page was found.");
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-    for (let index = 0; index < pages.length; index += 1) {
-      const page = pages[index];
-      const canvas = await html2canvas(page, {
-        backgroundColor: "#ffffff",
-        imageTimeout: 12_000,
-        logging: false,
-        scale: 2,
-        useCORS: true,
-        width: page.offsetWidth,
-        height: page.offsetHeight,
-        windowWidth: page.scrollWidth,
-      });
-      if (index > 0) pdf.addPage("a4", "portrait");
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297, undefined, "FAST");
-    }
-    pdf.save(directPdfFilename(kind, issueDate));
-    return true;
-  } finally {
-    frame.remove();
-  }
+  // The browser print engine preserves the reference CSS layout. Rendering the
+  // whole A4 page through html2canvas can clip transformed table-cell content.
+  return openPrintWindow(selected.html, selected.title);
 }
 
 export function openPrintWindow(html: string, title: string, host: PrintHost = window) {

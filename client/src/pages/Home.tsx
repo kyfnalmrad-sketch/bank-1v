@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
-import { renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
+import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
@@ -31,6 +31,7 @@ import {
   statementReferenceFromTransactions,
   reviewDescription,
   displayStatementDate,
+  formatHijriDate,
   type ImportedTransaction,
   type StatementColumnMap,
 } from "@/lib/statementImport";
@@ -109,7 +110,8 @@ export default function Home() {
   const [registerDirty, setRegisterDirty] = useState(false);
   const [importNote, setImportNote] = useState("Choose an Excel file to analyse the statement columns before importing.");
   const [isReading, setIsReading] = useState(false);
-  const [qrSource, setQrSource] = useState("");
+  const [statusQrSource, setStatusQrSource] = useState("");
+  const [statementQrSources, setStatementQrSources] = useState<string[]>([]);
   const [barcodeSources, setBarcodeSources] = useState<string[]>([]);
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-descriptions"));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-names"));
@@ -131,10 +133,25 @@ export default function Home() {
   const documentIssueDate = displayStatementDate(issueDate);
   const documentPeriodStart = displayStatementDate(periodStart);
   const documentPeriodEnd = displayStatementDate(periodEnd);
-  const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / 20));
+  const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE));
+  const statementPageGroups = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => statementRows.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE)), [statementPageCount, statementRows]);
+  const statementPageSummaries = useMemo(() => statementPageGroups.map((rows, pageIndex) => {
+    const previousRow = pageIndex > 0 ? statementPageGroups[pageIndex - 1]?.at(-1) : undefined;
+    return {
+      debitCount: rows.filter((row) => row.debit > 0).length,
+      creditCount: rows.filter((row) => row.credit > 0).length,
+      totalDebit: rows.reduce((sum, row) => sum + row.debit, 0),
+      totalCredit: rows.reduce((sum, row) => sum + row.credit, 0),
+      openingBalance: previousRow?.balance ?? money(client.opening),
+      closingBalance: rows.at(-1)?.balance ?? previousRow?.balance ?? money(client.opening),
+      firstReference: rows.at(0)?.operationNumber || "",
+      lastReference: rows.at(-1)?.operationNumber || "",
+    };
+  }), [client.opening, statementPageGroups]);
   const accountStatusHtml = useMemo(() => renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
-    qrUri: qrSource || referenceAssets.qrLogo,
+    qrUri: statusQrSource || referenceAssets.qrLogo,
+    qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
     momaizNo: client.momaizNo,
     passport: client.passport,
@@ -149,15 +166,16 @@ export default function Home() {
     debit: totalDebit,
     closing,
     issueDate: documentIssueDate,
-    issueDateHijri: client.issueDateHijri,
+    issueDateHijri: formatHijriDate(issueDate),
     printTime: client.printTime,
     correspondenceDate: displayStatementDate(client.correspondenceDate),
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, closing, documentIssueDate, qrSource, statementPageCount, statementReference, totalCredit, totalDebit]);
+  }), [client, closing, documentIssueDate, statusQrSource, statementPageCount, statementReference, totalCredit, totalDebit]);
   const statementPageHtml = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => renderStatementPreview({
     headerUri: referenceAssets.headerStrip,
-    qrUri: qrSource || referenceAssets.qrLogo,
+    qrUri: statementQrSources[pageIndex] || referenceAssets.qrLogo,
+    qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
     accountNumber: client.accountNumber,
     momaizNo: client.momaizNo,
@@ -171,16 +189,22 @@ export default function Home() {
     pageCount: statementPageCount,
     barcodeUri: barcodeSources[pageIndex] || "",
     barcodeLabel: `REF P${pageIndex + 1} of ${statementPageCount}`,
-    closing,
-    transactions: statementRows.slice(pageIndex * 20, (pageIndex + 1) * 20).map((row) => ({ date: displayStatementDate(row.date), description: row.description, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  })), [barcodeSources, client, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, qrSource, statementPageCount, statementReference, statementRows]);
+    closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
+    pageSummary: statementPageSummaries[pageIndex],
+    transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
+  })), [barcodeSources, client, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
-    const payload = buildVerificationQrPayload({ reference: statementReference, accountNumber: client.accountNumber, transactionCount: acceptedRows.length, currency: client.currency, closing });
-    QRCode.toDataURL(payload, { width: 220, margin: 1, color: { dark: "#6b5297", light: "#ffffff" } })
-      .then(setQrSource)
-      .catch(() => setQrSource(""));
-  }, [acceptedRows.length, client.accountNumber, client.currency, closing, statementReference]);
+    const firstSummary = statementPageSummaries[0];
+    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit, totalCredit, openingBalance: money(client.opening), currency: client.currency, closing, issueDate: documentIssueDate, issueDateHijri: formatHijriDate(issueDate) });
+    QRCode.toDataURL(statusPayload, { width: 260, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
+      .then(setStatusQrSource)
+      .catch(() => setStatusQrSource(""));
+  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageSummaries, statementReference, totalCredit, totalDebit]);
+
+  useEffect(() => {
+    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 240, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then(setStatementQrSources).catch(() => setStatementQrSources([]));
+  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
 
   useEffect(() => {
     const values = Array.from({ length: statementPageCount }, (_, pageIndex) => `BAK ${statementReference} P${pageIndex + 1} OF ${statementPageCount}`);
@@ -300,8 +324,8 @@ export default function Home() {
     const selected = selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
     setDownloadingDocument(kind);
     try {
-      const downloaded = await downloadDocumentPdf(kind, selected.html, client.issueDate);
-      setImportNote(downloaded ? `${selected.title} PDF downloaded successfully.` : "The PDF could not be created. Please try again.");
+      const opened = await downloadDocumentPdf(kind, selected.html);
+      setImportNote(opened ? `${selected.title} print dialog opened. Choose Save as PDF to create the file.` : "The PDF print window could not be opened. Please allow pop-ups for this site and try again.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);
       setImportNote("The PDF could not be created. Please try again after confirming the preview is fully visible.");
@@ -366,7 +390,7 @@ export default function Home() {
           <p className="hint">These fields appear only on the Account Status Statement. Totals and page count are calculated from the imported transaction file.</p>
           <div className="grid">
             <label>Issue date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
-            <label>Hijri issue date<input value={client.issueDateHijri} onChange={(event) => updateClient("issueDateHijri", event.target.value)} placeholder="e.g., 02 Safar 1448 AH" /></label>
+            <label>Hijri issue date <span className="field-note">Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
             <label>Print time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
             <label>Correspondence date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
           </div>
@@ -377,7 +401,7 @@ export default function Home() {
           <div className="grid">
             <label>Statement start date<input type="date" lang="en-GB" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
             <label>Statement end date<input type="date" lang="en-GB" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
-            <div className="computed-field"><span>Statement pages</span><strong>{statementPageCount}</strong><small>Maximum 20 transactions per page.</small></div>
+            <div className="computed-field"><span>Statement pages</span><strong>{statementPageCount}</strong><small>Maximum 19 transactions per page.</small></div>
           </div>
         </section>
         <section className="panel">
@@ -424,13 +448,13 @@ export default function Home() {
       {activeTab === "training" && <section className="panel statement-preview-panel">
         <div className="panel-heading"><div><h2>Account Status Statement</h2><p className="hint">HTML preview based on the Prototype 0.5.1 reference rules without redesign.</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
         <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
-        <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Creating PDF…" : "Download Account Status PDF"}</button></div>
+        <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button></div>
       </section>}
 
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><h2>Review & Export</h2><p className="hint">Review inputs before printing one document at a time.</p></div><FileText size={26} className="heading-icon" /></div>
-        <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && client.momaizNo ? "Ready for review" : "Customer details required"}</strong><small>Customer name and Momaiz No. are required on the statement.</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>20 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / 20))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
-        <div className="actions document-actions"><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Creating PDF…" : "Download Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Creating PDF…" : "Download Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
+          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && client.momaizNo ? "Ready for review" : "Customer details required"}</strong><small>Customer name and Momaiz No. are required on the statement.</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>19 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
+        <div className="actions document-actions"><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Opening print…" : "Print / Save Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
         {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">Review the original artwork, QR code, values, and page arrangement before printing or downloading.</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
 

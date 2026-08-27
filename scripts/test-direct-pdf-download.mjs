@@ -11,6 +11,28 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 
+async function capturePdf(page, buttonName, expectedTitle, fileName) {
+  const popupPromise = page.waitForEvent("popup", { timeout: 15_000 });
+  await page.getByRole("button", { name: buttonName }).click();
+  const popup = await popupPromise;
+  await popup.waitForLoadState("load");
+  await popup.evaluate(() => document.fonts?.ready);
+  const title = await popup.title();
+  const pageCount = await popup.locator(".page").count();
+  if (title !== expectedTitle || pageCount < 1) {
+    throw new Error(JSON.stringify({ buttonName, title, pageCount }));
+  }
+  await popup.pdf({
+    path: resolve(outputDir, fileName),
+    format: "A4",
+    printBackground: true,
+    preferCSSPageSize: true,
+    margin: { top: "0", right: "0", bottom: "0", left: "0" },
+  });
+  await popup.close();
+  return { title, pageCount };
+}
+
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const diagnostics = [];
@@ -18,29 +40,10 @@ try {
   page.on("pageerror", (error) => diagnostics.push(`pageerror: ${error.message}`));
   await page.goto("http://127.0.0.1:3000/?tab=review", { waitUntil: "networkidle" });
 
-  const statusDownload = page.waitForEvent("download", { timeout: 15_000 }).catch(() => null);
-  await page.getByRole("button", { name: "Download Account Status PDF" }).click();
-  const status = await statusDownload;
-  if (!status) {
-    const body = await page.locator("body").textContent();
-    throw new Error(JSON.stringify({ reason: "Account status PDF did not trigger a download.", body, diagnostics }));
-  }
-  await status.saveAs(resolve(outputDir, status.suggestedFilename()));
+  const status = await capturePdf(page, "Print / Save Account Status PDF", "Account Status Statement", "account-status-native.pdf");
+  const statement = await capturePdf(page, "Print / Save Account Statement PDF", "Account Statement", "account-statement-native.pdf");
 
-  const statementDownload = page.waitForEvent("download", { timeout: 15_000 }).catch(() => null);
-  await page.getByRole("button", { name: "Download Account Statement PDF" }).click();
-  const statement = await statementDownload;
-  if (!statement) {
-    const body = await page.locator("body").textContent();
-    throw new Error(JSON.stringify({ reason: "Account statement PDF did not trigger a download.", body, diagnostics }));
-  }
-  await statement.saveAs(resolve(outputDir, statement.suggestedFilename()));
-
-  console.log(JSON.stringify({
-    outputDir,
-    status: status.suggestedFilename(),
-    statement: statement.suggestedFilename(),
-  }));
+  console.log(JSON.stringify({ outputDir, status, statement, diagnostics }));
 } finally {
   await browser.close();
 }

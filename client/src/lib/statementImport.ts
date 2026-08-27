@@ -86,6 +86,37 @@ export function displayStatementDate(value: unknown) {
   return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : text;
 }
 
+function parseGregorianDate(value: unknown) {
+  const match = String(value ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day, 12));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
+}
+
+export function toArabicDigits(value: unknown) {
+  return String(value ?? "").replace(/[0-9]/g, (digit) => "٠١٢٣٤٥٦٧٨٩"[Number(digit)]);
+}
+
+export function formatHijriDate(value: unknown) {
+  const date = parseGregorianDate(value);
+  if (!date) return "";
+  try {
+    const formatter = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-arab", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
+    return `${parts.day} ${parts.month} ${parts.year} هـ`;
+  } catch {
+    return "";
+  }
+}
+
 function fieldForHeader(value: unknown): StatementColumnKey | undefined {
   const header = normalizeHeader(value);
   if (!header || unsupportedHeader.test(header)) return undefined;
