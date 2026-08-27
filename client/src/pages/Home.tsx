@@ -287,7 +287,7 @@ export default function Home() {
     const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount));
     const generated = values.map((value) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      JsBarcode(svg, value, { format: "CODE128", width: 1, height: 24, displayValue: false, margin: 0, lineColor: "#6b5297", background: "#ffffff" });
+      JsBarcode(svg, value, { format: "CODE128", width: 1.35, height: 22, displayValue: false, margin: 0, lineColor: "#6b5297", background: "#ffffff" });
       return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.outerHTML)}`;
     });
     setBarcodeSources(generated);

@@ -138,7 +138,7 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
 export function renderStatementPreview(data: StatementPreviewInput) {
   const rows = data.transactions.slice(0, MAX_TRANSACTIONS_PER_PAGE);
   const barcodeFooter = data.barcodeUri
-    ? `<div class="side-barcode" style="position:absolute;left:5.8mm;bottom:5.2mm;width:56mm;height:9.2mm;display:grid;grid-template-rows:6.8mm 2mm;gap:.4mm;text-align:center;color:#6b5297;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode" style="display:block;width:56mm;height:6.8mm;object-fit:fill;background:#fff"><span>${value(data.barcodeLabel)}</span></div>`
+    ? `<div class="side-barcode" style="position:absolute;left:4mm;bottom:5.2mm;width:72mm;height:8.4mm;display:grid;grid-template-rows:6mm 2mm;gap:.4mm;text-align:center;color:#6b5297;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode" style="display:block;width:72mm;height:6mm;object-fit:fill;background:#fff"><span>${value(data.barcodeLabel)}</span></div>`
     : "";
   const tableRows = rows.length
     ? rows.map((row) => `<tr data-operation="${escapeHtml(row.operationNumber)}"><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td><td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`).join("")
@@ -168,7 +168,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .right-meta .date-row{grid-template-columns:15mm minmax(0,1fr)}
     .right-meta .meta-value{display:block;min-width:0;max-width:100%;max-height:5mm;line-height:4mm;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .right-meta .branch-row .meta-value{font-size:8.5pt;letter-spacing:-.08pt}
-    .page-strip{position:absolute;left:65mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}
+    .page-strip{position:absolute;left:78mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}
     .page-strip table{width:100%;height:100%;margin:0;border-collapse:collapse;table-layout:fixed}
     .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .page-strip td:first-child{border-left:0}

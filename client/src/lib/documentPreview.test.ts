@@ -25,9 +25,10 @@ describe("reference document previews", () => {
     expect(html).not.toContain("PAGE 1/2");
     expect(html).toContain("1.00 DR");
     expect(html).not.toContain("20.00 DR");
-    expect(html).toContain("width:56mm;height:9.2mm");
+    expect(html).toContain("width:72mm;height:8.4mm");
     expect(html).toContain("REF P1 of 2");
     expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
+    expect(html).toContain("left:78mm;right:8mm;bottom:5mm;height:10.5mm");
     expect(html).toContain("clip-path:inset(0 0 22% 0)");
     expect(html).toContain("border:.6pt solid #6d6d86;border-radius:4mm");
     expect(html).toContain('class="right-meta"');
