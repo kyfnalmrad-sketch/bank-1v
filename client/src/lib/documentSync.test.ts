@@ -24,10 +24,13 @@ describe("applied transaction register synchronization", () => {
     expect(payload).toContain("CLOSE=125.00");
     expect(payload).not.toContain("٢٢ محرم");
     const statusPayload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "status", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", transactionCount: 2, debitCount: 1, creditCount: 1, totalDebit: 25, totalCredit: 100, openingBalance: 50, currency: "USD", closing: 125, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
+    expect(statusPayload).toContain("KURAIMI ISLAMIC BANK");
+    expect(statusPayload).not.toContain("TRAINING");
     expect(statusPayload).toContain("TYPE=ACCOUNT STATUS");
     expect(statusPayload).toContain("HIJRI=22 Muharram 1448 AH");
     const barcode = buildVerificationBarcodePayload("BAK-ACCT-20260804-0001", 1, 3);
-    expect(barcode.startsWith("KIMB|VERIFY|STMT|REF=BAK-ACCT-20260804-0001|PAGE=1/3|CHK=")).toBe(true);
+    expect(barcode.startsWith("KURAIMI ISLAMIC BANK|VERIFY|STMT|REF=BAK-ACCT-20260804-0001|PAGE=1/3|CHK=")).toBe(true);
+    expect(barcode).not.toContain("TRAINING");
     expect(barcode.slice(-8)).toMatch(/^[0-9A-F]{8}$/);
   });
 });

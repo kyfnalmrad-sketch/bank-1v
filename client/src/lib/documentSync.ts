@@ -81,7 +81,7 @@ function verificationChecksum(value: string) {
 export function buildVerificationQrPayload(input: VerificationQrInput) {
   const typeLabel = input.documentType === "status" ? "ACCOUNT STATUS" : "ACCOUNT STATEMENT";
   const lines = [
-    "KURAIMI TRAINING DOC",
+    "KURAIMI ISLAMIC BANK",
     `TYPE=${typeLabel}`,
     `PAGE=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
     `CLIENT=${qrText(input.customerName)}`,
@@ -105,6 +105,6 @@ export function buildVerificationQrPayload(input: VerificationQrInput) {
 
 export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number) {
   const normalizedReference = qrText(reference).replace(/\s+/g, "-");
-  const core = `KIMB|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
+  const core = `KURAIMI ISLAMIC BANK|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
   return `${core}|CHK=${verificationChecksum(core)}`;
 }
