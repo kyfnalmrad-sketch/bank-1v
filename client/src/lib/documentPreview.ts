@@ -173,22 +173,22 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .page-strip td:first-child{border-left:0}
     .tx-head,.transactions{table-layout:fixed;border-collapse:collapse}
-    .tx-head{width:176.11mm;height:9.91mm;margin-left:17.1mm}
+    .tx-head{width:179.11mm;height:9.91mm;margin-left:17.1mm}
     .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center}
-    .transactions{width:175.6mm;margin-left:17.36mm}
+    .transactions{width:178.6mm;margin-left:17.36mm}
     .transactions tr{break-inside:avoid;page-break-inside:avoid}
     .transactions td{height:8.8mm;padding:.35mm .45mm;border:0;text-align:center;vertical-align:middle}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
     .date-cell{width:26.59mm;text-align:center;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
-    .particular-cell{width:48mm;overflow:visible;white-space:normal;font:400 9.96pt/9.96pt "Courier New",Courier,monospace}
+    .particular-cell{width:51mm;overflow:visible;white-space:normal;text-align:left!important;font:700 9.2pt/3.05mm Arial,Tahoma,sans-serif;padding:.55mm .8mm!important}
     .operation-cell{width:26mm;font:400 8.1pt/8.1pt Arial,Tahoma,sans-serif;white-space:nowrap;color:#6b5297}
     .number-cell{width:18.5mm;white-space:nowrap;font:400 9.96pt/9.96pt "Courier New",Courier,monospace}
     .credit-cell{width:20mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
     .balance-cell{width:36.51mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
     .transactions td span{display:block;overflow:hidden;text-overflow:clip}
     .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:3}
-    .particular-cell .description-standard{font:400 9.6pt/2.55mm Arial,Tahoma,sans-serif;max-height:7.65mm}
-    .particular-cell .description-compact{font:400 8.6pt/2.4mm Arial,Tahoma,sans-serif;max-height:7.2mm}
+    .particular-cell .description-standard{font:700 9.1pt/3.05mm Arial,Tahoma,sans-serif;max-height:9.15mm}
+    .particular-cell .description-compact{font:700 8.3pt/2.85mm Arial,Tahoma,sans-serif;max-height:8.55mm}
     .date-cell span{transform:translate(2.1pt,-2.73pt)}
     .particular-cell span{transform:translateX(1.61pt)}
     .number-cell span{transform:translate(1.88pt,-1.59pt)}
@@ -197,7 +197,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .credit-cell.placeholder-cell span{transform:translate(-1.13pt,-1.59pt)}
     .balance-cell span{transform:translate(2.03pt,-.69pt)}
     .notice{width:149.01mm;min-height:7.2mm;margin:2.4mm 0 0 43.95mm;padding:0 1mm;color:#b00020;text-align:center;font:700 8.1pt/3.2mm Arial,sans-serif}
-    .end{width:149.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060;display:grid;grid-template-columns:48mm 26mm 18.5mm 20mm 36.51mm;color:#002060;text-align:center}
+    .end{width:152.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060;display:grid;grid-template-columns:51mm 26mm 18.5mm 20mm 36.51mm;color:#002060;text-align:center}
     .end div{padding-top:.44mm;font:700 12pt/12pt "Times New Roman",serif}
   </style></head><body><section class="page">
     <header class="masthead">

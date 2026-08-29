@@ -27,7 +27,7 @@ describe("reference document previews", () => {
     expect(html).not.toContain("20.00 DR");
     expect(html).toContain("width:72mm;height:8.4mm");
     expect(html).toContain("-webkit-line-clamp:3");
-    expect(html).toContain(".particular-cell .description-compact{font:400 8.6pt/2.4mm Arial,Tahoma,sans-serif;max-height:7.2mm}");
+    expect(html).toContain(".particular-cell .description-compact{font:700 8.3pt/2.85mm Arial,Tahoma,sans-serif;max-height:8.55mm}");
     expect(html).toContain("REF P1 of 2");
     expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
     expect(html).toContain("left:78mm;right:8mm;bottom:5mm;height:10.5mm");
@@ -45,7 +45,7 @@ describe("reference document previews", () => {
     expect(finalPage).toContain("END OF REPORT");
     expect(finalPage).toContain("Please review this statement");
     expect(finalPage).toContain("20.00 DR");
-    expect(finalPage).toContain(".end{width:149.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060");
+    expect(finalPage).toContain(".end{width:152.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060");
     expect(finalPage.indexOf('<section class="end">')).toBeLessThan(finalPage.indexOf('<p class="notice">'));
     const printable = assemblePrintableStatementHtml([html, finalPage]);
     expect((printable.match(/class="page"/g) || [])).toHaveLength(2);

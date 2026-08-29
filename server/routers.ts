@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { ensureRenderStagingSchema, getRenderSnapshot, saveRenderSnapshot } from "./renderPg";
+import { createStatementHistory, deleteStatementHistory, ensureRenderStagingSchema, getRenderSnapshot, getStatementHistory, listStatementHistory, saveRenderSnapshot, updateStatementHistory } from "./renderPg";
 import { z } from "zod";
 
 export const appRouter = router({
@@ -30,6 +30,11 @@ export const appRouter = router({
     saveSnapshot: publicProcedure
       .input(z.object({ workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) }))
       .mutation(({ input }) => saveRenderSnapshot(input.workspaceKey, input.payload)),
+    listHistory: publicProcedure.query(() => listStatementHistory()),
+    getHistory: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(({ input }) => getStatementHistory(input.id)),
+    createHistory: publicProcedure.input(z.object({ title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => createStatementHistory(input.payload, input.title, input.reference, input.customerName, input.accountNumber)),
+    updateHistory: publicProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => updateStatementHistory(input.id, input.payload, input.title, input.reference, input.customerName, input.accountNumber)),
+    deleteHistory: publicProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteStatementHistory(input.id)),
   }),
 
   // TODO: add feature routers here, e.g.

@@ -14,10 +14,12 @@ import {
   FileText,
   Download,
   Database,
+  FolderOpen,
   LoaderCircle,
   Printer,
   RefreshCcw,
   ShieldCheck,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { referenceAssets } from "@/lib/reference-assets";
@@ -38,7 +40,7 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
-type TabId = "account" | "transactions" | "training" | "review";
+type TabId = "account" | "transactions" | "training" | "review" | "history";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
@@ -52,6 +54,7 @@ type SnapshotPayload = {
   totalCreditOverride: string;
   totalDebitOverride: string;
 };
+type HistoryItem = { id: number; title: string; statement_reference: string | null; customer_name: string | null; account_number: string | null; created_at: string; updated_at: string };
 
 const snapshotWorkspaceStorageKey = "bak-web-staging-workspace-key";
 
@@ -69,6 +72,7 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "transactions", label: "Transactions & Import" },
   { id: "training", label: "Account Status Statement" },
   { id: "review", label: "Review & Export" },
+  { id: "history", label: "Saved Statements" },
 ];
 
 const defaultClient = {
@@ -149,6 +153,13 @@ export default function Home() {
   const snapshotRestored = useRef(false);
   const snapshotQuery = trpc.staging.loadSnapshot.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false });
   const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
+  const historyQuery = trpc.staging.listHistory?.useQuery(undefined, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
+  const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
+  const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1 }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null };
+  const createHistoryMutation = trpc.staging.createHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
+  const updateHistoryMutation = trpc.staging.updateHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
+  const deleteHistoryMutation = trpc.staging.deleteHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ deleted: false }) };
+  const [editingHistoryId, setEditingHistoryId] = useState<number | null>(null);
 
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(client.opening)), [appliedTransactions, client.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
@@ -249,6 +260,36 @@ export default function Home() {
     } catch {
       setSnapshotState("error");
     }
+  };
+
+  const saveStatementHistory = async () => {
+    const title = `${client.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
+    const input = { title, reference: statementReference, customerName: client.name, accountNumber: client.accountNumber, payload: snapshotPayload };
+    try {
+      if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input });
+      else await createHistoryMutation.mutateAsync(input);
+      await historyQuery.refetch(); setActiveTab("history");
+    } catch { setImportNote("The statement could not be saved to the history database."); }
+  };
+
+  const openStatementHistory = async (id: number) => {
+    setSelectedHistoryId(id);
+  };
+
+  useEffect(() => {
+    const payload = (getHistoryQuery.data as { payload?: Partial<SnapshotPayload> } | null)?.payload;
+    if (selectedHistoryId !== null && payload?.client) {
+      if (!payload?.client) return;
+      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
+      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
+      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("review");
+      setSelectedHistoryId(null);
+    }
+  }, [getHistoryQuery.data, selectedHistoryId]);
+
+  const deleteStatementHistory = async (id: number) => {
+    if (!window.confirm("Delete this saved statement?")) return;
+    await deleteHistoryMutation.mutateAsync({ id }); await historyQuery.refetch();
   };
 
   const snapshotStatusLabel = snapshotQuery.isLoading || snapshotState === "loading"
@@ -535,6 +576,7 @@ export default function Home() {
         </section>}
       </>}
 
+      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)}><FolderOpen size={16} /> Open / Edit</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "training" && <section className="panel statement-preview-panel">
         <div className="panel-heading"><div><h2>Account Status Statement</h2><p className="hint">HTML preview based on the Prototype 0.5.1 reference rules without redesign.</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
         <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
@@ -544,7 +586,7 @@ export default function Home() {
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><h2>Review & Export</h2><p className="hint">Review inputs before printing one document at a time.</p></div><FileText size={26} className="heading-icon" /></div>
           <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && client.momaizNo ? "Ready for review" : "Customer details required"}</strong><small>Customer name and Momaiz No. are required on the statement.</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>19 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
-        <div className="actions document-actions"><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Opening print…" : "Print / Save Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
+        <div className="actions document-actions"><button type="button" className="secondary-button" onClick={() => void saveStatementHistory()} disabled={createHistoryMutation.isPending || updateHistoryMutation.isPending}><Database size={17} /> {editingHistoryId ? "Update Saved Statement" : "Save to Statement History"}</button><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Opening print…" : "Print / Save Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
         {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">Review the original artwork, QR code, values, and page arrangement before printing or downloading.</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
 
