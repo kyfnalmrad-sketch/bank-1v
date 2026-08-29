@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as XLSX from "xlsx";
 
 const qrDataUrl = "data:image/png;base64,QR";
@@ -43,6 +43,8 @@ function mockPrintWindow() {
 }
 
 describe("Home applied transaction register", () => {
+  afterEach(cleanup);
+
   beforeEach(() => {
     localStorage.clear();
   });
@@ -77,5 +79,27 @@ describe("Home applied transaction register", () => {
     expect(statementHtml).toContain("<title>Account Statement</title>");
     expect(statementHtml).toContain("header-art");
     expect(statementHtml).toContain("05/08/2026");
+  });
+
+  it("allows reported credit and debit totals to be overridden before printing the status statement", async () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Transactions & Import" }));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [makeLedgerFile()] } });
+    await screen.findByText("Editable Transaction Register");
+
+    fireEvent.click(screen.getByRole("button", { name: "Account Details" }));
+    fireEvent.change(screen.getByLabelText("Total credit (editable)"), { target: { value: "120.00" } });
+    fireEvent.change(screen.getByLabelText("Total debit (editable)"), { target: { value: "30.00" } });
+    expect(screen.getByDisplayValue("120.00")).toBeTruthy();
+    expect(screen.getByDisplayValue("30.00")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Review & Export" }));
+    fireEvent.click(screen.getByRole("button", { name: "View Account Status Statement" }));
+    const preview = await screen.findByTitle("Account Status Statement print preview");
+    expect(preview.getAttribute("srcdoc")).toContain("Total Credits</th><td>120.00</td>");
+    expect(preview.getAttribute("srcdoc")).toContain("Total Debits</th><td>30.00</td>");
+    expect(preview.getAttribute("srcdoc")).toContain("Closing Balance</th><td>90.00</td>");
   });
 });

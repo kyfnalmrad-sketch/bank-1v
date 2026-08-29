@@ -186,9 +186,9 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .credit-cell{width:20mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
     .balance-cell{width:36.51mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
     .transactions td span{display:block;overflow:hidden;text-overflow:clip}
-    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-    .particular-cell .description-standard{font:400 9.6pt/3.3mm Arial,Tahoma,sans-serif;max-height:6.6mm}
-    .particular-cell .description-compact{font:400 8.8pt/3.1mm Arial,Tahoma,sans-serif;max-height:6.2mm}
+    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+    .particular-cell .description-standard{font:400 9.6pt/2.55mm Arial,Tahoma,sans-serif;max-height:7.65mm}
+    .particular-cell .description-compact{font:400 8.6pt/2.4mm Arial,Tahoma,sans-serif;max-height:7.2mm}
     .date-cell span{transform:translate(2.1pt,-2.73pt)}
     .particular-cell span{transform:translateX(1.61pt)}
     .number-cell span{transform:translate(1.88pt,-1.59pt)}

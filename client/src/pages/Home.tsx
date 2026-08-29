@@ -49,6 +49,8 @@ type SnapshotPayload = {
   mappedFields: Array<{ key: keyof typeof statementFieldLabels; source: string }>;
   transactions: Transaction[];
   appliedTransactions: Transaction[];
+  totalCreditOverride: string;
+  totalDebitOverride: string;
 };
 
 const snapshotWorkspaceStorageKey = "bak-web-staging-workspace-key";
@@ -130,6 +132,8 @@ export default function Home() {
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appliedTransactions, setAppliedTransactions] = useState<Transaction[]>([]);
+  const [totalCreditOverride, setTotalCreditOverride] = useState("");
+  const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [registerDirty, setRegisterDirty] = useState(false);
   const [importNote, setImportNote] = useState("Choose an Excel file to analyse the statement columns before importing.");
   const [isReading, setIsReading] = useState(false);
@@ -148,6 +152,10 @@ export default function Home() {
 
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(client.opening)), [appliedTransactions, client.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
+  const reportedTotalCredit = totalCreditOverride.trim() === "" ? totalCredit : money(totalCreditOverride);
+  const reportedTotalDebit = totalDebitOverride.trim() === "" ? totalDebit : money(totalDebitOverride);
+  const hasTotalsOverride = totalCreditOverride.trim() !== "" || totalDebitOverride.trim() !== "";
+  const reportedClosing = hasTotalsOverride ? money(client.opening) + reportedTotalCredit - reportedTotalDebit : closing;
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
   const internalStatementReference = useMemo(() => statementReferenceFromTransactions(appliedTransactions, client.accountNumber || client.momaizNo), [appliedTransactions, client.accountNumber, client.momaizNo]);
   const excelStatementReference = useMemo(() => appliedTransactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [appliedTransactions]);
@@ -190,17 +198,17 @@ export default function Home() {
     branchName: client.branch,
     currency: client.currency,
     opening: money(client.opening),
-    credit: totalCredit,
-    debit: totalDebit,
-    closing,
+    credit: reportedTotalCredit,
+    debit: reportedTotalDebit,
+    closing: reportedClosing,
     issueDate: formatEnglishGregorianDate(issueDate),
     issueDateHijri: formatHijriDate(issueDate),
     printTime: client.printTime,
     correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, closing, documentIssueDate, statusQrSource, statementPageCount, statementReference, totalCredit, totalDebit]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, fileName, columnMap, mappedFields, transactions, appliedTransactions }), [appliedTransactions, client, columnMap, fileName, mappedFields, referenceSource, transactions]);
+  }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statusQrSource, statementPageCount, statementReference]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, mappedFields, referenceSource, totalCreditOverride, totalDebitOverride, transactions]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -217,6 +225,8 @@ export default function Home() {
     setMappedFields(Array.isArray(payload.mappedFields) ? payload.mappedFields : []);
     setTransactions(Array.isArray(payload.transactions) ? payload.transactions : []);
     setAppliedTransactions(Array.isArray(payload.appliedTransactions) ? payload.appliedTransactions : []);
+    setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
+    setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
     setSnapshotState("restored");
   }, [snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -273,11 +283,11 @@ export default function Home() {
 
   useEffect(() => {
     const firstSummary = statementPageSummaries[0];
-    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit, totalCredit, openingBalance: money(client.opening), currency: client.currency, closing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
+    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
     QRCode.toDataURL(statusPayload, { width: 260, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then(setStatusQrSource)
       .catch(() => setStatusQrSource(""));
-  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageSummaries, statementReference, totalCredit, totalDebit]);
+  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementPageSummaries, statementReference]);
 
   useEffect(() => {
     Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 240, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then(setStatementQrSources).catch(() => setStatementQrSources([]));
@@ -465,7 +475,7 @@ export default function Home() {
         </section>
         <section className="panel">
           <h2>Account Status Statement Fields</h2>
-          <p className="hint">These fields appear only on the Account Status Statement. Totals and page count are calculated from the imported transaction file.</p>
+          <p className="hint">These fields appear only on the Account Status Statement. You can adjust the reported credit and debit totals before printing; the closing balance and status summary will update accordingly.</p>
           <div className="grid">
             <label>Issue date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
             <label>Hijri issue date <span className="field-note">Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
@@ -486,9 +496,11 @@ export default function Home() {
           <h2>Financial Details</h2>
           <div className="grid">
             <label>Opening balance<input inputMode="decimal" dir="ltr" value={client.opening} onChange={(event) => updateClient("opening", event.target.value)} /></label>
-            <div className="computed-field"><span>Imported total credit</span><strong>{formatMoney(totalCredit)}</strong></div>
-            <div className="computed-field"><span>Imported total debit</span><strong>{formatMoney(totalDebit)}</strong></div>
-            <div className="computed-field"><span>Calculated closing balance</span><strong>{formatMoney(closing)}</strong></div>
+            <label>Total credit (editable)<input inputMode="decimal" dir="ltr" value={totalCreditOverride} placeholder={formatMoney(totalCredit)} onChange={(event) => setTotalCreditOverride(event.target.value)} /></label>
+            <label>Total debit (editable)<input inputMode="decimal" dir="ltr" value={totalDebitOverride} placeholder={formatMoney(totalDebit)} onChange={(event) => setTotalDebitOverride(event.target.value)} /></label>
+            <div className="computed-field"><span>Reported credit</span><strong>{formatMoney(reportedTotalCredit)}</strong><small>{totalCreditOverride.trim() ? "Manual override" : "From accepted transactions"}</small></div>
+            <div className="computed-field"><span>Reported debit</span><strong>{formatMoney(reportedTotalDebit)}</strong><small>{totalDebitOverride.trim() ? "Manual override" : "From accepted transactions"}</small></div>
+            <div className="computed-field"><span>Reported closing balance</span><strong>{formatMoney(reportedClosing)}</strong></div>
             <div className="computed-field"><span>Accepted transactions</span><strong>{acceptedRows.length}</strong></div>
             <div className="computed-field reference-field"><span>Statement reference</span><strong dir="ltr">{statementReference}</strong><small>Stable structure based on the first imported transaction date.</small></div>
           </div>

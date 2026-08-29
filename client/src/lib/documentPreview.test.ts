@@ -26,6 +26,8 @@ describe("reference document previews", () => {
     expect(html).toContain("1.00 DR");
     expect(html).not.toContain("20.00 DR");
     expect(html).toContain("width:72mm;height:8.4mm");
+    expect(html).toContain("-webkit-line-clamp:3");
+    expect(html).toContain(".particular-cell .description-compact{font:400 8.6pt/2.4mm Arial,Tahoma,sans-serif;max-height:7.2mm}");
     expect(html).toContain("REF P1 of 2");
     expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
     expect(html).toContain("left:78mm;right:8mm;bottom:5mm;height:10.5mm");
