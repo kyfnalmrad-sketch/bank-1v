@@ -180,7 +180,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .tx-head{height:9.91mm}
     .tx-head tr,.transactions tr{display:grid;width:190mm;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm}
     .tx-head.with-branch tr,.transactions.with-branch tr{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}
-    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;min-width:0}
+    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;min-width:0;line-height:1.1}
     .transactions tr{break-inside:avoid;page-break-inside:avoid;min-height:9.3mm}
     .transactions td{min-width:0;min-height:9.3mm;padding:.7mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
