@@ -46,6 +46,7 @@ type SnapshotPayload = {
   schemaVersion: 1;
   client: typeof defaultClient;
   referenceSource: "internal" | "excel";
+  includeBranch: boolean;
   fileName: string;
   columnMap: StatementColumnMap;
   mappedFields: Array<{ key: keyof typeof statementFieldLabels; source: string }>;
@@ -131,6 +132,7 @@ export default function Home() {
   const [client, setClient] = useState(defaultClient);
   const [fileName, setFileName] = useState("");
   const [referenceSource, setReferenceSource] = useState<"internal" | "excel">("internal");
+  const [includeBranch, setIncludeBranch] = useState(false);
   const [columnMap, setColumnMap] = useState<StatementColumnMap>({});
   const [mappedFields, setMappedFields] = useState<Array<{ key: keyof typeof statementFieldLabels; source: string }>>([]);
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
@@ -219,7 +221,7 @@ export default function Home() {
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statusQrSource, statementPageCount, statementReference]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, mappedFields, referenceSource, totalCreditOverride, totalDebitOverride, transactions]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, totalCreditOverride, totalDebitOverride, transactions]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -231,6 +233,7 @@ export default function Home() {
     }
     setClient({ ...defaultClient, ...payload.client });
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
+    setIncludeBranch(payload.includeBranch === true);
     setFileName(typeof payload.fileName === "string" ? payload.fileName : "");
     setColumnMap(payload.columnMap && typeof payload.columnMap === "object" ? payload.columnMap : {});
     setMappedFields(Array.isArray(payload.mappedFields) ? payload.mappedFields : []);
@@ -281,7 +284,7 @@ export default function Home() {
     if (selectedHistoryId !== null && payload?.client) {
       if (!payload?.client) return;
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
-      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
+      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
       setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("review");
       setSelectedHistoryId(null);
     }
@@ -305,6 +308,7 @@ export default function Home() {
     qrUri: statementQrSources[pageIndex] || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
+    includeBranch,
     accountNumber: client.accountNumber,
     momaizNo: client.momaizNo,
     branchName: client.branch,
@@ -319,26 +323,26 @@ export default function Home() {
     barcodeLabel: `REF P${pageIndex + 1} of ${statementPageCount}`,
     closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
     pageSummary: statementPageSummaries[pageIndex],
-    transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  })), [barcodeSources, client, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
+      transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
+  })), [barcodeSources, client, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
     const firstSummary = statementPageSummaries[0];
     const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
-    QRCode.toDataURL(statusPayload, { width: 260, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
+    QRCode.toDataURL(statusPayload, { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then(setStatusQrSource)
       .catch(() => setStatusQrSource(""));
   }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementPageSummaries, statementReference]);
 
   useEffect(() => {
-    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 240, margin: 4, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then(setStatementQrSources).catch(() => setStatementQrSources([]));
+    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then(setStatementQrSources).catch(() => setStatementQrSources([]));
   }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
 
   useEffect(() => {
     const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount));
     const generated = values.map((value) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      JsBarcode(svg, value, { format: "CODE128", width: 1.35, height: 22, displayValue: false, margin: 0, lineColor: "#6b5297", background: "#ffffff" });
+      JsBarcode(svg, value, { format: "CODE128", width: 1.8, height: 34, displayValue: false, margin: 2, lineColor: "#6b5297", background: "#ffffff" });
       return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.outerHTML)}`;
     });
     setBarcodeSources(generated);
@@ -419,10 +423,11 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const updateTransaction = (operationNumber: string, field: "date" | "description" | "externalReference" | "debit" | "credit" | "balance", input: string) => {
+  const updateTransaction = (operationNumber: string, field: "date" | "description" | "branch" | "externalReference" | "debit" | "credit" | "balance", input: string) => {
     setRegisterDirty(true);
     setTransactions((current) => current.map((transaction) => {
       if (transaction.operationNumber !== operationNumber) return transaction;
+      if (field === "branch") return { ...transaction, branch: input };
       if (field === "description") {
         const review = reviewDescription(input);
         return { ...transaction, description: review.description, rejected: !review.accepted, rejectionReason: review.reason, personName: review.personName, suggestedDescription: review.suggestedDescription };
@@ -498,6 +503,7 @@ export default function Home() {
             <label>Document language<select value="en" disabled><option value="en">English</option></select></label>
             <label>Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
             <label>Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
+            <label>Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
           </div>
           <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button><span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
@@ -530,7 +536,7 @@ export default function Home() {
           <div className="grid">
             <label>Statement start date<input type="date" lang="en-GB" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
             <label>Statement end date<input type="date" lang="en-GB" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
-            <div className="computed-field"><span>Statement pages</span><strong>{statementPageCount}</strong><small>Maximum 19 transactions per page.</small></div>
+            <div className="computed-field"><span>Statement pages</span><strong>{statementPageCount}</strong><small>Maximum 18 transactions per page.</small></div>
           </div>
         </section>
         <section className="panel">
@@ -569,8 +575,8 @@ export default function Home() {
         </section>
         {transactions.length > 0 && <section className="panel preview-panel">
           <div className="panel-heading"><div><h2>Editable Transaction Register</h2><p className="hint">Edit the values directly, then apply the register to update the financial totals, documents, QR code, and print output together. Rejected transactions remain visible for review and are re-evaluated when the description changes.</p></div><span className="summary-chip">{transactions.filter((item) => !item.rejected).length} accepted · {draftRejectedRows.length} rejected</span></div>
-          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th></tr></thead><tbody>
-            {transactions.map((row) => <tr className={row.rejected ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.operationNumber, "date", event.target.value)} /></td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.operationNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.operationNumber, "externalReference", event.target.value)} /></td>}<td dir="ltr">{row.operationNumber}</td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.operationNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.operationNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.operationNumber, "balance", event.target.value)} /></td><td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td></tr>)}
+          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th></tr></thead><tbody>
+            {transactions.map((row) => <tr className={row.rejected ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.operationNumber, "date", event.target.value)} /></td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.operationNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.operationNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.operationNumber, "externalReference", event.target.value)} /></td>}<td dir="ltr">{row.operationNumber}</td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.operationNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.operationNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.operationNumber, "balance", event.target.value)} /></td><td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td></tr>)}
           </tbody></table></div>
           <div className="actions"><button type="button" onClick={applyTransactionRegister} disabled={!registerDirty}><CheckCircle2 size={17} /> {registerDirty ? "Apply Register Changes" : "Register Applied"}</button></div>
         </section>}

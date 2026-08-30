@@ -26,6 +26,13 @@ describe("statement Excel import", () => {
     expect(discovered?.map).toMatchObject({ date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 });
   });
 
+  it("detects and imports an optional Branch column from Excel", () => {
+    const matrix = [["Date", "Movement Description", "Branch", "Ref No.", "Debit", "Credit", "Balance"], ["2026-08-01", "Cash deposit", "Br. Maalla", "OP-1001", "", "100", "100"]];
+    const discovered = discoverStatementHeader(matrix);
+    expect(discovered?.map).toMatchObject({ date: 0, description: 1, branch: 2 });
+    expect(buildImportedTransactions(matrix.slice(1), discovered!.map)[0].branch).toBe("Br. Maalla");
+  });
+
   it("reads a signed amount plus type without presenting fictional debit or credit columns", () => {
     const matrix = [["Bank Al Karimi Account Activity", "", "", "", ""], ["Posting Date", "Narration", "Amount", "Type", "Ref No"], ["2026-02-01", "Cash deposit", "1,250.50", "Credit", "EXT-A"], ["2026-02-02", "ATM withdrawal", "(500.00)", "Debit", "EXT-B"]];
     const discovered = discoverStatementHeader(matrix);

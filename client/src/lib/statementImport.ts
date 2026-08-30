@@ -1,4 +1,4 @@
-export type StatementColumnKey = "date" | "description" | "debit" | "credit" | "balance" | "reference" | "amount" | "direction";
+export type StatementColumnKey = "date" | "description" | "branch" | "debit" | "credit" | "balance" | "reference" | "amount" | "direction";
 
 export type StatementColumnMap = Partial<Record<StatementColumnKey, number>>;
 
@@ -6,6 +6,7 @@ export type ImportedTransaction = {
   rowNumber: number;
   date: string;
   description: string;
+  branch: string;
   debit: number;
   credit: number;
   balance: number | null;
@@ -27,6 +28,7 @@ export type HeaderDiscovery = {
 const aliases: Record<StatementColumnKey, readonly string[]> = {
   date: ["date", "posting date", "transaction date", "value date", "تاريخ", "تاريخ الحركة"],
   description: ["description", "movement description", "narration", "details", "particular", "particulars", "وصف العملية", "الوصف", "بيان الحركة"],
+  branch: ["branch", "branch name", "branch code", "الفرع", "اسم الفرع", "فرع"],
   debit: ["debit", "debit amount", "withdrawal", "مدين", "مبلغ مدين"],
   credit: ["credit", "credit amount", "deposit", "دائن", "مبلغ دائن"],
   balance: ["balance", "running balance", "الرصيد", "الرصيد الجاري"],
@@ -306,6 +308,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
         rowNumber: index + 1,
         date,
         description: review.description,
+        branch: String(getCell(row, map.branch) ?? "").trim(),
         debit,
         credit,
         balance,
@@ -334,6 +337,7 @@ export function statementReferenceFromTransactions(transactions: Pick<ImportedTr
 export const statementFieldLabels: Record<StatementColumnKey, string> = {
   date: "Date",
   description: "Description",
+  branch: "Branch",
   debit: "Debit",
   credit: "Credit",
   balance: "Balance",

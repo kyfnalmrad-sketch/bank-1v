@@ -13,9 +13,9 @@ describe("reference document previews", () => {
     expect(html).toContain("02 صفر 1448 هـ");
   });
 
-  it("keeps statement preview rows to the 19 transactions permitted per page", () => {
+  it("keeps statement preview rows to the 17 transactions permitted per page", () => {
     const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P1 of 2", closing: -20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT260815${String.fromCharCode(65 + (index % 20))}AA`, debit: 0, credit: 1, balance: index === 0 ? -1 : index + 1 })) });
-    expect((html.match(/data-operation=/g) || [])).toHaveLength(19);
+    expect((html.match(/data-operation=/g) || [])).toHaveLength(17);
     expect(html).not.toContain("END OF REPORT");
     expect(html).not.toContain("Please review this statement");
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
@@ -25,9 +25,9 @@ describe("reference document previews", () => {
     expect(html).not.toContain("PAGE 1/2");
     expect(html).toContain("1.00 DR");
     expect(html).not.toContain("20.00 DR");
-    expect(html).toContain("width:72mm;height:8.4mm");
-    expect(html).toContain("-webkit-line-clamp:3");
-    expect(html).toContain(".particular-cell .description-compact{font:700 8.3pt/2.85mm Arial,Tahoma,sans-serif;max-height:8.55mm}");
+    expect(html).toContain("width:72mm;height:10mm");
+    expect(html).toContain("-webkit-line-clamp:2");
+    expect(html).toContain(".particular-cell .description-compact{font:700 7.7pt/2.95mm Arial,Tahoma,sans-serif;max-height:5.9mm}");
     expect(html).toContain("REF P1 of 2");
     expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
     expect(html).toContain("left:78mm;right:8mm;bottom:5mm;height:10.5mm");

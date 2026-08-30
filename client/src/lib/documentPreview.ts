@@ -2,11 +2,12 @@
  * Reference previews preserve the Prototype 0.5.1 visual rules while every
  * user-provided field remains HTML escaped before it enters an iframe document.
  */
-export const MAX_TRANSACTIONS_PER_PAGE = 19;
+export const MAX_TRANSACTIONS_PER_PAGE = 17;
 
 export type PreviewTransaction = {
   date: string;
   description: string;
+  branch?: string;
   operationNumber: string;
   debit: number;
   credit: number;
@@ -51,6 +52,7 @@ export type StatementPreviewInput = {
   periodStart: string;
   periodEnd: string;
   statementReference: string;
+  includeBranch?: boolean;
   pageNumber: number;
   pageCount: number;
   barcodeUri: string;
@@ -100,7 +102,7 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     .correspondence{position:absolute;left:13mm;top:68mm;z-index:3;border:.7pt solid #6b5297;background:rgba(255,255,255,.94);padding:1.3mm 2mm;font-size:8.5pt;line-height:1.35}
     .correspondence div{white-space:nowrap}
     .qr-wrap{position:absolute;right:13mm;top:60mm;width:27mm;height:27mm;padding:1mm;background:#fff;z-index:3}
-    .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain}
+    .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
     .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center}
     .meta{position:absolute;left:12mm;right:12mm;top:87mm;z-index:3;font-size:8.4pt;line-height:1.5}
     .meta strong{color:#6b5297}
@@ -137,12 +139,15 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
 
 export function renderStatementPreview(data: StatementPreviewInput) {
   const rows = data.transactions.slice(0, MAX_TRANSACTIONS_PER_PAGE);
+  const includeBranch = Boolean(data.includeBranch);
+  const tableClass = includeBranch ? "transactions with-branch" : "transactions";
+  const headerClass = includeBranch ? "tx-head with-branch" : "tx-head";
   const barcodeFooter = data.barcodeUri
-    ? `<div class="side-barcode" style="position:absolute;left:4mm;bottom:5.2mm;width:72mm;height:8.4mm;display:grid;grid-template-rows:6mm 2mm;gap:.4mm;text-align:center;color:#6b5297;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode" style="display:block;width:72mm;height:6mm;object-fit:fill;background:#fff"><span>${value(data.barcodeLabel)}</span></div>`
+    ? `<div class="side-barcode" style="position:absolute;left:4mm;bottom:5.2mm;width:72mm;height:10mm;display:grid;grid-template-rows:7.5mm 2mm;gap:.5mm;text-align:center;color:#6b5297;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode" style="display:block;width:72mm;height:7.5mm;object-fit:contain;object-position:left center;background:#fff"><span>${value(data.barcodeLabel)}</span></div>`
     : "";
   const tableRows = rows.length
-    ? rows.map((row) => `<tr data-operation="${escapeHtml(row.operationNumber)}"><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td><td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`).join("")
-    : `<tr><td class="date-cell"><span>—</span></td><td class="particular-cell"><span class="description-line description-standard">No imported transactions</span></td><td class="operation-cell"><span>—</span></td><td class="number-cell debit-placeholder-cell"><span>-----</span></td><td class="credit-cell placeholder-cell"><span>-----</span></td><td class="balance-cell"><span>${balanceAmount(data.closing)}</span></td></tr>`;
+    ? rows.map((row) => `<tr data-operation="${escapeHtml(row.operationNumber)}"><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td>${includeBranch ? `<td class="branch-cell"><span>${value(row.branch)}</span></td>` : ""}<td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`).join("")
+    : `<tr><td class="date-cell"><span>—</span></td><td class="particular-cell"><span class="description-line description-standard">No imported transactions</span></td>${includeBranch ? `<td class="branch-cell"><span>—</span></td>` : ""}<td class="operation-cell"><span>—</span></td><td class="number-cell debit-placeholder-cell"><span>-----</span></td><td class="credit-cell placeholder-cell"><span>-----</span></td><td class="balance-cell"><span>${balanceAmount(data.closing)}</span></td></tr>`;
   const finalSection = data.pageNumber === data.pageCount
     ? `<section class="end"><div>END OF REPORT</div><div></div><div></div><div>BALANCE</div><div>${balanceAmount(data.closing)}</div></section><p class="notice">Please review this statement and report any discrepancy to AlKuraimi Islamic Microfinance Bank within fifteen (15) calendar days of receipt.</p>`
     : "";
@@ -155,7 +160,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .masthead{position:relative;width:210mm;height:70mm}
     .header-art{position:absolute;left:2.05mm;top:2.7mm;width:204.52mm;height:48.65mm;object-fit:fill;clip-path:inset(0 0 22% 0);z-index:1}
     .qr-wrap{position:absolute;left:5.8mm;top:5.4mm;width:25mm;height:25mm;padding:1mm;background:#fff;z-index:3}
-    .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain}
+    .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
     .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center}
     .meta{position:absolute;left:8mm;top:40.2mm;width:194mm;display:grid;grid-template-columns:101mm 78mm;column-gap:5mm;padding:2mm 3mm;border:.6pt solid #6d6d86;border-radius:4mm;background:#fff;z-index:2;font:400 9.6pt/5mm Arial,Tahoma,sans-serif}
     .left-meta{display:grid;grid-template-rows:auto auto auto;align-content:start;gap:1mm;min-width:0;padding-top:1mm}
@@ -172,23 +177,25 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .page-strip table{width:100%;height:100%;margin:0;border-collapse:collapse;table-layout:fixed}
     .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .page-strip td:first-child{border-left:0}
-    .tx-head,.transactions{table-layout:fixed;border-collapse:collapse}
-    .tx-head{width:179.11mm;height:9.91mm;margin-left:17.1mm}
-    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center}
-    .transactions{width:178.6mm;margin-left:17.36mm}
-    .transactions tr{break-inside:avoid;page-break-inside:avoid}
-    .transactions td{height:8.8mm;padding:.35mm .45mm;border:0;text-align:center;vertical-align:middle}
+    .tx-head,.transactions{table-layout:fixed;border-collapse:collapse;width:190mm;margin-left:10mm}
+    .tx-head{height:9.91mm}
+    .tx-head tr,.transactions tr{display:grid;width:190mm;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm}
+    .tx-head.with-branch tr,.transactions.with-branch tr{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}
+    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;min-width:0}
+    .transactions tr{break-inside:avoid;page-break-inside:avoid;min-height:9mm}
+    .transactions td{min-width:0;min-height:9mm;padding:.8mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
-    .date-cell{width:26.59mm;text-align:center;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
-    .particular-cell{width:51mm;overflow:visible;white-space:normal;text-align:left!important;font:700 9.2pt/3.05mm Arial,Tahoma,sans-serif;padding:.55mm .8mm!important}
-    .operation-cell{width:26mm;font:400 8.1pt/8.1pt Arial,Tahoma,sans-serif;white-space:nowrap;color:#6b5297}
-    .number-cell{width:18.5mm;white-space:nowrap;font:400 9.96pt/9.96pt "Courier New",Courier,monospace}
-    .credit-cell{width:20mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
-    .balance-cell{width:36.51mm;white-space:nowrap;font:400 11.04pt/11.04pt Calibri,Arial,sans-serif}
+    .date-cell{text-align:center;white-space:nowrap;font:400 10.5pt/10.5pt Calibri,Arial,sans-serif}
+    .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.2pt/3.05mm Arial,Tahoma,sans-serif;padding:.85mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
+    .branch-cell{font:400 8pt/3.2mm Arial,Tahoma,sans-serif;white-space:normal;overflow-wrap:anywhere}
+    .operation-cell{font:400 7.6pt/8pt Arial,Tahoma,sans-serif;white-space:nowrap;color:#6b5297}
+    .number-cell{white-space:nowrap;font:400 9.2pt/9.2pt "Courier New",Courier,monospace}
+    .credit-cell{white-space:nowrap;font:400 10.2pt/10.2pt Calibri,Arial,sans-serif}
+    .balance-cell{white-space:nowrap;overflow:visible!important;font:400 10.2pt/10.2pt Calibri,Arial,sans-serif}
     .transactions td span{display:block;overflow:hidden;text-overflow:clip}
-    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:3}
-    .particular-cell .description-standard{font:700 9.1pt/3.05mm Arial,Tahoma,sans-serif;max-height:9.15mm}
-    .particular-cell .description-compact{font:700 8.3pt/2.85mm Arial,Tahoma,sans-serif;max-height:8.55mm}
+    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+    .particular-cell .description-standard{font:700 8.2pt/3.05mm Arial,Tahoma,sans-serif;max-height:6.1mm}
+    .particular-cell .description-compact{font:700 7.7pt/2.95mm Arial,Tahoma,sans-serif;max-height:5.9mm}
     .date-cell span{transform:translate(2.1pt,-2.73pt)}
     .particular-cell span{transform:translateX(1.61pt)}
     .number-cell span{transform:translate(1.88pt,-1.59pt)}
@@ -208,8 +215,8 @@ export function renderStatementPreview(data: StatementPreviewInput) {
         <div class="right-meta"><div class="meta-row branch-row"><b>Branch Name:</b><span class="meta-value">${value(data.branchName)}</span></div><div class="meta-row"><b>Account Currency:</b><span class="meta-value">${value(data.currency)}</span></div><div class="meta-row date-row"><b>Date:</b><span class="meta-value">${value(data.issueDate)}</span></div></div>
       </div>
     </header>
-    <table class="tx-head"><thead><tr><th>Date</th><th>Movement Description</th><th>Ref No.</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead></table>
-    <table class="transactions"><tbody>${tableRows}</tbody></table>
+    <table class="${headerClass}"><thead><tr><th>Date</th><th>Movement Description</th>${includeBranch ? "<th>Branch</th>" : ""}<th>Ref No.</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead></table>
+    <table class="${tableClass}"><tbody>${tableRows}</tbody></table>
     ${finalSection}${barcodeFooter}${data.pageSummary ? `<div class="page-strip" dir="rtl"><table><tbody><tr><td>صفحة ${data.pageNumber}/${data.pageCount}</td><td>${rows.length} عملية</td><td>سحب ${data.pageSummary.debitCount} · ${amount(data.pageSummary.totalDebit)}</td><td>إيداع ${data.pageSummary.creditCount} · ${amount(data.pageSummary.totalCredit)}</td></tr><tr><td>بداية ${amount(data.pageSummary.openingBalance)}</td><td>نهاية ${amount(data.closing)}</td><td>مرجع أول ${value(data.pageSummary.firstReference)}</td><td>مرجع آخر ${value(data.pageSummary.lastReference)}</td></tr></tbody></table></div>` : ""}
   </section></body></html>`;
 }
