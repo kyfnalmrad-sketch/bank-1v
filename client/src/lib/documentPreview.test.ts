@@ -13,9 +13,9 @@ describe("reference document previews", () => {
     expect(html).toContain("02 صفر 1448 هـ");
   });
 
-  it("keeps statement preview rows to the 17 transactions permitted per page", () => {
+  it("keeps statement preview rows to the 18 transactions permitted per page", () => {
     const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P1 of 2", closing: -20, transactions: Array.from({ length: 21 }, (_, index) => ({ date: "15/08/2026", description: `Transaction ${index + 1}`, operationNumber: `FT260815${String.fromCharCode(65 + (index % 20))}AA`, debit: 0, credit: 1, balance: index === 0 ? -1 : index + 1 })) });
-    expect((html.match(/data-operation=/g) || [])).toHaveLength(17);
+    expect((html.match(/data-operation=/g) || [])).toHaveLength(18);
     expect(html).not.toContain("END OF REPORT");
     expect(html).not.toContain("Please review this statement");
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
@@ -25,27 +25,30 @@ describe("reference document previews", () => {
     expect(html).not.toContain("PAGE 1/2");
     expect(html).toContain("1.00 DR");
     expect(html).not.toContain("20.00 DR");
-    expect(html).toContain("width:72mm;height:10mm");
+    expect(html).toContain("width:43mm;height:11.5mm");
+    expect(html).toContain("width:40mm;height:7.3mm");
+    expect(html).toContain('class="barcode-frame"');
     expect(html).toContain("-webkit-line-clamp:2");
-    expect(html).toContain(".particular-cell .description-compact{font:700 7.7pt/2.95mm Arial,Tahoma,sans-serif;max-height:5.9mm}");
+    expect(html).toContain(".particular-cell .description-compact{font:700 7.55pt/2.8mm Arial,Tahoma,sans-serif;max-height:5.6mm}");
     expect(html).toContain("REF P1 of 2");
-    expect(html).toContain("grid-template-columns:101mm 78mm;column-gap:5mm");
-    expect(html).toContain("left:78mm;right:8mm;bottom:5mm;height:10.5mm");
+    expect(html).toContain("grid-template-columns:94mm 85mm;column-gap:10mm");
+    expect(html).toContain("left:55mm;right:8mm;bottom:5mm;height:10.5mm");
     expect(html).toContain("clip-path:inset(0 0 22% 0)");
     expect(html).toContain("border:.6pt solid #6d6d86;border-radius:4mm");
     expect(html).toContain('class="right-meta"');
-    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:33mm minmax(0,1fr);column-gap:2mm");
+    expect(html).toContain(".right-meta .meta-row{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:2.5mm;align-items:center;min-height:8mm;line-height:4mm;overflow:hidden}");
     expect(html).toContain('class="meta-row branch-row"><b>Branch Name:</b><span class="meta-value">HADDAH</span>');
     expect(html).toContain('class="meta-row"><b>Account Currency:</b><span class="meta-value">USD</span>');
     expect(html).toContain('class="meta-row date-row"><b>Date:</b><span class="meta-value">15/08/2026</span>');
     expect(html).toContain('<div class="meta-field"><b>Customer Name:</b><span class="field-value">Client</span></div>');
-    expect(html).toContain(".left-meta{display:grid;grid-template-rows:auto auto auto;align-content:start;gap:1mm");
-    expect(html).toContain(".notice{width:149.01mm;min-height:7.2mm;margin:2.4mm 0 0 43.95mm");
+    expect(html).toContain(".left-meta{display:grid;grid-template-rows:repeat(3,1fr);align-content:start;gap:1mm");
+    expect(html).toContain("grid-template-columns:max-content minmax(0,1fr);column-gap:3mm;align-items:center");
+    expect(html).toContain(".notice{width:190mm;min-height:7.2mm;margin:2.4mm 0 0 10mm");
     const finalPage = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 2, pageCount: 2, barcodeUri: "/barcode.svg", barcodeLabel: "REF P2 of 2", closing: -20, transactions: [{ date: "16/08/2026", description: "Cash deposit by customer", operationNumber: "FT260816UAA", debit: 0, credit: 20, balance: -20 }] });
     expect(finalPage).toContain("END OF REPORT");
     expect(finalPage).toContain("Please review this statement");
     expect(finalPage).toContain("20.00 DR");
-    expect(finalPage).toContain(".end{width:152.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060");
+    expect(finalPage).toContain(".end{width:190mm;margin-left:10mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060");
     expect(finalPage.indexOf('<section class="end">')).toBeLessThan(finalPage.indexOf('<p class="notice">'));
     const printable = assemblePrintableStatementHtml([html, finalPage]);
     expect((printable.match(/class="page"/g) || [])).toHaveLength(2);

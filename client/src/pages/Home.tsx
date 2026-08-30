@@ -5,7 +5,7 @@
 import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
-import JsBarcode from "jsbarcode";
+import bwipjs from "bwip-js/browser";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -341,9 +341,8 @@ export default function Home() {
   useEffect(() => {
     const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount));
     const generated = values.map((value) => {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      JsBarcode(svg, value, { format: "CODE128", width: 1.8, height: 34, displayValue: false, margin: 2, lineColor: "#6b5297", background: "#ffffff" });
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.outerHTML)}`;
+      const svg = bwipjs.toSVG({ bcid: "pdf417", text: value, scaleX: 2, scaleY: 2, padding: 4, backgroundcolor: "FFFFFF", barcolor: "6B5297" });
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     });
     setBarcodeSources(generated);
   }, [statementPageCount, statementReference]);

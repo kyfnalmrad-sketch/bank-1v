@@ -2,7 +2,7 @@
  * Reference previews preserve the Prototype 0.5.1 visual rules while every
  * user-provided field remains HTML escaped before it enters an iframe document.
  */
-export const MAX_TRANSACTIONS_PER_PAGE = 17;
+export const MAX_TRANSACTIONS_PER_PAGE = 18;
 
 export type PreviewTransaction = {
   date: string;
@@ -143,13 +143,13 @@ export function renderStatementPreview(data: StatementPreviewInput) {
   const tableClass = includeBranch ? "transactions with-branch" : "transactions";
   const headerClass = includeBranch ? "tx-head with-branch" : "tx-head";
   const barcodeFooter = data.barcodeUri
-    ? `<div class="side-barcode" style="position:absolute;left:4mm;bottom:5.2mm;width:72mm;height:10mm;display:grid;grid-template-rows:7.5mm 2mm;gap:.5mm;text-align:center;color:#6b5297;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode" style="display:block;width:72mm;height:7.5mm;object-fit:contain;object-position:left center;background:#fff"><span>${value(data.barcodeLabel)}</span></div>`
+    ? `<div class="side-barcode"><div class="barcode-frame"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode"></div><span>${value(data.barcodeLabel)}</span></div>`
     : "";
   const tableRows = rows.length
     ? rows.map((row) => `<tr data-operation="${escapeHtml(row.operationNumber)}"><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td>${includeBranch ? `<td class="branch-cell"><span>${value(row.branch)}</span></td>` : ""}<td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`).join("")
     : `<tr><td class="date-cell"><span>—</span></td><td class="particular-cell"><span class="description-line description-standard">No imported transactions</span></td>${includeBranch ? `<td class="branch-cell"><span>—</span></td>` : ""}<td class="operation-cell"><span>—</span></td><td class="number-cell debit-placeholder-cell"><span>-----</span></td><td class="credit-cell placeholder-cell"><span>-----</span></td><td class="balance-cell"><span>${balanceAmount(data.closing)}</span></td></tr>`;
   const finalSection = data.pageNumber === data.pageCount
-    ? `<section class="end"><div>END OF REPORT</div><div></div><div></div><div>BALANCE</div><div>${balanceAmount(data.closing)}</div></section><p class="notice">Please review this statement and report any discrepancy to AlKuraimi Islamic Microfinance Bank within fifteen (15) calendar days of receipt.</p>`
+    ? `<section class="end${includeBranch ? " with-branch" : ""}"><div class="end-label">END OF REPORT</div><div class="end-balance-label">BALANCE</div><div class="end-balance-value">${balanceAmount(data.closing)}</div></section><p class="notice">Please review this statement and report any discrepancy to AlKuraimi Islamic Microfinance Bank within fifteen (15) calendar days of receipt.</p>`
     : "";
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
@@ -157,45 +157,44 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     *{box-sizing:border-box}
     html,body{width:210mm;margin:0;background:#fff;font-family:Calibri,Arial,sans-serif;color:#000}
     .page{position:relative;width:210mm;height:297mm;overflow:hidden}
-    .masthead{position:relative;width:210mm;height:70mm}
+    .masthead{position:relative;width:210mm;height:75mm}
     .header-art{position:absolute;left:2.05mm;top:2.7mm;width:204.52mm;height:48.65mm;object-fit:fill;clip-path:inset(0 0 22% 0);z-index:1}
     .qr-wrap{position:absolute;left:5.8mm;top:5.4mm;width:25mm;height:25mm;padding:1mm;background:#fff;z-index:3}
     .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
     .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center}
-    .meta{position:absolute;left:8mm;top:40.2mm;width:194mm;display:grid;grid-template-columns:101mm 78mm;column-gap:5mm;padding:2mm 3mm;border:.6pt solid #6d6d86;border-radius:4mm;background:#fff;z-index:2;font:400 9.6pt/5mm Arial,Tahoma,sans-serif}
-    .left-meta{display:grid;grid-template-rows:auto auto auto;align-content:start;gap:1mm;min-width:0;padding-top:1mm}
-    .meta-field{display:grid;grid-template-columns:34mm minmax(0,1fr);column-gap:3mm;align-items:start;min-height:5.2mm;line-height:5mm}
+    .meta{position:absolute;left:8mm;top:40.2mm;width:194mm;display:grid;grid-template-columns:94mm 85mm;column-gap:10mm;padding:2mm 3mm;border:.6pt solid #6d6d86;border-radius:4mm;background:#fff;z-index:2;font:400 9.6pt/5mm Arial,Tahoma,sans-serif}
+    .left-meta{display:grid;grid-template-rows:repeat(3,1fr);align-content:start;gap:1mm;min-width:0;padding-top:0}.left-meta .meta-field{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:3mm;align-items:center;min-height:8mm;line-height:4mm}
+    .meta-field{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:3mm;align-items:center;min-height:8mm;line-height:4mm}.meta-field b{display:block}.meta-field .field-value{text-align:left;display:block;line-height:4mm}
     .meta-field .field-value{display:block;min-width:0;overflow-wrap:anywhere;word-break:break-word}
     .meta b{white-space:nowrap}
-    .right-meta{display:grid;grid-template-rows:repeat(3,4.7mm);align-content:start}
-    .right-meta .meta-row{display:grid;grid-template-columns:33mm minmax(0,1fr);column-gap:2mm;align-items:center;min-height:5mm;overflow:hidden}
-    .right-meta .branch-row{grid-template-columns:33mm minmax(0,1fr)}
-    .right-meta .date-row{grid-template-columns:15mm minmax(0,1fr)}
+    .right-meta{display:grid;grid-template-rows:repeat(3,1fr);align-content:start;gap:1mm;padding-top:0}.right-meta .meta-row{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:2.5mm;align-items:center;min-height:8mm;line-height:4mm;overflow:hidden}.right-meta .meta-row b{display:block}.right-meta .meta-value{text-align:left;display:block;line-height:4mm}
+    .right-meta .branch-row{grid-template-columns:max-content minmax(0,1fr)}
+    .right-meta .date-row{grid-template-columns:max-content minmax(0,1fr)}
     .right-meta .meta-value{display:block;min-width:0;max-width:100%;max-height:5mm;line-height:4mm;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .right-meta .branch-row .meta-value{font-size:8.5pt;letter-spacing:-.08pt}
-    .page-strip{position:absolute;left:78mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}
-    .page-strip table{width:100%;height:100%;margin:0;border-collapse:collapse;table-layout:fixed}
-    .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip}
+    .page-strip{position:absolute;left:55mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}.side-barcode{position:absolute;left:8mm;bottom:5.2mm;width:43mm;height:11.5mm;padding:1.2mm 1.5mm .8mm;border:1pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#6b5297;display:grid;grid-template-rows:7.3mm 2mm;gap:.4mm;text-align:center;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em;z-index:4}.barcode-frame{width:40mm;height:7.3mm;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center}.barcode-frame img{display:block;width:40mm;height:7.3mm;object-fit:fill;object-position:center;background:#fff}
+    .page-strip table{width:100%;height:100%;margin:0;border-collapse:collapse;table-layout:fixed}.page-strip tr:first-child{background:#eeeaf4;color:#3f2b68}.page-strip tr:last-child{background:#fff}.page-strip td{border-top:.35pt solid #c8bdd8}
+    .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:700}
     .page-strip td:first-child{border-left:0}
-    .tx-head,.transactions{table-layout:fixed;border-collapse:collapse;width:190mm;margin-left:10mm}
+    .tx-head,.transactions{table-layout:fixed;border-collapse:collapse;width:190mm;margin-left:10mm}.tx-head{margin-top:2mm}
     .tx-head{height:9.91mm}
     .tx-head tr,.transactions tr{display:grid;width:190mm;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm}
     .tx-head.with-branch tr,.transactions.with-branch tr{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}
-    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;min-width:0}
-    .transactions tr{break-inside:avoid;page-break-inside:avoid;min-height:9mm}
-    .transactions td{min-width:0;min-height:9mm;padding:.8mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;min-width:0}
+    .transactions tr{break-inside:avoid;page-break-inside:avoid;min-height:9.3mm}
+    .transactions td{min-width:0;min-height:9.3mm;padding:.7mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
     .date-cell{text-align:center;white-space:nowrap;font:400 10.5pt/10.5pt Calibri,Arial,sans-serif}
-    .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.2pt/3.05mm Arial,Tahoma,sans-serif;padding:.85mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
+    .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;padding:.65mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
     .branch-cell{font:400 8pt/3.2mm Arial,Tahoma,sans-serif;white-space:normal;overflow-wrap:anywhere}
     .operation-cell{font:400 7.6pt/8pt Arial,Tahoma,sans-serif;white-space:nowrap;color:#6b5297}
     .number-cell{white-space:nowrap;font:400 9.2pt/9.2pt "Courier New",Courier,monospace}
-    .credit-cell{white-space:nowrap;font:400 10.2pt/10.2pt Calibri,Arial,sans-serif}
+    .credit-cell{white-space:nowrap;font:700 9.2pt/9.2pt Calibri,Arial,sans-serif}
     .balance-cell{white-space:nowrap;overflow:visible!important;font:400 10.2pt/10.2pt Calibri,Arial,sans-serif}
     .transactions td span{display:block;overflow:hidden;text-overflow:clip}
     .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-    .particular-cell .description-standard{font:700 8.2pt/3.05mm Arial,Tahoma,sans-serif;max-height:6.1mm}
-    .particular-cell .description-compact{font:700 7.7pt/2.95mm Arial,Tahoma,sans-serif;max-height:5.9mm}
+    .particular-cell .description-standard{font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;max-height:5.7mm}
+    .particular-cell .description-compact{font:700 7.55pt/2.8mm Arial,Tahoma,sans-serif;max-height:5.6mm}
     .date-cell span{transform:translate(2.1pt,-2.73pt)}
     .particular-cell span{transform:translateX(1.61pt)}
     .number-cell span{transform:translate(1.88pt,-1.59pt)}
@@ -203,9 +202,9 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .credit-cell span{transform:translate(2.07pt,-2.73pt)}
     .credit-cell.placeholder-cell span{transform:translate(-1.13pt,-1.59pt)}
     .balance-cell span{transform:translate(2.03pt,-.69pt)}
-    .notice{width:149.01mm;min-height:7.2mm;margin:2.4mm 0 0 43.95mm;padding:0 1mm;color:#b00020;text-align:center;font:700 8.1pt/3.2mm Arial,sans-serif}
-    .end{width:152.01mm;margin-left:43.95mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060;display:grid;grid-template-columns:51mm 26mm 18.5mm 20mm 36.51mm;color:#002060;text-align:center}
-    .end div{padding-top:.44mm;font:700 12pt/12pt "Times New Roman",serif}
+    .notice{width:190mm;min-height:7.2mm;margin:2.4mm 0 0 10mm;padding:0 1mm;color:#b00020;text-align:center;font:700 8.1pt/3.2mm Arial,sans-serif}
+    .end{width:190mm;margin-left:10mm;padding-bottom:2.2mm;border-bottom:3pt solid #002060;display:grid;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm;color:#002060;text-align:center}.end.with-branch{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}.end-label{grid-column:1 / span 4}.end.with-branch .end-label{grid-column:1 / span 5}.end-balance-label,.end-balance-value{align-self:center}
+    .end div{padding-top:.44mm;font:700 10.5pt/10.5pt "Times New Roman",serif}
   </style></head><body><section class="page">
     <header class="masthead">
       <img class="header-art" src="${escapeHtml(data.headerUri)}" alt="Original statement header">
