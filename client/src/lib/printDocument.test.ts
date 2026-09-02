@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { assemblePrintableStatementHtml, directPdfFilename, openPrintWindow, selectPrintableDocument, withPrintTitle } from "./printDocument";
+import { assemblePrintableStatementHtml, assembleUnifiedDocumentHtml, directPdfFilename, openPrintWindow, selectPrintableDocument, withPrintTitle } from "./printDocument";
 
 describe("separate document printing", () => {
   it("combines only pages of the same account statement for a separate print job", () => {
@@ -39,6 +39,25 @@ describe("separate document printing", () => {
     expect(selectPrintableDocument("accountStatus", accountStatus, accountStatement)).toEqual({ html: accountStatus, title: "Account Status Statement" });
     expect(selectPrintableDocument("accountStatement", accountStatus, accountStatement)).toEqual({ html: accountStatement, title: "Account Statement" });
     expect(selectPrintableDocument("accountStatement", accountStatus, accountStatement).html).toContain("header-art");
+  });
+
+  it("combines the account statement first and the account status statement second", () => {
+    const statement = "<html><head><style>.statement{color:red}</style></head><body><section class=\"page\">ACCOUNT STATEMENT</section></body></html>";
+    const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">ACCOUNT STATUS</section></body></html>";
+    const html = assembleUnifiedDocumentHtml(statement, status);
+    expect(html.indexOf("ACCOUNT STATEMENT")).toBeLessThan(html.indexOf("ACCOUNT STATUS"));
+    expect(html).toContain("break-after:page");
+    expect(html).toContain(".statement{color:red}");
+    expect(html).toContain(".status{color:blue}");
+  });
+
+  it("selects the unified print package and uses a stable filename", () => {
+    const accountStatus = "<html><head></head><body>status</body></html>";
+    const accountStatement = "<html><head></head><body>statement</body></html>";
+    const selected = selectPrintableDocument("unified", accountStatus, accountStatement);
+    expect(selected.title).toBe("Unified Account Statement Package");
+    expect(selected.html.indexOf("statement")).toBeLessThan(selected.html.indexOf("status"));
+    expect(directPdfFilename("unified", "2026-08-15")).toBe("Unified-Account-Statement-Package-20260815.pdf");
   });
 
   it("builds separate stable filenames for direct PDF downloads", () => {

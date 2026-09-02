@@ -103,7 +103,7 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     .correspondence div{white-space:nowrap}
     .qr-wrap{position:absolute;right:13mm;top:60mm;width:27mm;height:27mm;padding:1mm;background:#fff;z-index:3}
     .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
-    .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center}
+    .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center;filter:brightness(0) saturate(100%) invert(25%) sepia(92%) saturate(1715%) hue-rotate(199deg) brightness(88%) contrast(96%)}
     .meta{position:absolute;left:12mm;right:12mm;top:87mm;z-index:3;font-size:8.4pt;line-height:1.5}
     .meta strong{color:#6b5297}
     .hijri{position:absolute;left:13mm;right:13mm;top:92.5mm;z-index:3;font:700 8.5pt/1.35 Arial,Tahoma,sans-serif}
@@ -161,7 +161,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .header-art{position:absolute;left:2.05mm;top:2.7mm;width:204.52mm;height:48.65mm;object-fit:fill;clip-path:inset(0 0 22% 0);z-index:1}
     .qr-wrap{position:absolute;left:5.8mm;top:5.4mm;width:25mm;height:25mm;padding:1mm;background:#fff;z-index:3}
     .qr-wrap img.qr{display:block;width:100%;height:100%;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
-    .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center}
+    .qr-mark{position:absolute;left:35%;top:35%;width:30%;height:30%;padding:0;border:0;border-radius:0;background:transparent;object-fit:contain;object-position:center;filter:brightness(0) saturate(100%) invert(25%) sepia(92%) saturate(1715%) hue-rotate(199deg) brightness(88%) contrast(96%)}
     .meta{position:absolute;left:8mm;top:40.2mm;width:194mm;display:grid;grid-template-columns:94mm 85mm;column-gap:10mm;padding:2mm 3mm;border:.6pt solid #6d6d86;border-radius:4mm;background:#fff;z-index:2;font:400 9.6pt/5mm Arial,Tahoma,sans-serif}
     .left-meta{display:grid;grid-template-rows:repeat(3,1fr);align-content:start;gap:1mm;min-width:0;padding-top:0}.left-meta .meta-field{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:3mm;align-items:center;min-height:8mm;line-height:4mm}
     .meta-field{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:3mm;align-items:center;min-height:8mm;line-height:4mm}.meta-field b{display:block}.meta-field .field-value{text-align:left;display:block;line-height:4mm}

@@ -6,7 +6,7 @@ export type PrintableWindow = {
 };
 
 export type PrintHost = { open: (url?: string, target?: string) => PrintableWindow | null };
-export type PrintDocumentKind = "accountStatus" | "accountStatement";
+export type PrintDocumentKind = "accountStatus" | "accountStatement" | "unified";
 
 const safeTitle = (title: string) => title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const printAssetStyles = "<style id=\"print-asset-preservation\">@media print{html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style>";
@@ -66,10 +66,23 @@ export function assemblePrintableStatementHtml(pages: string[]) {
     .replace("</body>", `${laterBodies}</body>`);
 }
 
+function extractHtmlPart(html: string, tag: "head" | "body") {
+  return html.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] || "";
+}
+
+const escapeSrcdoc = (html: string) => html.replace(/&/g, "&amp;").replace(/'/g, "&#39;");
+
+export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accountStatusHtml: string) {
+  if (!accountStatementHtml && !accountStatusHtml) return "";
+  const statementFrame = accountStatementHtml ? `<iframe class="unified-page-frame" title="Account Statement" srcdoc='${escapeSrcdoc(accountStatementHtml)}'></iframe>` : "";
+  const statusFrame = accountStatusHtml ? `<iframe class="unified-page-frame" title="Account Status Statement" srcdoc='${escapeSrcdoc(accountStatusHtml)}'></iframe>` : "";
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.unified-page-frame{display:block;width:210mm;height:297mm;border:0;margin:0;padding:0;break-after:page;page-break-after:always}.unified-page-frame:last-child{break-after:auto;page-break-after:auto}</style></head><body>${statementFrame}${statusFrame}</body></html>`;
+}
+
 export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string) {
-  return kind === "accountStatus"
-    ? { html: accountStatusHtml, title: "Account Status Statement" }
-    : { html: accountStatementHtml, title: "Account Statement" };
+  if (kind === "accountStatus") return { html: accountStatusHtml, title: "Account Status Statement" };
+  if (kind === "unified") return { html: assembleUnifiedDocumentHtml(accountStatementHtml, accountStatusHtml), title: "Unified Account Statement Package" };
+  return { html: accountStatementHtml, title: "Account Statement" };
 }
 
 export function directPdfFilename(kind: PrintDocumentKind, issueDate?: string) {
@@ -77,7 +90,8 @@ export function directPdfFilename(kind: PrintDocumentKind, issueDate?: string) {
   const dateToken = normalizedDate.length >= 8
     ? normalizedDate.slice(0, 8)
     : new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  return `${kind === "accountStatus" ? "Account-Status-Statement" : "Account-Statement"}-${dateToken}.pdf`;
+  const prefix = kind === "accountStatus" ? "Account-Status-Statement" : kind === "unified" ? "Unified-Account-Statement-Package" : "Account-Statement";
+  return `${prefix}-${dateToken}.pdf`;
 }
 
 function waitForFrameLoad(frame: HTMLIFrameElement) {
