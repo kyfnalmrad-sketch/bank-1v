@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+const path = '/home/ubuntu/bank-karimi-web-staging/preview/password-login.html';
+let html = fs.readFileSync(path, 'utf8');
+html = html.replace(/(<a class="conduct"[^>]*>حسن السيرة والسلوك<\/a>){2,}/g, '$1');
+html = html.replace('<button class="logout">تسجيل الخروج</button>', '<a class="conduct" href="https://good-conduct-training.onrender.com/" target="_blank">حسن السيرة والسلوك</a><button class="logout">تسجيل الخروج</button>');
+html = html.replace('.logout{margin-right:18px;', '.conduct{padding:8px 11px;border:1px solid #b9ded9;border-radius:7px;background:#effaf8;color:#1a7774;font-size:11px;text-decoration:none;font-weight:bold}.logout{margin-right:18px;');
+html = html.replace('مساحة عمل الكريمي', 'نظام إصدار كشفي');
+html = html.replace('تجهيز ومراجعة كشوف الحسابات', 'إصدار ومراجعة الكشوف');
+html = html.replace('مصرف الكريمي', 'نظام إصدار كشفي');
+html = html.replace('بوابة الموظفين الآمنة', 'منصة إصدار ومراجعة الكشوف');
+html = html.replace('AL KURAIMI SECURE WORKSPACE', 'SECURE STATEMENT WORKSPACE');
+fs.writeFileSync(path, html);
+console.log('updated portal preview link');

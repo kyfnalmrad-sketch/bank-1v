@@ -21,9 +21,14 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
+  LockKeyhole,
+  LogIn,
+  LogOut,
+  Shield,
 } from "lucide-react";
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
@@ -126,7 +131,56 @@ function loadLocalList(key: string) {
   }
 }
 
+function clearSessionToken() {
+  try {
+    sessionStorage.removeItem("manus-cookie");
+  } catch {}
+}
+
+function LoginScreen({ login, pending, error }: { login: (password: string) => Promise<unknown>; pending: boolean; error: unknown }) {
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const submit = async () => {
+    if (!password) { setMessage("أدخل كلمة المرور للمتابعة."); return; }
+    setMessage("");
+    try {
+      const result = await login(password) as { authenticated?: boolean };
+      if (!result.authenticated) setMessage("كلمة المرور غير صحيحة.");
+    } catch { setMessage("تعذر تسجيل الدخول الآن. حاول مرة أخرى."); }
+  };
+  return <main className="login-shell" dir="rtl">
+    <div className="login-glow login-glow-one" />
+    <div className="login-glow login-glow-two" />
+    <section className="login-card" aria-labelledby="login-title">
+      <div className="login-brand"><div className="login-mark"><Shield size={24} /></div><div><strong>نظام إصدار كشفي</strong><span>منصة إصدار ومراجعة الكشوف</span></div></div>
+      <div className="login-divider" />
+      <p className="login-kicker">دخول آمن للموظفين</p>
+      <h1 id="login-title">مرحبًا بك من جديد</h1>
+      <p className="login-copy">أدخل كلمة المرور للوصول إلى مساحة إصدار الكشوف وإدارتها بأمان.</p>
+      <label className="login-password-label" htmlFor="site-password">كلمة المرور</label>
+      <input id="site-password" className="login-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void submit(); }} autoComplete="current-password" />
+      <button className="login-button" type="button" onClick={() => void submit()} disabled={pending}><LogIn size={19} /> {pending ? "جارٍ التحقق…" : "دخول إلى النظام"}</button>
+      {Boolean(message || error) && <p className="login-error" role="alert">{message || "تعذر تسجيل الدخول."}</p>}
+      <div className="login-security"><LockKeyhole size={16} /><span>اتصال محمي</span><span className="login-dot" /> <span>الجلسة تنتهي تلقائيًا بعد 6 ساعات</span></div>
+      <p className="login-footnote">الوصول مخصص للمستخدمين المصرح لهم فقط.</p>
+    </section>
+  </main>;
+}
+
 export default function Home() {
+  const { user, loading, logout, login, loginPending, loginError } = useAuth();
+  useEffect(() => {
+    if (!user && !loading) clearSessionToken();
+  }, [loading, user]);
+
+  if (loading) return <main className="login-shell"><div className="login-loading"><Shield size={24} className="spin" /> جارٍ التحقق من الجلسة…</div></main>;
+  if (!user) return <LoginScreen login={login} pending={loginPending} error={loginError} />;
+
+  return <AuthenticatedHome user={user} logout={logout} />;
+}
+
+function AuthenticatedHome({ user, logout }: { user: { name?: string | null; email?: string | null }; logout: () => Promise<void> }) {
+  const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
@@ -474,18 +528,23 @@ export default function Home() {
     <div className="app-shell">
       <header className="app-header">
         <div className="brand-row">
-          <img src={referenceAssets.logo} className="reference-logo" alt="Prototype 0.5.1 reference logo" />
+          <div className="reference-logo system-mark" aria-label="نظام إصدار كشفي"><Shield size={30} /></div>
           <div>
-            <p className="eyebrow">Separate web edition for internal review</p>
-            <h1>Account Statement System</h1>
-            <p className="bank-name">Bank Al Karimi</p>
+            <p className="eyebrow">منصة داخلية لإصدار ومراجعة الكشوف</p>
+          <h1>نظام إصدار كشفي</h1>
+          <p className="bank-name">منصة إصدار ومراجعة الكشوف</p>
           </div>
         </div>
-        <div className="reference-badge"><ShieldCheck size={17} /> Prototype 0.5.1 design reference preserved</div>
+        <div className="reference-badge"><ShieldCheck size={17} /> نظام إصدار كشفي · جلسة محمية</div>
       </header>
 
+      <div className="session-bar" role="status">
+        <div className="session-user"><span className="session-avatar">{(user.name || user.email || "مستخدم").slice(0, 1).toUpperCase()}</span><span><b>{user.name || "مستخدم مصادق"}</b><small>{user.email || "جلسة عمل آمنة"}</small></span></div>
+        <div className="session-meta"><span><LockKeyhole size={14} /> جلسة آمنة · تنتهي بعد 6 ساعات</span><a className="conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a><button type="button" onClick={() => void handleSecureLogout()}><LogOut size={15} /> تسجيل الخروج</button></div>
+      </div>
+
       <section className="reference-strip" aria-label="Staging status">
-        <div><span>Work mode</span><strong>Web Staging</strong></div>
+        <div><span>Work mode</span><strong>نظام إصدار كشفي</strong></div>
         <div><span>Staging database</span><strong>{stagingHealth.isLoading ? "Checking…" : stagingHealth.data ? `${stagingHealth.data.tableCount} tables ready` : "Unavailable"}</strong></div>
         <div><span>Reference documents</span><strong>No visual changes</strong></div>
       </section>
@@ -502,7 +561,7 @@ export default function Home() {
         <section className="panel">
           <h2>Document Settings</h2>
           <div className="grid">
-            <label>Bank<select value="KURAIMI" disabled><option>Bank Al Karimi</option></select></label>
+            <label>System<select value="STATEMENTS" disabled><option>نظام إصدار كشفي</option></select></label>
             <label>Document language<select value="en" disabled><option value="en">English</option></select></label>
             <label>Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
             <label>Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
