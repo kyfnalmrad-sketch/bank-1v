@@ -31,7 +31,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
-import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
+import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
   discoverStatementHeader,
@@ -180,6 +180,16 @@ export default function Home() {
 }
 
 function AuthenticatedHome({ user, logout }: { user: { name?: string | null; email?: string | null }; logout: () => Promise<void> }) {
+  useEffect(() => {
+    void preloadPrintAssets([
+      referenceAssets.statementBackground,
+      referenceAssets.headerStrip,
+      referenceAssets.footerStrip,
+      referenceAssets.centralLogo,
+      referenceAssets.qrLogo,
+      referenceAssets.qrBrandLogo,
+    ]);
+  }, []);
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);

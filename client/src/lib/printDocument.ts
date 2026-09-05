@@ -10,6 +10,28 @@ export type PrintDocumentKind = "accountStatus" | "accountStatement" | "unified"
 
 const safeTitle = (title: string) => title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const printAssetStyles = "<style id=\"print-asset-preservation\">@media print{html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style>";
+const preloadedAssets = new Map<string, Promise<void>>();
+
+/** Warm the browser cache before a print window is opened; this does not alter the print markup. */
+export function preloadPrintAssets(urls: string[], baseHref = currentBaseHref()) {
+  if (typeof window === "undefined") return Promise.resolve();
+  const tasks = urls.filter(shouldInlineAsset).map((url) => {
+    const absolute = new URL(url, baseHref).href;
+    if (!preloadedAssets.has(absolute)) {
+      const image = new Image();
+      image.decoding = "async";
+      image.fetchPriority = "high";
+      image.src = absolute;
+      preloadedAssets.set(absolute, new Promise<void>((resolve) => {
+        if (image.complete) { resolve(); return; }
+        image.addEventListener("load", () => resolve(), { once: true });
+        image.addEventListener("error", () => resolve(), { once: true });
+      }));
+    }
+    return preloadedAssets.get(absolute)!;
+  });
+  return Promise.all(tasks).then(() => undefined);
+}
 
 function currentBaseHref() {
   if (typeof window === "undefined") return "http://localhost/";
@@ -131,7 +153,9 @@ async function inlineFrameAssets(frameDocument: Document) {
 
   const images = Array.from(frameDocument.querySelectorAll<HTMLImageElement>("img")).filter((image) => shouldInlineAsset(image.getAttribute("src") || ""));
   await Promise.all(images.map(async (image) => {
-    image.src = await inline(image.getAttribute("src") || "");
+      image.src = await inline(image.getAttribute("src") || "");
+      image.decoding = "async";
+      image.fetchPriority = "high";
   }));
 
   const styles = Array.from(frameDocument.querySelectorAll("style"));
