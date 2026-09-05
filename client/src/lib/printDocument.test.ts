@@ -49,6 +49,17 @@ describe("separate document printing", () => {
     expect(html).toContain("break-after:page");
     expect(html).toContain(".statement{color:red}");
     expect(html).toContain(".status{color:blue}");
+    expect(html).not.toContain("<iframe");
+  });
+
+  it("prints every statement page in the unified package, not only the first page", () => {
+    const statement = "<html><head><style>.statement{color:red}</style></head><body><section class=\"page\">STATEMENT PAGE 1</section><section class=\"page\">STATEMENT PAGE 2</section></body></html>";
+    const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">ACCOUNT STATUS</section></body></html>";
+    const html = assembleUnifiedDocumentHtml(statement, status);
+    expect(html.match(/class=\"page\"/g)).toHaveLength(3);
+    expect(html.indexOf("ACCOUNT STATUS")).toBeLessThan(html.indexOf("STATEMENT PAGE 1"));
+    expect(html.indexOf("STATEMENT PAGE 1")).toBeLessThan(html.indexOf("STATEMENT PAGE 2"));
+    expect(html).not.toContain("unified-page-frame");
   });
 
   it("selects the unified print package and uses a stable filename", () => {

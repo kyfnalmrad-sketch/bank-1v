@@ -79,26 +79,34 @@ export function withPrintTitle(html: string, title: string, baseHref = currentBa
   return html.replace("<head>", `<head><base href="${safeTitle(baseHref)}"><title>${safeTitle(title)}</title>${printAssetStyles}`);
 }
 
-export function assemblePrintableStatementHtml(pages: string[]) {
-  const [first, ...remaining] = pages;
+function assemblePrintablePages(pages: string[]) {
+  const validPages = pages.filter(Boolean);
+  const [first, ...remaining] = validPages;
   if (!first) return "";
-  const laterBodies = remaining.map((page) => page.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] || "").join("");
+
+  const laterStyles = remaining
+    .map((page) => page.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] || "")
+    .join("");
+  const laterBodies = remaining
+    .map((page) => page.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || "")
+    .join("");
+
   return first
-    .replace("</style>", ".page{break-after:page}.page:last-child{break-after:auto}</style>")
+    .replace(/<head([^>]*)>/i, `<head$1>${laterStyles}`)
+    .replace("</head>", "<style>.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head>")
     .replace("</body>", `${laterBodies}</body>`);
+}
+
+export function assemblePrintableStatementHtml(pages: string[]) {
+  return assemblePrintablePages(pages);
 }
 
 function extractHtmlPart(html: string, tag: "head" | "body") {
   return html.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] || "";
 }
 
-const escapeSrcdoc = (html: string) => html.replace(/&/g, "&amp;").replace(/'/g, "&#39;");
-
 export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accountStatusHtml: string) {
-  if (!accountStatementHtml && !accountStatusHtml) return "";
-  const statementFrame = accountStatementHtml ? `<iframe class="unified-page-frame" title="Account Statement" srcdoc='${escapeSrcdoc(accountStatementHtml)}'></iframe>` : "";
-  const statusFrame = accountStatusHtml ? `<iframe class="unified-page-frame" title="Account Status Statement" srcdoc='${escapeSrcdoc(accountStatusHtml)}'></iframe>` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.unified-page-frame{display:block;width:210mm;height:297mm;border:0;margin:0;padding:0;break-after:page;page-break-after:always}.unified-page-frame:last-child{break-after:auto;page-break-after:auto}</style></head><body>${statusFrame}${statementFrame}</body></html>`;
+  return assemblePrintablePages([accountStatusHtml, accountStatementHtml]);
 }
 
 export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string) {
