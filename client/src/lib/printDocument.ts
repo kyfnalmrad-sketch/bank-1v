@@ -98,7 +98,7 @@ export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accoun
   if (!accountStatementHtml && !accountStatusHtml) return "";
   const statementFrame = accountStatementHtml ? `<iframe class="unified-page-frame" title="Account Statement" srcdoc='${escapeSrcdoc(accountStatementHtml)}'></iframe>` : "";
   const statusFrame = accountStatusHtml ? `<iframe class="unified-page-frame" title="Account Status Statement" srcdoc='${escapeSrcdoc(accountStatusHtml)}'></iframe>` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.unified-page-frame{display:block;width:210mm;height:297mm;border:0;margin:0;padding:0;break-after:page;page-break-after:always}.unified-page-frame:last-child{break-after:auto;page-break-after:auto}</style></head><body>${statementFrame}${statusFrame}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.unified-page-frame{display:block;width:210mm;height:297mm;border:0;margin:0;padding:0;break-after:page;page-break-after:always}.unified-page-frame:last-child{break-after:auto;page-break-after:auto}</style></head><body>${statusFrame}${statementFrame}</body></html>`;
 }
 
 export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string) {

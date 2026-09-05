@@ -41,11 +41,11 @@ describe("separate document printing", () => {
     expect(selectPrintableDocument("accountStatement", accountStatus, accountStatement).html).toContain("header-art");
   });
 
-  it("combines the account statement first and the account status statement second", () => {
+  it("combines the account status statement first and the full account statement after it", () => {
     const statement = "<html><head><style>.statement{color:red}</style></head><body><section class=\"page\">ACCOUNT STATEMENT</section></body></html>";
     const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">ACCOUNT STATUS</section></body></html>";
     const html = assembleUnifiedDocumentHtml(statement, status);
-    expect(html.indexOf("ACCOUNT STATEMENT")).toBeLessThan(html.indexOf("ACCOUNT STATUS"));
+    expect(html.indexOf("ACCOUNT STATUS")).toBeLessThan(html.indexOf("ACCOUNT STATEMENT"));
     expect(html).toContain("break-after:page");
     expect(html).toContain(".statement{color:red}");
     expect(html).toContain(".status{color:blue}");
@@ -56,7 +56,7 @@ describe("separate document printing", () => {
     const accountStatement = "<html><head></head><body>statement</body></html>";
     const selected = selectPrintableDocument("unified", accountStatus, accountStatement);
     expect(selected.title).toBe("Unified Account Statement Package");
-    expect(selected.html.indexOf("statement")).toBeLessThan(selected.html.indexOf("status"));
+    expect(selected.html.indexOf("status")).toBeLessThan(selected.html.indexOf("statement"));
     expect(directPdfFilename("unified", "2026-08-15")).toBe("Unified-Account-Statement-Package-20260815.pdf");
   });
 
