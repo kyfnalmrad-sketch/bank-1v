@@ -118,3 +118,9 @@ input:focus, select:focus { outline: 4px solid rgba(43, 154, 153, .14); border-c
 .computed-field { border-color: #cde2e4; border-radius: 10px; background: linear-gradient(145deg, #f8fffe, #f2f7fb); }
 .import-zone { border-color: #79b8b7; border-radius: 14px; background: linear-gradient(135deg, #f5fffe, #fbf9ff); }
 .actions button, .upload-button { border-radius: 10px; background: linear-gradient(135deg, #1b7d83, #27639a); box-shadow: 0 7px 14px rgba(35,126,134,.16); }
+.app-header { background: linear-gradient(135deg, #102f4a 0%, #174c68 58%, #1c7e82 100%); color: #fff; border: 0; box-shadow: 0 18px 36px rgba(16,47,74,.22); }
+.app-header h1, .app-header .eyebrow, .app-header .bank-name { color: #fff; }
+.app-header .eyebrow { color: #a9e1dc; }.app-header .bank-name { color: #d2edf0; }.app-header .system-mark { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.session-bar { padding: 12px 16px; }.session-avatar { background: linear-gradient(145deg, #1b7d83, #27639a); }
+.panel { position: relative; overflow: hidden; }.panel::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(#1b7d83, #6b5297); opacity: .9; }.panel > h2, .panel-heading h2 { font-size: 1.08rem; letter-spacing: -.01em; }.panel > h2::before, .panel-heading h2::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-inline-end: 9px; border-radius: 50%; background: #2aa6a1; box-shadow: 0 0 0 4px rgba(42,166,161,.12); vertical-align: 1px; }
+.grid { gap: 18px; }.field-note, .hint { line-height: 1.55; }.computed-field { min-height: 82px; }
