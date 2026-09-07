@@ -58,7 +58,7 @@ describe("Home applied transaction register", () => {
     vi.stubGlobal("open", host.open);
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Transactions & Import" }));
+    fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [makeLedgerFile()] } });
     await screen.findByText("Editable Transaction Register");
@@ -66,7 +66,7 @@ describe("Home applied transaction register", () => {
     const dateInput = screen.getByDisplayValue("2026-08-04") as HTMLInputElement;
     fireEvent.change(dateInput, { target: { value: "2026-08-05" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply Register Changes" }));
-    fireEvent.click(screen.getByRole("button", { name: "Review & Export" }));
+    fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
 
     fireEvent.click(screen.getByRole("button", { name: "View Account Statement" }));
     const preview = await screen.findByTitle("Account Statement print preview");
@@ -88,18 +88,18 @@ describe("Home applied transaction register", () => {
   it("allows reported credit and debit totals to be overridden before printing the status statement", async () => {
     render(<Home />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Transactions & Import" }));
+    fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [makeLedgerFile()] } });
     await screen.findByText("Editable Transaction Register");
 
-    fireEvent.click(screen.getByRole("button", { name: "Account Details" }));
+    fireEvent.click(screen.getByRole("button", { name: "الإدخال / Data Entry" }));
     fireEvent.change(screen.getByLabelText("Total credit (editable)"), { target: { value: "120.00" } });
     fireEvent.change(screen.getByLabelText("Total debit (editable)"), { target: { value: "30.00" } });
     expect(screen.getByDisplayValue("120.00")).toBeTruthy();
     expect(screen.getByDisplayValue("30.00")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Review & Export" }));
+    fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
     fireEvent.click(screen.getByRole("button", { name: "View Account Status Statement" }));
     const preview = await screen.findByTitle("Account Status Statement print preview");
     expect(preview.getAttribute("srcdoc")).toContain("Total Credits</th><td>120.00</td>");

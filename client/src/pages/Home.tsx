@@ -25,6 +25,9 @@ import {
   LogIn,
   LogOut,
   Shield,
+  LayoutDashboard,
+  BarChart3,
+  PieChart,
 } from "lucide-react";
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
@@ -45,7 +48,7 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
-type TabId = "account" | "transactions" | "training" | "review" | "history";
+type TabId = "dashboard" | "account" | "transactions" | "training" | "review" | "history" | "analytics";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
@@ -74,11 +77,13 @@ function getWorkspaceKey() {
 }
 
 const tabs: { id: TabId; label: string }[] = [
-  { id: "account", label: "Account Details" },
-  { id: "transactions", label: "Transactions & Import" },
-  { id: "training", label: "Account Status Statement" },
-  { id: "review", label: "Review & Export" },
-  { id: "history", label: "Saved Statements" },
+  { id: "dashboard", label: "لوحة التحكم / Dashboard" },
+  { id: "account", label: "الإدخال / Data Entry" },
+  { id: "transactions", label: "استيراد Excel / Excel Import" },
+  { id: "training", label: "بيان الحالة / Account Status" },
+  { id: "review", label: "المعاينة والطباعة / Preview & Print" },
+  { id: "history", label: "السجلات / Records" },
+  { id: "analytics", label: "المؤشرات / Analytics" },
 ];
 
 const defaultClient = {
@@ -234,6 +239,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const hasTotalsOverride = totalCreditOverride.trim() !== "" || totalDebitOverride.trim() !== "";
   const reportedClosing = hasTotalsOverride ? money(client.opening) + reportedTotalCredit - reportedTotalDebit : closing;
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
+  const uniquePeopleCount = useMemo(() => new Set(acceptedRows.map((row) => row.personName || row.description.trim()).filter(Boolean)).size, [acceptedRows]);
+  const operationBars = useMemo(() => {
+    const counts = new Map<string, number>();
+    acceptedRows.forEach((row) => counts.set(row.date || "N/A", (counts.get(row.date || "N/A") || 0) + 1));
+    return Array.from(counts.entries()).slice(-14);
+  }, [acceptedRows]);
+  const tabWarnings = [
+    !client.name || !client.momaizNo ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
+    acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
+    rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
+  ].filter(Boolean);
   const internalStatementReference = useMemo(() => statementReferenceFromTransactions(appliedTransactions, client.accountNumber || client.momaizNo), [appliedTransactions, client.accountNumber, client.momaizNo]);
   const excelStatementReference = useMemo(() => appliedTransactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [appliedTransactions]);
   const statementReference = referenceSource === "excel" && excelStatementReference ? excelStatementReference : internalStatementReference;
@@ -337,6 +353,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       else await createHistoryMutation.mutateAsync(input);
       await historyQuery.refetch(); setActiveTab("history");
     } catch { setImportNote("The statement could not be saved to the history database."); }
+  };
+  const postToRecords = async () => {
+    applyTransactionRegister();
+    await saveStatementHistory();
+    setActiveTab("history");
+    setImportNote("تم ترحيل الكشف إلى السجلات / Statement posted to records.");
   };
 
   const openStatementHistory = async (id: number) => {
@@ -567,29 +589,55 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         ))}
       </nav>
 
+      {tabWarnings.length > 0 && <aside className="tab-warning" role="status">
+        <AlertTriangle size={18} />
+        <div><strong>تنبيهات التبويبات المهمة / Important tab warnings</strong><span>{tabWarnings.join(" · ")}</span></div>
+      </aside>}
+
+      {activeTab === "dashboard" && <section className="panel dashboard-panel" dir="rtl">
+        <div className="panel-heading"><div><h2>لوحة التحكم / Dashboard</h2><p className="hint">ملخص مباشر للمدخلات والعمليات والسجلات. يمكنك الانتقال بين التبويبات دون ترتيب إلزامي.</p></div><LayoutDashboard size={26} className="heading-icon" /></div>
+        <div className="metric-grid">
+          <div className="metric-card"><span>عدد العمليات / Transaction Count</span><strong>{acceptedRows.length}</strong><small>Accepted rows</small></div>
+          <div className="metric-card"><span>الأفراد بدون تكرار / Unique People</span><strong>{uniquePeopleCount}</strong><small>From accepted descriptions</small></div>
+          <div className="metric-card"><span>الكشوفات المحفوظة / Saved Statements</span><strong>{(historyQuery.data as HistoryItem[] || []).length}</strong><small>Statement history</small></div>
+          <div className="metric-card"><span>الصفحات / Statement Pages</span><strong>{statementPageCount}</strong><small>Final statement pages</small></div>
+        </div>
+        <div className="dashboard-grid">
+          <div className="chart-card"><h3>العمليات اليومية / Daily Operations <BarChart3 size={18} /></h3><div className="bar-chart" aria-label="Daily operations chart">{(operationBars.length ? operationBars : [["N/A", 0] as [string, number]]).map(([date, count]) => <div className="bar-item" key={date}><span style={{ height: `${Math.max(6, Math.min(100, count * 12))}%` }} title={`${date}: ${count}`} /><small>{date}</small></div>)}</div></div>
+          <div className="chart-card"><h3>حالة الكشف / Statement Status <PieChart size={18} /></h3><div className="status-donut"><div><strong>{acceptedRows.length}</strong><small>Accepted</small></div></div><div className="legend"><span><i className="legend-ok" /> مقبول / Accepted</span><span><i className="legend-warn" /> مرفوض / Rejected: {rejectedRows.length}</span></div></div>
+        </div>
+        <div className="actions"><button type="button" onClick={() => void saveCurrentSnapshot()}><Database size={17} /> حفظ / Save</button><button type="button" className="unified-print-button" onClick={() => void postToRecords()}><FolderOpen size={17} /> ترحيل إلى السجلات / Post to Records</button></div>
+      </section>}
+
+      {activeTab === "analytics" && <section className="panel analytics-panel" dir="rtl">
+        <div className="panel-heading"><div><h2>المؤشرات / Analytics</h2><p className="hint">رسوم توضيحية للعمليات والأفراد والسجلات الحالية.</p></div><BarChart3 size={26} className="heading-icon" /></div>
+        <div className="metric-grid"><div className="metric-card"><span>إجمالي العمليات / Total Operations</span><strong>{transactions.length}</strong></div><div className="metric-card"><span>الأفراد بدون تكرار / Unique People</span><strong>{uniquePeopleCount}</strong></div><div className="metric-card"><span>المقبولة / Accepted</span><strong>{acceptedRows.length}</strong></div><div className="metric-card"><span>المرفوضة / Rejected</span><strong>{rejectedRows.length}</strong></div></div>
+        <div className="dashboard-grid"><div className="chart-card"><h3>توزيع العمليات / Operations Distribution</h3><div className="progress-ring"><span>{transactions.length ? Math.round((acceptedRows.length / transactions.length) * 100) : 0}%</span></div></div><div className="chart-card"><h3>خريطة كثافة العمليات / Operations Heatmap</h3><div className="heatmap">{Array.from({ length: 35 }, (_, index) => <i key={index} style={{ opacity: `${0.18 + ((index * 17) % 80) / 100}` }} />)}</div></div></div>
+      </section>}
+
       {activeTab === "account" && <>
         <section className="panel">
-          <h2>Document Settings</h2>
+          <h2>إعدادات الإدخال / Document Settings</h2>
           <div className="grid">
-            <label>System<select value="STATEMENTS" disabled><option>نظام إصدار كشفي</option></select></label>
-            <label>Document language<select value="en" disabled><option value="en">English</option></select></label>
-            <label>Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
-            <label>Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
-            <label>Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
+            <label>النظام / System<select value="STATEMENTS" disabled><option>نظام إصدار كشفي</option></select></label>
+            <label>لغة المستند / Document language<select value="en" disabled><option value="en">English</option></select></label>
+            <label>العملة / Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
+            <label>مصدر المرجع / Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
+            <label>عمود الفرع / Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
           </div>
           <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button><span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
         <section className="panel">
-          <h2>Customer & Account Details</h2>
+          <h2>بيانات العميل والحساب / Customer & Account Details</h2>
           <div className="grid">
-            <label>Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
-            <label>Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>
-            <label>Passport number <span className="field-note">Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
-            <label className="wide">Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
-            <label>Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
-            <label>Date of birth <span className="field-note">Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
-            <label>Account type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
-            <label>Account number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
+            <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
+            <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>
+            <label>رقم الجواز / Passport number <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
+            <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
+            <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
+            <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
+            <label>نوع الحساب / Account type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
+            <label>رقم الحساب / Account number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
         </section>
         <section className="panel">
