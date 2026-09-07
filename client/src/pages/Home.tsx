@@ -28,6 +28,13 @@ import {
   LayoutDashboard,
   BarChart3,
   PieChart,
+  Users,
+  Settings,
+  ClipboardList,
+  Building2,
+  CreditCard,
+  Receipt,
+  HelpCircle,
 } from "lucide-react";
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
@@ -240,6 +247,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const reportedClosing = hasTotalsOverride ? money(client.opening) + reportedTotalCredit - reportedTotalDebit : closing;
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
   const uniquePeopleCount = useMemo(() => new Set(acceptedRows.map((row) => row.personName || row.description.trim()).filter(Boolean)).size, [acceptedRows]);
+  const duplicatePeopleCount = Math.max(0, acceptedRows.length - uniquePeopleCount);
   const operationBars = useMemo(() => {
     const counts = new Map<string, number>();
     acceptedRows.forEach((row) => counts.set(row.date || "N/A", (counts.get(row.date || "N/A") || 0) + 1));
@@ -557,7 +565,24 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" dir="rtl">
+      <div className="desktop-fan desktop-fan-one" aria-hidden="true" />
+      <div className="desktop-fan desktop-fan-two" aria-hidden="true" />
+      <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
+        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>بنك التورا</strong><small>Altura Bank</small></div></div>
+        <div className="sidebar-section-label">مساحة العمل / Workspace</div>
+        <button type="button" className={activeTab === "dashboard" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("dashboard")}><LayoutDashboard size={18} /><span>لوحة التحكم<small>Dashboard</small></span></button>
+        <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
+        <button type="button" className={activeTab === "transactions" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("transactions")}><Receipt size={18} /><span>استيراد Excel<small>Excel Import</small></span></button>
+        <button type="button" className={activeTab === "training" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("training")}><CreditCard size={18} /><span>بيان الحالة<small>Account Status</small></span></button>
+        <button type="button" className={activeTab === "review" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("review")}><ClipboardList size={18} /><span>المعاينة والطباعة<small>Preview & Print</small></span></button>
+        <button type="button" className={activeTab === "history" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("history")}><Receipt size={18} /><span>السجلات<small>Records</small></span></button>
+        <button type="button" className={activeTab === "analytics" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("analytics")}><BarChart3 size={18} /><span>المؤشرات<small>Analytics</small></span></button>
+        <div className="sidebar-spacer" />
+        <button type="button" className="sidebar-link"><Users size={18} /><span>المستخدمون<small>Users</small></span></button>
+        <button type="button" className="sidebar-link"><Settings size={18} /><span>الإعدادات<small>Settings</small></span></button>
+        <button type="button" className="sidebar-link sidebar-help"><HelpCircle size={18} /><span>المساعدة<small>Help & Support</small></span></button>
+      </aside>
       <header className="app-header">
         <div className="brand-row">
           <div className="reference-logo system-mark" aria-label="نظام إصدار كشفي"><Shield size={30} /></div>
@@ -596,11 +621,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {activeTab === "dashboard" && <section className="panel dashboard-panel" dir="rtl">
         <div className="panel-heading"><div><h2>لوحة التحكم / Dashboard</h2><p className="hint">ملخص مباشر للمدخلات والعمليات والسجلات. يمكنك الانتقال بين التبويبات دون ترتيب إلزامي.</p></div><LayoutDashboard size={26} className="heading-icon" /></div>
-        <div className="metric-grid">
-          <div className="metric-card"><span>عدد العمليات / Transaction Count</span><strong>{acceptedRows.length}</strong><small>Accepted rows</small></div>
-          <div className="metric-card"><span>الأفراد بدون تكرار / Unique People</span><strong>{uniquePeopleCount}</strong><small>From accepted descriptions</small></div>
-          <div className="metric-card"><span>الكشوفات المحفوظة / Saved Statements</span><strong>{(historyQuery.data as HistoryItem[] || []).length}</strong><small>Statement history</small></div>
-          <div className="metric-card"><span>الصفحات / Statement Pages</span><strong>{statementPageCount}</strong><small>Final statement pages</small></div>
+        <div className="metric-grid metric-grid-focused">
+          <div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong><small>Imported customer records</small></div>
+          <div className="metric-card metric-card-primary"><span>عملاء بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong><small>Distinct customer identities</small></div>
+          <div className="metric-card"><span>التكرار المكتشف / Duplicate Records</span><strong>{duplicatePeopleCount}</strong><small>Records needing review</small></div>
         </div>
         <div className="dashboard-grid">
           <div className="chart-card"><h3>العمليات اليومية / Daily Operations <BarChart3 size={18} /></h3><div className="bar-chart" aria-label="Daily operations chart">{(operationBars.length ? operationBars : [["N/A", 0] as [string, number]]).map(([date, count]) => <div className="bar-item" key={date}><span style={{ height: `${Math.max(6, Math.min(100, count * 12))}%` }} title={`${date}: ${count}`} /><small>{date}</small></div>)}</div></div>
@@ -611,7 +635,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {activeTab === "analytics" && <section className="panel analytics-panel" dir="rtl">
         <div className="panel-heading"><div><h2>المؤشرات / Analytics</h2><p className="hint">رسوم توضيحية للعمليات والأفراد والسجلات الحالية.</p></div><BarChart3 size={26} className="heading-icon" /></div>
-        <div className="metric-grid"><div className="metric-card"><span>إجمالي العمليات / Total Operations</span><strong>{transactions.length}</strong></div><div className="metric-card"><span>الأفراد بدون تكرار / Unique People</span><strong>{uniquePeopleCount}</strong></div><div className="metric-card"><span>المقبولة / Accepted</span><strong>{acceptedRows.length}</strong></div><div className="metric-card"><span>المرفوضة / Rejected</span><strong>{rejectedRows.length}</strong></div></div>
+        <div className="metric-grid metric-grid-focused"><div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong></div><div className="metric-card metric-card-primary"><span>عملاء بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong></div><div className="metric-card"><span>التكرار / Duplicate Records</span><strong>{duplicatePeopleCount}</strong></div></div>
         <div className="dashboard-grid"><div className="chart-card"><h3>توزيع العمليات / Operations Distribution</h3><div className="progress-ring"><span>{transactions.length ? Math.round((acceptedRows.length / transactions.length) * 100) : 0}%</span></div></div><div className="chart-card"><h3>خريطة كثافة العمليات / Operations Heatmap</h3><div className="heatmap">{Array.from({ length: 35 }, (_, index) => <i key={index} style={{ opacity: `${0.18 + ((index * 17) % 80) / 100}` }} />)}</div></div></div>
       </section>}
 
