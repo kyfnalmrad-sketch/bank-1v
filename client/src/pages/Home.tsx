@@ -248,6 +248,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
   const uniquePeopleCount = useMemo(() => new Set(acceptedRows.map((row) => row.personName || row.description.trim()).filter(Boolean)).size, [acceptedRows]);
   const duplicatePeopleCount = Math.max(0, acceptedRows.length - uniquePeopleCount);
+  const customerQualityRate = acceptedRows.length ? Math.round((uniquePeopleCount / acceptedRows.length) * 100) : 0;
+  const duplicateRate = acceptedRows.length ? Math.round((duplicatePeopleCount / acceptedRows.length) * 100) : 0;
   const operationBars = useMemo(() => {
     const counts = new Map<string, number>();
     acceptedRows.forEach((row) => counts.set(row.date || "N/A", (counts.get(row.date || "N/A") || 0) + 1));
@@ -622,21 +624,22 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "dashboard" && <section className="panel dashboard-panel" dir="rtl">
         <div className="panel-heading"><div><h2>لوحة التحكم / Dashboard</h2><p className="hint">ملخص مباشر للمدخلات والعمليات والسجلات. يمكنك الانتقال بين التبويبات دون ترتيب إلزامي.</p></div><LayoutDashboard size={26} className="heading-icon" /></div>
         <div className="metric-grid metric-grid-focused">
-          <div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong><small>Imported customer records</small></div>
-          <div className="metric-card metric-card-primary"><span>عملاء بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong><small>Distinct customer identities</small></div>
-          <div className="metric-card"><span>التكرار المكتشف / Duplicate Records</span><strong>{duplicatePeopleCount}</strong><small>Records needing review</small></div>
+          <div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong><small>كل السجلات المقبولة / Accepted records</small><em className="metric-trend">البيانات الحالية</em></div>
+          <div className="metric-card metric-card-primary"><span>عملاء بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong><small>هويات عملاء مختلفة / Distinct identities</small><em className="metric-trend">{customerQualityRate}% من العملاء</em></div>
+          <div className="metric-card metric-card-alert"><span>التكرار المكتشف / Duplicate Records</span><strong>{duplicatePeopleCount}</strong><small>سجلات تحتاج مراجعة / Need review</small><em className="metric-trend">{duplicateRate}% من الإجمالي</em></div>
+          <div className="metric-card metric-card-quality"><span>جودة بيانات العملاء / Customer Data Quality</span><strong>{customerQualityRate}%</strong><small>نسبة العملاء بدون تكرار / Unique ratio</small><div className="quality-track"><i style={{ width: `${customerQualityRate}%` }} /></div></div>
         </div>
         <div className="dashboard-grid">
           <div className="chart-card"><h3>العمليات اليومية / Daily Operations <BarChart3 size={18} /></h3><div className="bar-chart" aria-label="Daily operations chart">{(operationBars.length ? operationBars : [["N/A", 0] as [string, number]]).map(([date, count]) => <div className="bar-item" key={date}><span style={{ height: `${Math.max(6, Math.min(100, count * 12))}%` }} title={`${date}: ${count}`} /><small>{date}</small></div>)}</div></div>
-          <div className="chart-card"><h3>حالة الكشف / Statement Status <PieChart size={18} /></h3><div className="status-donut"><div><strong>{acceptedRows.length}</strong><small>Accepted</small></div></div><div className="legend"><span><i className="legend-ok" /> مقبول / Accepted</span><span><i className="legend-warn" /> مرفوض / Rejected: {rejectedRows.length}</span></div></div>
+          <div className="chart-card"><h3>توزيع العملاء / Customer Quality <PieChart size={18} /></h3><div className="status-donut quality-donut" style={{ "--quality": `${customerQualityRate}%` } as React.CSSProperties}><div><strong>{customerQualityRate}%</strong><small>Unique</small></div></div><div className="legend"><span><i className="legend-ok" /> بدون تكرار / Unique: {uniquePeopleCount}</span><span><i className="legend-warn" /> مكرر / Duplicate: {duplicatePeopleCount}</span></div></div>
         </div>
         <div className="actions"><button type="button" onClick={() => void saveCurrentSnapshot()}><Database size={17} /> حفظ / Save</button><button type="button" className="unified-print-button" onClick={() => void postToRecords()}><FolderOpen size={17} /> ترحيل إلى السجلات / Post to Records</button></div>
       </section>}
 
       {activeTab === "analytics" && <section className="panel analytics-panel" dir="rtl">
         <div className="panel-heading"><div><h2>المؤشرات / Analytics</h2><p className="hint">رسوم توضيحية للعمليات والأفراد والسجلات الحالية.</p></div><BarChart3 size={26} className="heading-icon" /></div>
-        <div className="metric-grid metric-grid-focused"><div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong></div><div className="metric-card metric-card-primary"><span>عملاء بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong></div><div className="metric-card"><span>التكرار / Duplicate Records</span><strong>{duplicatePeopleCount}</strong></div></div>
-        <div className="dashboard-grid"><div className="chart-card"><h3>توزيع العمليات / Operations Distribution</h3><div className="progress-ring"><span>{transactions.length ? Math.round((acceptedRows.length / transactions.length) * 100) : 0}%</span></div></div><div className="chart-card"><h3>خريطة كثافة العمليات / Operations Heatmap</h3><div className="heatmap">{Array.from({ length: 35 }, (_, index) => <i key={index} style={{ opacity: `${0.18 + ((index * 17) % 80) / 100}` }} />)}</div></div></div>
+        <div className="metric-grid metric-grid-focused"><div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong><small>All accepted records</small></div><div className="metric-card metric-card-primary"><span>بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong><small>{customerQualityRate}% data quality</small></div><div className="metric-card metric-card-alert"><span>التكرار / Duplicate Records</span><strong>{duplicatePeopleCount}</strong><small>{duplicateRate}% requires review</small></div><div className="metric-card metric-card-quality"><span>جودة البيانات / Data Quality</span><strong>{customerQualityRate}%</strong><small>Unique customer ratio</small></div></div>
+        <div className="dashboard-grid"><div className="chart-card"><h3>مقارنة العملاء / Customer Comparison</h3><div className="comparison-bars"><div><span>بدون تكرار / Unique</span><i style={{ width: `${customerQualityRate}%` }}><b>{uniquePeopleCount}</b></i></div><div><span>مكرر / Duplicate</span><i className="duplicate-bar" style={{ width: `${duplicateRate}%` }}><b>{duplicatePeopleCount}</b></i></div></div></div><div className="chart-card"><h3>مراجعة البيانات / Data Review</h3><div className="review-score"><strong>{customerQualityRate >= 90 ? "ممتاز / Excellent" : customerQualityRate >= 70 ? "جيد / Good" : "يحتاج مراجعة / Review"}</strong><span>{acceptedRows.length ? `${duplicatePeopleCount} سجل مكرر من أصل ${acceptedRows.length}` : "أضف بيانات العملاء لبدء التحليل"}</span></div></div></div>
       </section>}
 
       {activeTab === "account" && <>
