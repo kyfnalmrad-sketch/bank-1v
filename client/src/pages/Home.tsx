@@ -39,7 +39,7 @@ import {
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { BankSelector, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
+import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
@@ -207,7 +207,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
-  const [ycbClient, setYcbClient] = useState({ name: "أحمد محمد القحطاني", branch: "فرع صنعاء الرئيسي", accountNumber: "YCB-0045827319", accountType: "Current", currency: "YER", opening: "1250000", issueDate: "08 September 2026" });
+  const [ycbClient, setYcbClient] = useState({ name: "أحمد محمد القحطاني", passport: "", branch: "فرع صنعاء الرئيسي", customerSince: "15/01/2020", dateOfBirth: "", accountNumber: "YCB-0045827319", accountType: "Current", currency: "YER", opening: "1250000", issueDate: "08 September 2026", referenceNumber: "YCB-DEMO-2026-091", customerServiceName: "سارة عبدالله المقطري", branchManagerName: "خالد علي الحضرمي" });
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
@@ -266,7 +266,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     return Array.from(counts.entries()).slice(-14);
   }, [acceptedRows]);
   const tabWarnings = [
-    !client.name || !client.momaizNo ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
+    !client.name || (selectedBank === "ycb" ? !client.accountNumber : !client.momaizNo) ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
     rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
   ].filter(Boolean);
@@ -297,7 +297,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       lastReference: rows.at(-1)?.operationNumber || "",
     };
   }), [client.opening, statementPageGroups]);
-  const accountStatusHtml = useMemo(() => renderAccountStatusPreview({
+  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(ycbClient) : renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
@@ -320,7 +320,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statusQrSource, statementPageCount, statementReference]);
+  }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
   const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions]);
 
   useEffect(() => {
@@ -460,6 +460,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
     setClient((current) => ({ ...current, [key]: value }));
+    if (selectedBank === "ycb") {
+      const ycbKeyMap: Partial<Record<keyof typeof defaultClient, keyof typeof ycbClient>> = {
+        name: "name", passport: "passport", branch: "branch", customerSince: "customerSince", dateOfBirth: "dateOfBirth", accountNumber: "accountNumber", accountType: "accountType", currency: "currency", opening: "opening", issueDate: "issueDate",
+      };
+      const ycbKey = ycbKeyMap[key];
+      if (ycbKey) setYcbClient((current) => ({ ...current, [ycbKey]: value }));
+    }
   };
 
   const applySuggestedDescription = (operationNumber: string) => {
@@ -593,7 +600,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   if (selectedBank === null) {
-    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(bank === "ycb"); }} onLogout={() => void handleSecureLogout()} />;
+    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(false); if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate })); }} onLogout={() => void handleSecureLogout()} />;
   }
   if (selectedBank === "ycb" && showYcbCertificate) {
     return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => { setShowYcbCertificate(false); setSelectedBank(null); }} />;
@@ -604,7 +611,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       <div className="desktop-fan desktop-fan-one" aria-hidden="true" />
       <div className="desktop-fan desktop-fan-two" aria-hidden="true" />
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
-        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>بنك التورا</strong><small>Altura Bank</small></div></div>
+        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : "AlKuraimi Bank"}</small></div></div>
         <div className="sidebar-section-label">مساحة العمل / Workspace</div>
         <button type="button" className={activeTab === "dashboard" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("dashboard")}><LayoutDashboard size={18} /><span>لوحة التحكم<small>Dashboard</small></span></button>
         <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
@@ -624,7 +631,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div>
             <p className="eyebrow">منصة داخلية لإصدار ومراجعة الكشوف</p>
           <h1>نظام إصدار كشفي</h1>
-          <p className="bank-name">منصة إصدار ومراجعة الكشوف</p>
+          <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
         <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div>{selectedBank === "ycb" && <button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> شهادة البنك التجاري</button>}</div>
@@ -764,14 +771,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)}><FolderOpen size={16} /> Open / Edit</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "training" && <section className="panel statement-preview-panel">
-        <div className="panel-heading"><div><h2>Account Status Statement</h2><p className="hint">HTML preview based on the Prototype 0.5.1 reference rules without redesign.</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
+        <div className="panel-heading"><div><h2>{selectedBank === "ycb" ? "Yemen Commercial Bank Certificate" : "Account Status Statement"}</h2><p className="hint">{selectedBank === "ycb" ? "قالب شهادة البنك التجاري اليمني مرتبط بمدخلات هذا المسار." : "HTML preview based on the Prototype 0.5.1 reference rules without redesign."}</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
         <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
         <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button></div>
       </section>}
 
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><h2>Review & Export</h2><p className="hint">Review the statement first, then print the Account Status Statement after it as one combined PDF/print job.</p></div><FileText size={26} className="heading-icon" /></div>
-          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && client.momaizNo ? "Ready for review" : "Customer details required"}</strong><small>Customer name and Momaiz No. are required on the statement.</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
+          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="actions document-actions"><button type="button" className="secondary-button" onClick={() => void saveStatementHistory()} disabled={createHistoryMutation.isPending || updateHistoryMutation.isPending}><Database size={17} /> {editingHistoryId ? "Update Saved Statement" : "Save to Statement History"}</button><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> Print Unified PDF (Statement + Status)</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Opening print…" : "Print / Save Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
         {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">Review the original artwork, QR code, values, and page arrangement before printing or downloading.</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
