@@ -207,7 +207,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
-  const [ycbClient, setYcbClient] = useState({ name: "", branch: "", accountNumber: "", accountType: "Current Account", currency: "YER", opening: "0.00", issueDate: "" });
+  const [ycbClient, setYcbClient] = useState({ name: "أحمد محمد القحطاني", branch: "فرع صنعاء الرئيسي", accountNumber: "YCB-0045827319", accountType: "Current", currency: "YER", opening: "1250000", issueDate: "08 September 2026" });
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
@@ -593,10 +593,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   if (selectedBank === null) {
-    return <BankSelector onSelect={setSelectedBank} onLogout={() => void handleSecureLogout()} />;
+    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(bank === "ycb"); }} onLogout={() => void handleSecureLogout()} />;
   }
   if (selectedBank === "ycb" && showYcbCertificate) {
-    return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => setShowYcbCertificate(false)} />;
+    return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => { setShowYcbCertificate(false); setSelectedBank(null); }} />;
   }
 
   return (
