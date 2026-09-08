@@ -71,6 +71,7 @@ type SnapshotPayload = {
   appliedTransactions: Transaction[];
   totalCreditOverride: string;
   totalDebitOverride: string;
+  ycbClient?: typeof defaultYcbClient;
 };
 type HistoryItem = { id: number; title: string; statement_reference: string | null; customer_name: string | null; account_number: string | null; created_at: string; updated_at: string };
 
@@ -112,6 +113,22 @@ const defaultClient = {
   correspondenceDate: "",
   periodStart: "",
   periodEnd: "",
+};
+
+const defaultYcbClient = {
+  name: "Ahmed Mohammed Al-Qahtani",
+  passport: "",
+  branch: "Sana’a Main Branch",
+  customerSince: "15/01/2020",
+  dateOfBirth: "",
+  accountNumber: "YCB-0045827319",
+  accountType: "Current Account",
+  currency: "YER",
+  opening: "1250000",
+  issueDate: "08 September 2026",
+  referenceNumber: "YCB-DEMO-2026-091",
+  customerServiceName: "Sarah Abdullah Al-Maqtari",
+  branchManagerName: "Khaled Ali Al-Hadrami",
 };
 
 function money(value: unknown) {
@@ -207,7 +224,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
-  const [ycbClient, setYcbClient] = useState({ name: "Ahmed Mohammed Al-Qahtani", passport: "", branch: "Sana’a Main Branch", customerSince: "15/01/2020", dateOfBirth: "", accountNumber: "YCB-0045827319", accountType: "Current Account", currency: "YER", opening: "1250000", issueDate: "08 September 2026", referenceNumber: "YCB-DEMO-2026-091", customerServiceName: "Sarah Abdullah Al-Maqtari", branchManagerName: "Khaled Ali Al-Hadrami" });
+  const [ycbClient, setYcbClient] = useState(defaultYcbClient);
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
@@ -321,7 +338,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -333,6 +350,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       return;
     }
     setClient({ ...defaultClient, ...payload.client });
+    if (selectedBank === "ycb" && payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
     setIncludeBranch(payload.includeBranch === true);
     setFileName(typeof payload.fileName === "string" ? payload.fileName : "");
@@ -699,7 +717,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
-            <label>رقم الجواز / Passport number <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
+            <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
             <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
@@ -707,6 +725,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>رقم الحساب / Account number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
         </section>
+        {selectedBank === "ycb" && <>
+          <section className="panel ycb-entry-panel">
+            <h2>Certificate Information</h2>
+            <p className="hint">YCB-only fields. The optional reference is placed in the certificate header when provided.</p>
+            <div className="grid">
+              <label>Reference number <span className="field-note">Optional</span><input dir="ltr" value={ycbClient.referenceNumber} onChange={(event) => updateYcbClient("referenceNumber", event.target.value)} placeholder="YCB-2026-001" /></label>
+            </div>
+          </section>
+          <section className="panel ycb-entry-panel">
+            <h2>Authorization Information</h2>
+            <p className="hint">These names are used in the YCB certificate signature area and remain separate from the AlKuraimi workspace.</p>
+            <div className="grid">
+              <label>Customer Service<input dir="ltr" value={ycbClient.customerServiceName} onChange={(event) => updateYcbClient("customerServiceName", event.target.value)} placeholder="Authorized employee name" /></label>
+              <label>Branch Manager<input dir="ltr" value={ycbClient.branchManagerName} onChange={(event) => updateYcbClient("branchManagerName", event.target.value)} placeholder="Branch manager name" /></label>
+            </div>
+          </section>
+        </>}
         <section className="panel">
           <h2>Account Status Statement Fields</h2>
           <p className="hint">These fields appear only on the Account Status Statement. You can adjust the reported credit and debit totals before printing; the closing balance and status summary will update accordingly.</p>

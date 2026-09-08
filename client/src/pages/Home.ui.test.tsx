@@ -108,4 +108,13 @@ describe("Home applied transaction register", () => {
     expect(preview.getAttribute("srcdoc")).toContain("Total Debits</th><td>30.00</td>");
     expect(preview.getAttribute("srcdoc")).toContain("Closing Balance</th><td>90.00</td>");
   });
+
+  it("shows YCB authorization fields only in the YCB data-entry workspace", () => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك اليمن التجاري/ }));
+    expect(screen.getByLabelText("Customer Service")).toBeTruthy();
+    expect(screen.getByLabelText("Branch Manager")).toBeTruthy();
+    expect(screen.getByLabelText(/Reference number/)).toBeTruthy();
+    expect(screen.queryByText(/Momaiz No\./)).toBeNull();
+  });
 });

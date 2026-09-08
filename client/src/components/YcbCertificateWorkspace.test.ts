@@ -1,0 +1,57 @@
+import { describe, expect, it } from "vitest";
+import { renderYcbCertificateHtml, type YcbClient } from "./YcbCertificateWorkspace";
+
+const demoClient: YcbClient = {
+  name: "Ahmed Mohammed Al-Qahtani",
+  passport: "P1234567",
+  branch: "Sana’a Main Branch",
+  customerSince: "15/01/2020",
+  dateOfBirth: "1988-04-12",
+  accountNumber: "YCB-0045827319",
+  accountType: "Current Account",
+  currency: "YER",
+  opening: "1250000",
+  issueDate: "08 September 2026",
+  referenceNumber: "YCB-DEMO-2026-091",
+  customerServiceName: "Sarah Abdullah Al-Maqtari",
+  branchManagerName: "Khaled Ali Al-Hadrami",
+};
+
+describe("YCB certificate data placement", () => {
+  it("places optional passport and birth date inside the certificate statement", () => {
+    const html = renderYcbCertificateHtml(demoClient);
+    expect(html).toContain("holder of Passport No. P1234567");
+    expect(html).toContain("born on 12 April 1988");
+    expect(html).toContain("Customer since: 15/01/2020");
+    expect(html).toContain("Reference:</b> YCB-DEMO-2026-091");
+    expect(html).toContain("1,250,000 YER");
+    expect(html).toContain("text-decoration:underline");
+    expect(html).toContain("margin:clamp(3mm,1.2vw,6mm) 0 0");
+    expect(html).toContain("Customer Service");
+    expect(html).toContain("Branch Manager");
+    expect(html).not.toContain("[PASSPORT_LINE]");
+    expect(html).not.toContain("[BIRTH_DATE_LINE]");
+    expect(html).not.toContain("Momaiz");
+  });
+
+  it("omits optional values cleanly when the fields are empty", () => {
+    const html = renderYcbCertificateHtml({ ...demoClient, passport: "", dateOfBirth: "", referenceNumber: "" });
+    expect(html).not.toContain("Passport No.");
+    expect(html).not.toContain("born on");
+    expect(html).toContain("Customer since: 15/01/2020");
+    expect(html).not.toContain("Reference:</b>");
+    expect(html).not.toContain("PENDING");
+  });
+
+  it("keeps both signature columns when either authorized name is empty", () => {
+    const html = renderYcbCertificateHtml({ ...demoClient, customerServiceName: "", branchManagerName: "" });
+    expect(html).toContain('<span class="role">Customer Service</span><span class="name">—</span>');
+    expect(html).toContain('<span class="role">Branch Manager</span><span class="name">—</span>');
+  });
+
+  it("formats USD balances with thousands separators", () => {
+    const html = renderYcbCertificateHtml({ ...demoClient, currency: "USD", opening: "2500000" });
+    expect(html).toContain("2,500,000 USD");
+    expect(html).not.toContain("2500000 USD");
+  });
+});

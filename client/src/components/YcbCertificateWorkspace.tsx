@@ -17,6 +17,22 @@ function escapeHtml(value: unknown) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
+function formatOptionalDate(value: string) {
+  if (!value) return "";
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" }).format(parsed);
+}
+
+function formatFinancialAmount(value: string) {
+  const numeric = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(numeric) ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(numeric) : value || "0.00";
+}
+
+function currencyWords(currency: string) {
+  return ({ YER: "Yemeni Rials", USD: "US Dollars", SAR: "Saudi Riyals" } as Record<string, string>)[currency] || currency;
+}
+
 export function renderYcbCertificateHtml(client: YcbClient) {
   const issueDate = new Date(client.issueDate);
   const hijriDate = Number.isNaN(issueDate.getTime()) ? "PENDING" : new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-arab", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(issueDate);
@@ -24,18 +40,21 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     "[CUSTOMER_NAME]": client.name,
     "[ACCOUNT_TYPE]": client.accountType,
     "[ACCOUNT_NUMBER]": client.accountNumber,
-    "[BALANCE_IN_WORDS]": "One Million Two Hundred Fifty Thousand Yemeni Rials",
-    "[BALANCE_NUMERIC]": client.opening || "0.00",
+    "[PASSPORT_LINE]": client.passport ? `, holder of Passport No. ${client.passport}` : "",
+    "[BIRTH_DATE_LINE]": client.dateOfBirth ? `, born on ${formatOptionalDate(client.dateOfBirth)}` : "",
+    "[CUSTOMER_SINCE_LINE]": client.customerSince.trim() ? `Customer since: ${formatOptionalDate(client.customerSince)}` : "",
+    "[BALANCE_IN_WORDS]": `${formatFinancialAmount(client.opening)} ${currencyWords(client.currency)}`,
+    "[BALANCE_NUMERIC]": formatFinancialAmount(client.opening),
     "[CURRENCY]": client.currency,
     "[AS_OF_DATE]": client.issueDate,
     "[AS_OF_DATE_HIJRI]": hijriDate,
-    "[AUTHORIZED_OFFICER_NAME]": client.customerServiceName,
-    "[BRANCH_MANAGER_NAME]": client.branchManagerName,
+    "[AUTHORIZED_OFFICER_NAME]": client.customerServiceName.trim() || "—",
+    "[BRANCH_MANAGER_NAME]": client.branchManagerName.trim() || "—",
   };
   let html = ycbOfficialCertificateTemplate
     .replaceAll("ycb-official-letterhead.png", "/assets/ycb-official-letterhead.png")
     .replaceAll("ycb-certificate-qr.png", "/assets/ycb-certificate-qr.png")
-    .replace("<div><b>Reference:</b> 4119</div>", `<div><b>Reference:</b> ${escapeHtml(client.referenceNumber || "PENDING")}</div>`)
+    .replace("<div><b>Reference:</b> 4119</div>", client.referenceNumber.trim() ? `<div><b>Reference:</b> ${escapeHtml(client.referenceNumber)}</div>` : "")
     .replace("<div><b>DATE:</b> 07 AUG 2025</div>", `<div><b>DATE:</b> ${escapeHtml(client.issueDate || "PENDING")}</div>`);
   for (const [placeholder, value] of Object.entries(values)) html = html.replaceAll(placeholder, escapeHtml(value));
   return html;
@@ -51,7 +70,7 @@ function readDefaults(): Partial<Pick<YcbClient, LockedField>> {
 }
 
 export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
-  const [preview, setPreview] = useState(true);
+  const [preview, setPreview] = useState(false);
   const [lockedFields, setLockedFields] = useState<Record<LockedField, boolean>>({ customerServiceName: false, branchManagerName: false });
   const [defaultMessage, setDefaultMessage] = useState("");
   const html = useMemo(() => renderYcbCertificateHtml(client), [client]);
@@ -94,7 +113,7 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
     <div className="bank-workspace-heading"><div><p className="eyebrow">YEMEN COMMERCIAL BANK</p><h2>Official Certificate Issuance</h2><p className="hint">Independent YCB certificate entry. These values are not shared with the AlKuraimi workspace.</p></div><button type="button" className="secondary-button" onClick={onBack}><ArrowRight size={16} /> Select another bank</button></div>
     <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Customer Information</h2><p className="hint">YCB customer fields only. Momaiz No. is not used by Yemen Commercial Bank.</p></div><FileText size={26} className="heading-icon" /></div><div className="grid">
       <label>Customer name<input value={client.name} onChange={(e) => onChange("name", e.target.value)} /></label>
-      <label>Passport number <span className="field-note">Optional</span><input dir="ltr" value={client.passport} onChange={(e) => onChange("passport", e.target.value)} /></label>
+      <label>Passport No. <span className="field-note">Optional</span><input dir="ltr" value={client.passport} onChange={(e) => onChange("passport", e.target.value)} /></label>
       <label>Branch name<input dir="ltr" value={client.branch} onChange={(e) => onChange("branch", e.target.value)} /></label>
       <label>Customer since<input value={client.customerSince} onChange={(e) => onChange("customerSince", e.target.value)} /></label>
       <label>Date of birth <span className="field-note">Optional</span><input type="date" value={client.dateOfBirth} onChange={(e) => onChange("dateOfBirth", e.target.value)} /></label>
@@ -105,8 +124,8 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
       <label>Currency<select value={client.currency} onChange={(e) => onChange("currency", e.target.value)}><option>YER</option><option>USD</option><option>SAR</option></select></label>
       <label>Balance<input dir="ltr" value={client.opening} onChange={(e) => onChange("opening", e.target.value)} /></label>
     </div></section>
-    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Certificate Information</h2><p className="hint">Reference and issue date are used in the English and Arabic date header.</p></div></div><div className="grid">
-      <label>Reference number<input dir="ltr" value={client.referenceNumber} onChange={(e) => onChange("referenceNumber", e.target.value)} /></label>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Certificate Information</h2><p className="hint">The optional reference is placed in the header when provided. The issue date is used in the English and Arabic date header.</p></div></div><div className="grid">
+      <label>Reference number <span className="field-note">Optional</span><input dir="ltr" value={client.referenceNumber} onChange={(e) => onChange("referenceNumber", e.target.value)} /></label>
       <label>Issue date<input value={client.issueDate} onChange={(e) => onChange("issueDate", e.target.value)} /></label>
     </div></section>
     <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Authorization Information</h2><p className="hint">Save authorized names as independent YCB defaults. You can unlock and change them at any time.</p></div><LockKeyhole size={26} className="heading-icon" /></div><div className="ycb-authorization-grid">
