@@ -572,7 +572,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote(`Register changes applied. ${transactions.filter((item) => !item.rejected).length} accepted transaction(s) now drive the documents, QR code, and print output.`);
   };
 
-  const printableStatementHtml = useMemo(() => assemblePrintableStatementHtml(statementPageHtml), [statementPageHtml]);
+  const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? accountStatusHtml : assemblePrintableStatementHtml(statementPageHtml), [accountStatusHtml, selectedBank, statementPageHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
     const selected = selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
