@@ -16,6 +16,8 @@ function escapeHtml(value: unknown) {
 }
 
 export function renderYcbCertificateHtml(client: YcbClient) {
+  const issueDate = new Date(client.issueDate);
+  const hijriDate = Number.isNaN(issueDate.getTime()) ? "PENDING" : new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-arab", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(issueDate);
   const values: Record<string, string> = {
     "[CUSTOMER_NAME]": client.name,
     "[ACCOUNT_TYPE]": client.accountType,
@@ -24,6 +26,7 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     "[BALANCE_NUMERIC]": client.opening || "0.00",
     "[CURRENCY]": client.currency,
     "[AS_OF_DATE]": client.issueDate,
+    "[AS_OF_DATE_HIJRI]": hijriDate,
     "[AUTHORIZED_OFFICER_NAME]": client.customerServiceName,
     "[BRANCH_MANAGER_NAME]": client.branchManagerName,
   };
@@ -41,23 +44,23 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
   const html = useMemo(() => renderYcbCertificateHtml(client), [client]);
   const print = () => openPrintWindow(html, "Yemen Commercial Bank Official Certificate");
   return <main className="bank-workspace" dir="rtl">
-    <div className="bank-workspace-heading"><div><p className="eyebrow">YEMEN COMMERCIAL BANK</p><h2>بيانات وإصدار الشهادة الرسمية</h2><p className="hint">القالب أدناه هو قالب YCB الرسمي الأصلي، والمدخلات مرتبطة به مباشرة.</p></div><button type="button" className="secondary-button" onClick={onBack}><ArrowRight size={16} /> اختيار بنك آخر</button></div>
-    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>بيانات العميل والحساب / Customer & Account Details</h2><p className="hint">نفس تنسيق مدخلات النظام الأصلي، بدون رقم المميز الخاص بالكريمي.</p></div><FileText size={26} className="heading-icon" /></div><div className="grid">
-      <label>اسم العميل / Customer name<input value={client.name} onChange={(e) => onChange("name", e.target.value)} /></label>
-      <label>رقم الجواز / Passport number <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(e) => onChange("passport", e.target.value)} /></label>
-      <label>اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(e) => onChange("branch", e.target.value)} /></label>
-      <label>تاريخ بدء العميل / Customer since<input value={client.customerSince} onChange={(e) => onChange("customerSince", e.target.value)} /></label>
-      <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" value={client.dateOfBirth} onChange={(e) => onChange("dateOfBirth", e.target.value)} /></label>
-      <label>نوع الحساب / Account type<input dir="ltr" value={client.accountType} onChange={(e) => onChange("accountType", e.target.value)} /></label>
-      <label>رقم الحساب / Account number<input dir="ltr" value={client.accountNumber} onChange={(e) => onChange("accountNumber", e.target.value)} /></label>
-      <label>العملة / Currency<select value={client.currency} onChange={(e) => onChange("currency", e.target.value)}><option>YER</option><option>USD</option><option>SAR</option></select></label>
-      <label>الرصيد / Balance<input dir="ltr" value={client.opening} onChange={(e) => onChange("opening", e.target.value)} /></label>
-      <label>رقم المراجعة / Reference number<input dir="ltr" value={client.referenceNumber} onChange={(e) => onChange("referenceNumber", e.target.value)} /></label>
-      <label>تاريخ الإصدار / Issue date<input value={client.issueDate} onChange={(e) => onChange("issueDate", e.target.value)} /></label>
+    <div className="bank-workspace-heading"><div><p className="eyebrow">YEMEN COMMERCIAL BANK</p><h2>Official Certificate Issuance</h2><p className="hint">Enter the customer and account details used directly in the official YCB certificate.</p></div><button type="button" className="secondary-button" onClick={onBack}><ArrowRight size={16} /> Select another bank</button></div>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Customer & Account Details</h2><p className="hint">All fields below are connected to the English certificate preview.</p></div><FileText size={26} className="heading-icon" /></div><div className="grid">
+      <label>Customer name<input value={client.name} onChange={(e) => onChange("name", e.target.value)} /></label>
+      <label>Passport number <span className="field-note">Optional</span><input dir="ltr" value={client.passport} onChange={(e) => onChange("passport", e.target.value)} /></label>
+      <label>Branch name<input dir="ltr" value={client.branch} onChange={(e) => onChange("branch", e.target.value)} /></label>
+      <label>Customer since<input value={client.customerSince} onChange={(e) => onChange("customerSince", e.target.value)} /></label>
+      <label>Date of birth <span className="field-note">Optional</span><input type="date" value={client.dateOfBirth} onChange={(e) => onChange("dateOfBirth", e.target.value)} /></label>
+      <label>Account type<input dir="ltr" value={client.accountType} onChange={(e) => onChange("accountType", e.target.value)} /></label>
+      <label>Account number<input dir="ltr" value={client.accountNumber} onChange={(e) => onChange("accountNumber", e.target.value)} /></label>
+      <label>Currency<select value={client.currency} onChange={(e) => onChange("currency", e.target.value)}><option>YER</option><option>USD</option><option>SAR</option></select></label>
+      <label>Balance<input dir="ltr" value={client.opening} onChange={(e) => onChange("opening", e.target.value)} /></label>
+      <label>Reference number<input dir="ltr" value={client.referenceNumber} onChange={(e) => onChange("referenceNumber", e.target.value)} /></label>
+      <label>Issue date<input value={client.issueDate} onChange={(e) => onChange("issueDate", e.target.value)} /></label>
       <label>Customer Service<input value={client.customerServiceName} onChange={(e) => onChange("customerServiceName", e.target.value)} /></label>
       <label>Branch Manager<input value={client.branchManagerName} onChange={(e) => onChange("branchManagerName", e.target.value)} /></label>
-    </div><div className="actions"><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "إخفاء المعاينة" : "عرض المعاينة"}</button><button type="button" onClick={print}><Printer size={17} /> طباعة / حفظ PDF</button></div></section>
-    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>معاينة قالب YCB الرسمي</h2><p className="hint">هذه المعاينة تستخدم نفس HTML والصور الموجودة في المعاينة الرسمية الأصلية.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Official Yemen Commercial Bank certificate preview" srcDoc={html} /></div></section>}
+    </div><div className="actions"><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" onClick={print}><Printer size={17} /> Print / Save PDF</button></div></section>
+    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>Official YCB Certificate Preview</h2><p className="hint">This preview uses the official English certificate layout and assets.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Official Yemen Commercial Bank certificate preview" srcDoc={html} /></div></section>}
   </main>;
 }
 

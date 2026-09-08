@@ -207,7 +207,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
   const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
-  const [ycbClient, setYcbClient] = useState({ name: "أحمد محمد القحطاني", passport: "", branch: "فرع صنعاء الرئيسي", customerSince: "15/01/2020", dateOfBirth: "", accountNumber: "YCB-0045827319", accountType: "Current", currency: "YER", opening: "1250000", issueDate: "08 September 2026", referenceNumber: "YCB-DEMO-2026-091", customerServiceName: "سارة عبدالله المقطري", branchManagerName: "خالد علي الحضرمي" });
+  const [ycbClient, setYcbClient] = useState({ name: "Ahmed Mohammed Al-Qahtani", passport: "", branch: "Sana’a Main Branch", customerSince: "15/01/2020", dateOfBirth: "", accountNumber: "YCB-0045827319", accountType: "Current Account", currency: "YER", opening: "1250000", issueDate: "08 September 2026", referenceNumber: "YCB-DEMO-2026-091", customerServiceName: "Sarah Abdullah Al-Maqtari", branchManagerName: "Khaled Ali Al-Hadrami" });
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
