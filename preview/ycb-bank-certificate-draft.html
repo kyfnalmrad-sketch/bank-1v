@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مسودة الشهادة البنكية - بنك اليمن التجاري</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root { --navy:#172a63; --blue:#2e63aa; --cyan:#28a9c8; --ink:#1d2740; --muted:#61708f; --line:#d8e2ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#eef2f7; color:var(--ink); font-family:Arial,"Noto Sans Arabic",sans-serif; }
+  .sheet { width:210mm; height:297mm; margin:0 auto; background:#fff; padding:14mm 18mm 11mm; position:relative; overflow:hidden; page-break-after:avoid; }
+  .sheet:before { content:""; position:absolute; top:0; right:0; left:0; height:8mm; background:linear-gradient(90deg,var(--navy),var(--blue) 58%,var(--cyan)); }
+  .sheet:after { content:"YCB"; position:absolute; left:11mm; bottom:29mm; font-size:86px; font-weight:900; letter-spacing:5px; color:#eef3f9; transform:rotate(-18deg); z-index:0; }
+  header { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; direction:ltr; padding-top:2mm; border-bottom:1px solid var(--line); padding-bottom:6mm; }
+  .brand { display:flex; align-items:center; gap:12px; direction:ltr; }
+  .mark { width:58px; height:42px; border:4px solid var(--navy); border-radius:50% 45% 48% 42%; display:grid; place-items:center; color:var(--navy); font-weight:900; font-size:21px; letter-spacing:-2px; transform:skew(-7deg); }
+  .brand-en { color:var(--navy); font-size:16px; font-weight:700; line-height:1.2; }
+  .brand-ar { color:var(--navy); font-size:19px; font-weight:700; direction:rtl; text-align:right; line-height:1.2; }
+  .meta { text-align:left; color:var(--muted); font-size:10px; line-height:1.8; direction:ltr; }
+  .meta b { color:var(--navy); }
+  main { position:relative; z-index:1; padding-top:12mm; }
+  .eyebrow { text-align:center; color:var(--blue); font-size:11px; letter-spacing:2px; direction:ltr; font-weight:700; }
+  h1 { text-align:center; margin:4mm 0 2mm; color:var(--navy); font-family:Georgia,serif; font-size:25px; letter-spacing:.5px; direction:ltr; }
+  .title-ar { text-align:center; color:var(--navy); font-size:18px; font-weight:700; margin-bottom:10mm; }
+  .rule { width:56mm; height:3px; margin:0 auto 9mm; background:linear-gradient(90deg,var(--cyan),var(--navy)); border-radius:3px; }
+  .salutation { font-family:Georgia,serif; font-weight:700; font-size:17px; text-align:center; direction:ltr; margin-bottom:7mm; }
+  .letter { font-family:Georgia,"Noto Naskh Arabic",serif; font-size:15.5px; line-height:2.05; text-align:justify; direction:ltr; }
+  .letter .field { color:var(--navy); font-weight:700; border-bottom:1px dotted var(--blue); padding:0 5px; white-space:nowrap; }
+  .summary { margin:9mm 0; border:1px solid var(--line); border-right:5px solid var(--blue); background:#f7faff; padding:5mm 7mm; display:grid; grid-template-columns:1fr 1fr; gap:3mm 12mm; direction:ltr; }
+  .summary div { border-bottom:1px solid #e5ebf3; padding-bottom:3mm; }
+  .summary small { display:block; color:var(--muted); font-size:10px; margin-bottom:1.5mm; }
+  .summary strong { color:var(--navy); font-size:15px; }
+  .notice { background:#f5fbfd; border:1px solid #cfeaf1; border-radius:4px; padding:5mm 6mm; font-family:Georgia,serif; font-size:12px; line-height:1.8; direction:ltr; }
+  .signatures { margin-top:9mm; display:grid; grid-template-columns:1fr 1fr; gap:24mm; direction:ltr; }
+  .signature { padding-top:9mm; border-top:1px solid var(--navy); text-align:center; color:var(--navy); font-size:12px; }
+  .signature span { display:block; color:var(--muted); font-size:10px; margin-top:2mm; }
+  footer { position:absolute; z-index:1; right:18mm; left:18mm; bottom:12mm; border-top:1px solid var(--line); padding-top:4mm; display:flex; justify-content:space-between; color:var(--muted); font-size:9px; direction:ltr; }
+  .footer-accent { color:var(--blue); font-weight:700; }
+  .draft { position:fixed; top:10px; left:10px; background:#fff5d6; color:#755600; border:1px solid #e4c86b; padding:7px 10px; font:12px Arial; z-index:10; }
+  @media print { body{background:#fff}.sheet{margin:0}.draft{display:none} }
+</style>
+</head>
+<body>
+<div class="draft">DRAFT — معاينة غير معتمدة</div>
+<section class="sheet">
+  <header>
+    <div class="brand">
+      <div class="mark">YCB</div>
+      <div class="brand-en">Yemen Commercial Bank<br><span style="font-size:10px;font-weight:400;color:#61708f">Official Banking Document</span></div>
+    </div>
+    <div>
+      <div class="brand-ar">البنك التجاري اليمني</div>
+      <div class="meta"><b>Reference:</b> [REFERENCE_NUMBER]<br><b>Issue date:</b> [ISSUE_DATE]</div>
+    </div>
+  </header>
+  <main>
+    <div class="eyebrow">BANK CERTIFICATE</div>
+    <h1>TO WHOM IT MAY CONCERN</h1>
+    <div class="title-ar">شهادة بنكية</div>
+    <div class="rule"></div>
+    <div class="salutation">Dear Sir / Madam,</div>
+    <div class="letter">
+      We, <span class="field">Yemen Commercial Bank</span>, hereby confirm that our client
+      <span class="field">[CUSTOMER_NAME]</span> holds a
+      <span class="field">[ACCOUNT_TYPE]</span> account with us under account number
+      <span class="field">[ACCOUNT_NUMBER]</span>, maintained at
+      <span class="field">[BRANCH_NAME]</span>.
+      <br><br>
+      As of <span class="field">[AS_OF_DATE]</span>, the available account balance is
+      <span class="field">[BALANCE_IN_WORDS]</span>
+      (<span class="field">[CURRENCY] [BALANCE_NUMERIC]</span>).
+    </div>
+    <section class="summary">
+      <div><small>Customer name</small><strong>[CUSTOMER_NAME]</strong></div>
+      <div><small>Account type</small><strong>[ACCOUNT_TYPE]</strong></div>
+      <div><small>Account number</small><strong>[ACCOUNT_NUMBER]</strong></div>
+      <div><small>Currency</small><strong>[CURRENCY]</strong></div>
+      <div><small>Balance date</small><strong>[AS_OF_DATE]</strong></div>
+      <div><small>Closing balance</small><strong>[CURRENCY] [BALANCE_NUMERIC]</strong></div>
+    </section>
+    <div class="notice">
+      This certificate is issued upon the request of the customer for the stated purpose. The information is valid as of the issue date and is subject to the bank’s applicable verification and disclosure policies.
+    </div>
+    <div class="signatures">
+      <div class="signature">Authorized signature<span>Customer Service / Authorized Officer</span></div>
+      <div class="signature">Authorized signature<span>Branch / Operations Manager</span></div>
+    </div>
+  </main>
+  <footer><span class="footer-accent">Yemen Commercial Bank</span><span>Official document • [BRANCH_NAME] • [CONTACT_DETAILS]</span></footer>
+</section>
+</body>
+</html>
