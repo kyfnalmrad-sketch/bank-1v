@@ -110,6 +110,8 @@ export async function ensureRenderStagingSchema() {
   const client = await getRenderPool().connect();
   try {
     for (const statement of schemaStatements) await client.query(statement);
+    await client.query("ALTER TABLE staging_statement_history ADD COLUMN IF NOT EXISTS workspace_key VARCHAR(160) NOT NULL DEFAULT 'karimi'");
+    await client.query("CREATE INDEX IF NOT EXISTS staging_statement_history_workspace_idx ON staging_statement_history (workspace_key, updated_at DESC)");
     const result = await client.query<{ table_count: string }>(
       "SELECT COUNT(*)::text AS table_count FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE 'staging_%'",
     );
@@ -145,50 +147,50 @@ export async function saveRenderSnapshot(workspaceKey: string, payload: RenderSn
   return { saved: true as const };
 }
 
-export async function listStatementHistory() {
+export async function listStatementHistory(workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return [];
   await ensureRenderStagingSchema();
   const result = await getRenderPool().query(
     `SELECT id, title, statement_reference, customer_name, account_number, created_at, updated_at
-     FROM staging_statement_history ORDER BY updated_at DESC, id DESC`,
+     FROM staging_statement_history WHERE workspace_key = $1 ORDER BY updated_at DESC, id DESC`, [workspaceKey],
   );
   return result.rows;
 }
 
-export async function getStatementHistory(id: number) {
+export async function getStatementHistory(id: number, workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return null;
   await ensureRenderStagingSchema();
   const result = await getRenderPool().query(
     `SELECT id, title, statement_reference, customer_name, account_number, payload, created_at, updated_at
-     FROM staging_statement_history WHERE id = $1 LIMIT 1`, [id],
+     FROM staging_statement_history WHERE id = $1 AND workspace_key = $2 LIMIT 1`, [id, workspaceKey],
   );
   return result.rows[0] ?? null;
 }
 
-export async function createStatementHistory(payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string) {
+export async function createStatementHistory(payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string, workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const result = await getRenderPool().query<{ id: string }>(
-    `INSERT INTO staging_statement_history (title, statement_reference, customer_name, account_number, payload)
-     VALUES ($1, $2, $3, $4, $5::jsonb) RETURNING id`,
-    [title, reference || null, customerName || null, accountNumber || null, JSON.stringify(payload)],
+    `INSERT INTO staging_statement_history (title, statement_reference, customer_name, account_number, payload, workspace_key)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6) RETURNING id`,
+    [title, reference || null, customerName || null, accountNumber || null, JSON.stringify(payload), workspaceKey],
   );
   return { saved: true as const, id: Number(result.rows[0].id) };
 }
 
-export async function updateStatementHistory(id: number, payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string) {
+export async function updateStatementHistory(id: number, payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string, workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   await getRenderPool().query(
-    `UPDATE staging_statement_history SET title = $2, statement_reference = $3, customer_name = $4, account_number = $5, payload = $6::jsonb, updated_at = NOW() WHERE id = $1`,
-    [id, title, reference || null, customerName || null, accountNumber || null, JSON.stringify(payload)],
+    `UPDATE staging_statement_history SET title = $2, statement_reference = $3, customer_name = $4, account_number = $5, payload = $6::jsonb, updated_at = NOW() WHERE id = $1 AND workspace_key = $7`,
+    [id, title, reference || null, customerName || null, accountNumber || null, JSON.stringify(payload), workspaceKey],
   );
   return { saved: true as const };
 }
 
-export async function deleteStatementHistory(id: number) {
+export async function deleteStatementHistory(id: number, workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return { deleted: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
-  await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1", [id]);
+  await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1 AND workspace_key = $2", [id, workspaceKey]);
   return { deleted: true as const };
 }

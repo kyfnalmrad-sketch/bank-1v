@@ -39,6 +39,7 @@ import {
 import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { BankSelector, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
@@ -59,6 +60,7 @@ type TabId = "dashboard" | "account" | "transactions" | "training" | "review" | 
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
+  bankId: "karimi" | "ycb";
   client: typeof defaultClient;
   referenceSource: "internal" | "excel";
   includeBranch: boolean;
@@ -204,6 +206,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, []);
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
+  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
+  const [ycbClient, setYcbClient] = useState({ name: "", branch: "", accountNumber: "", accountType: "Current Account", currency: "YER", opening: "0.00", issueDate: "" });
+  const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
   const [fileName, setFileName] = useState("");
@@ -222,18 +227,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [statusQrSource, setStatusQrSource] = useState("");
   const [statementQrSources, setStatementQrSources] = useState<string[]>([]);
   const [barcodeSources, setBarcodeSources] = useState<string[]>([]);
-  const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-descriptions"));
-  const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList("bak-web-staging-names"));
+  const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : "bak-web-staging-karimi";
+  const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-descriptions`));
+  const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-names`));
+  useEffect(() => {
+    setDescriptionMemory(loadLocalList(`${localMemoryPrefix}-descriptions`));
+    setNameMemory(loadLocalList(`${localMemoryPrefix}-names`));
+  }, [localMemoryPrefix]);
   const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
   const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
-  const workspaceKey = useMemo(() => getWorkspaceKey(), []);
+  const workspaceKey = useMemo(() => `${getWorkspaceKey()}-${selectedBank || "selector"}`, [selectedBank]);
   const [snapshotState, setSnapshotState] = useState<"loading" | "restored" | "saved" | "error">("loading");
   const snapshotRestored = useRef(false);
   const snapshotQuery = trpc.staging.loadSnapshot.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false });
   const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
-  const historyQuery = trpc.staging.listHistory?.useQuery(undefined, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
+  const historyQuery = trpc.staging.listHistory?.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
-  const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1 }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null };
+  const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1, workspaceKey }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null };
   const createHistoryMutation = trpc.staging.createHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
   const updateHistoryMutation = trpc.staging.updateHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
   const deleteHistoryMutation = trpc.staging.deleteHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ deleted: false }) };
@@ -311,13 +321,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statusQrSource, statementPageCount, statementReference]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, totalCreditOverride, totalDebitOverride, transactions]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
     snapshotRestored.current = true;
     const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
-    if (payload?.schemaVersion !== 1 || !payload.client) {
+    if (payload?.schemaVersion !== 1 || (payload.bankId && payload.bankId !== selectedBank) || !payload.client) {
+      if (payload?.bankId && payload.bankId !== selectedBank) setImportNote(`تنبيه: توجد بيانات محفوظة لبنك مختلف (${payload.bankId === "ycb" ? "بنك اليمن التجاري" : "بنك الكريمي"}) ولم يتم استعادتها داخل مساحة البنك الحالي.`);
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
       return;
     }
@@ -332,7 +343,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
     setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
     setSnapshotState("restored");
-  }, [snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
+  }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
   useEffect(() => {
     if (!snapshotRestored.current || snapshotState === "loading") return;
@@ -359,8 +370,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const title = `${client.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
     const input = { title, reference: statementReference, customerName: client.name, accountNumber: client.accountNumber, payload: snapshotPayload };
     try {
-      if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input });
-      else await createHistoryMutation.mutateAsync(input);
+      if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input, workspaceKey });
+      else await createHistoryMutation.mutateAsync({ ...input, workspaceKey });
       await historyQuery.refetch(); setActiveTab("history");
     } catch { setImportNote("The statement could not be saved to the history database."); }
   };
@@ -388,7 +399,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const deleteStatementHistory = async (id: number) => {
     if (!window.confirm("Delete this saved statement?")) return;
-    await deleteHistoryMutation.mutateAsync({ id }); await historyQuery.refetch();
+    await deleteHistoryMutation.mutateAsync({ id, workspaceKey }); await historyQuery.refetch();
   };
 
   const snapshotStatusLabel = snapshotQuery.isLoading || snapshotState === "loading"
@@ -467,12 +478,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const extractedNames = nextRows.map((item) => item.personName).filter((item): item is string => Boolean(item));
     setDescriptionMemory((current) => {
       const next = Array.from(new Set([...acceptedDescriptions, ...current])).slice(0, 300);
-      localStorage.setItem("bak-web-staging-descriptions", JSON.stringify(next));
+      localStorage.setItem(`${localMemoryPrefix}-descriptions`, JSON.stringify(next));
       return next;
     });
     setNameMemory((current) => {
       const next = Array.from(new Set([...extractedNames, ...current])).slice(0, 220);
-      localStorage.setItem("bak-web-staging-names", JSON.stringify(next));
+      localStorage.setItem(`${localMemoryPrefix}-names`, JSON.stringify(next));
       return next;
     });
     setImportNote(`${nextRows.length} rows analysed: ${nextRows.filter((item) => !item.rejected).length} ready for review and ${nextRows.filter((item) => item.rejected).length} rejected.`);
@@ -482,6 +493,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const fileInput = event.currentTarget;
     const file = event.target.files?.[0];
     if (!file) return;
+    const fileIdentity = file.name.toLowerCase();
+    const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : "بنك الكريمي";
+    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي" : "بنك اليمن التجاري";
+    const looksLikeOtherBank = selectedBank === "ycb"
+      ? /karimi|kuraimi|alkuraimi|الكريمي/.test(fileIdentity)
+      : /ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity);
+    if (looksLikeOtherBank && !window.confirm(`تنبيه: اسم الملف يبدو تابعاً لـ ${otherBankLabel} بينما المسار الحالي هو ${currentBankLabel}. هل تريد استيراده إلى المسار الحالي؟`)) {
+      setImportNote(`تم إلغاء الاستيراد: الملف يبدو تابعاً لـ ${otherBankLabel}.`);
+      fileInput.value = "";
+      return;
+    }
     setIsReading(true);
     setFileName(file.name);
     try {
@@ -566,6 +588,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     }
   };
 
+  const updateYcbClient = (key: keyof typeof ycbClient, value: string) => {
+    setYcbClient((current) => ({ ...current, [key]: value }));
+  };
+
+  if (selectedBank === null) {
+    return <BankSelector onSelect={setSelectedBank} onLogout={() => void handleSecureLogout()} />;
+  }
+  if (selectedBank === "ycb" && showYcbCertificate) {
+    return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => setShowYcbCertificate(false)} />;
+  }
+
   return (
     <div className="app-shell" dir="rtl">
       <div className="desktop-fan desktop-fan-one" aria-hidden="true" />
@@ -594,7 +627,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="bank-name">منصة إصدار ومراجعة الكشوف</p>
           </div>
         </div>
-        <div className="reference-badge"><ShieldCheck size={17} /> نظام إصدار كشفي · جلسة محمية</div>
+        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div>{selectedBank === "ycb" && <button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> شهادة البنك التجاري</button>}</div>
       </header>
 
       <div className="session-bar" role="status">

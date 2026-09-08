@@ -57,6 +57,7 @@ describe("Home applied transaction register", () => {
     const host = mockPrintWindow();
     vi.stubGlobal("open", host.open);
     render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك الكريمي/ }));
 
     fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -87,6 +88,7 @@ describe("Home applied transaction register", () => {
 
   it("allows reported credit and debit totals to be overridden before printing the status statement", async () => {
     render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك الكريمي/ }));
 
     fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;

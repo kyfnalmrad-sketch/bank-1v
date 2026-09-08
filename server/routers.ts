@@ -39,11 +39,11 @@ export const appRouter = router({
     saveSnapshot: passwordProtectedProcedure
       .input(z.object({ workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) }))
       .mutation(({ input }) => saveRenderSnapshot(input.workspaceKey, input.payload)),
-    listHistory: passwordProtectedProcedure.query(() => listStatementHistory()),
-    getHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive() })).query(({ input }) => getStatementHistory(input.id)),
-    createHistory: passwordProtectedProcedure.input(z.object({ title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => createStatementHistory(input.payload, input.title, input.reference, input.customerName, input.accountNumber)),
-    updateHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => updateStatementHistory(input.id, input.payload, input.title, input.reference, input.customerName, input.accountNumber)),
-    deleteHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteStatementHistory(input.id)),
+    listHistory: passwordProtectedProcedure.input(z.object({ workspaceKey: z.string().min(16).max(160) })).query(({ input }) => listStatementHistory(input.workspaceKey)),
+    getHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), workspaceKey: z.string().min(16).max(160) })).query(({ input }) => getStatementHistory(input.id, input.workspaceKey)),
+    createHistory: passwordProtectedProcedure.input(z.object({ title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => createStatementHistory(input.payload, input.title, input.reference, input.customerName, input.accountNumber, input.workspaceKey)),
+    updateHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => updateStatementHistory(input.id, input.payload, input.title, input.reference, input.customerName, input.accountNumber, input.workspaceKey)),
+    deleteHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), workspaceKey: z.string().min(16).max(160) })).mutation(({ input }) => deleteStatementHistory(input.id, input.workspaceKey)),
   }),
 
   // TODO: add feature routers here, e.g.
