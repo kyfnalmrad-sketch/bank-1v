@@ -26,7 +26,7 @@ describe("YCB certificate data placement", () => {
     expect(html).toContain("Reference:</b> YCB-DEMO-2026-091");
     expect(html).toContain("1,250,000 YER");
     expect(html).toContain("text-decoration:underline");
-    expect(html).toContain("margin:clamp(3mm,1.2vw,6mm) 0 0");
+    expect(html).toContain("margin:clamp(8mm,2.5vw,12mm) 0 0");
     expect(html).toContain("Customer Service");
     expect(html).toContain("Branch Manager");
     expect(html).not.toContain("[PASSPORT_LINE]");

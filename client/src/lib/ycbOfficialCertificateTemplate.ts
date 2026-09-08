@@ -23,12 +23,12 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .body .strong{font-size:18pt;font-weight:700}
 .disclaimer{font-size:10.5pt!important;line-height:1.42!important;margin:0 auto!important;color:#a30000;text-align:center}
 .closing{font-size:16pt;font-weight:700;text-align:center;margin-top:clamp(8mm,2.5vw,11mm);color:#151b29}
-.signatures{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(16mm,6vw,24mm);margin:clamp(3mm,1.2vw,6mm) 0 0;position:relative;z-index:2}
+.signatures{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(16mm,6vw,24mm);margin:clamp(8mm,2.5vw,12mm) 0 0;position:relative;z-index:2}
 .signature{text-align:center;font-size:12pt;line-height:1.45;color:#151b29;min-height:27mm;min-width:0}
 .signature .role{display:block;font-weight:700;font-size:18pt}
 .signature .name{display:block;font-weight:400;font-size:18pt;white-space:nowrap;letter-spacing:-.1px}
 .signature .stamp-space{display:block;height:10mm}
-.notice{position:absolute;bottom:20mm;left:16mm;right:16mm;text-align:center;font-size:9pt;line-height:1.35;color:#a30000}
+.notice{position:absolute;bottom:30mm;left:16mm;right:16mm;text-align:center;font-size:9pt;line-height:1.35;color:#a30000}
 @media print{body{background:#fff}.page{margin:0}}
 </style>
 </head>
