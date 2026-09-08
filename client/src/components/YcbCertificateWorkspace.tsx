@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { ArrowRight, FileText, Printer } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ArrowRight, FileText, LockKeyhole, Printer, Save, UnlockKeyhole } from "lucide-react";
 import { openPrintWindow } from "@/lib/printDocument";
 import { ycbOfficialCertificateTemplate } from "@/lib/ycbOfficialCertificateTemplate";
 
@@ -10,6 +10,8 @@ export type YcbClient = {
 };
 
 type Props = { client: YcbClient; onChange: (key: keyof YcbClient, value: string) => void; onBack: () => void };
+type LockedField = "customerServiceName" | "branchManagerName";
+const defaultsStorageKey = "bak-web-staging-ycb-authorized-defaults";
 
 function escapeHtml(value: unknown) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -39,28 +41,80 @@ export function renderYcbCertificateHtml(client: YcbClient) {
   return html;
 }
 
+function readDefaults(): Partial<Pick<YcbClient, LockedField>> {
+  try {
+    const value = JSON.parse(localStorage.getItem(defaultsStorageKey) || "{}");
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
+}
+
 export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
   const [preview, setPreview] = useState(true);
+  const [lockedFields, setLockedFields] = useState<Record<LockedField, boolean>>({ customerServiceName: false, branchManagerName: false });
+  const [defaultMessage, setDefaultMessage] = useState("");
   const html = useMemo(() => renderYcbCertificateHtml(client), [client]);
+
+  useEffect(() => {
+    const defaults = readDefaults();
+    for (const key of ["customerServiceName", "branchManagerName"] as const) {
+      if (defaults[key]) onChange(key, String(defaults[key]));
+    }
+    setLockedFields({ customerServiceName: Boolean(defaults.customerServiceName), branchManagerName: Boolean(defaults.branchManagerName) });
+  }, []);
+
+  const saveDefault = (key: LockedField) => {
+    const defaults = readDefaults();
+    localStorage.setItem(defaultsStorageKey, JSON.stringify({ ...defaults, [key]: client[key] }));
+    setLockedFields((current) => ({ ...current, [key]: true }));
+    setDefaultMessage(`${key === "customerServiceName" ? "Customer Service" : "Branch Manager"} saved as the YCB default.`);
+  };
+  const unlock = (key: LockedField) => {
+    setLockedFields((current) => ({ ...current, [key]: false }));
+    setDefaultMessage("The field is unlocked for editing. Save it again to make it the default.");
+  };
+  const clearDefault = (key: LockedField) => {
+    const defaults = readDefaults();
+    delete defaults[key];
+    localStorage.setItem(defaultsStorageKey, JSON.stringify(defaults));
+    setLockedFields((current) => ({ ...current, [key]: false }));
+    setDefaultMessage("The saved default was cleared.");
+  };
+  const authorizationField = (key: LockedField, label: string, value: string) => <div className="ycb-authorized-field">
+    <label>{label}<input value={value} disabled={lockedFields[key]} onChange={(event) => onChange(key, event.target.value)} /></label>
+    <div className="ycb-field-actions">
+      {lockedFields[key] ? <button type="button" className="secondary-button" onClick={() => unlock(key)}><UnlockKeyhole size={14} /> Edit</button> : <button type="button" className="secondary-button" onClick={() => saveDefault(key)} disabled={!value.trim()}><Save size={14} /> Save as default</button>}
+      {lockedFields[key] && <button type="button" className="text-button" onClick={() => clearDefault(key)}>Clear default</button>}
+    </div>
+  </div>;
   const print = () => openPrintWindow(html, "Yemen Commercial Bank Official Certificate");
-  return <main className="bank-workspace" dir="rtl">
-    <div className="bank-workspace-heading"><div><p className="eyebrow">YEMEN COMMERCIAL BANK</p><h2>Official Certificate Issuance</h2><p className="hint">Enter the customer and account details used directly in the official YCB certificate.</p></div><button type="button" className="secondary-button" onClick={onBack}><ArrowRight size={16} /> Select another bank</button></div>
-    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Customer & Account Details</h2><p className="hint">All fields below are connected to the English certificate preview.</p></div><FileText size={26} className="heading-icon" /></div><div className="grid">
+
+  return <main className="bank-workspace" dir="ltr">
+    <div className="bank-workspace-heading"><div><p className="eyebrow">YEMEN COMMERCIAL BANK</p><h2>Official Certificate Issuance</h2><p className="hint">Independent YCB certificate entry. These values are not shared with the AlKuraimi workspace.</p></div><button type="button" className="secondary-button" onClick={onBack}><ArrowRight size={16} /> Select another bank</button></div>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Customer Information</h2><p className="hint">YCB customer fields only. Momaiz No. is not used by Yemen Commercial Bank.</p></div><FileText size={26} className="heading-icon" /></div><div className="grid">
       <label>Customer name<input value={client.name} onChange={(e) => onChange("name", e.target.value)} /></label>
       <label>Passport number <span className="field-note">Optional</span><input dir="ltr" value={client.passport} onChange={(e) => onChange("passport", e.target.value)} /></label>
       <label>Branch name<input dir="ltr" value={client.branch} onChange={(e) => onChange("branch", e.target.value)} /></label>
       <label>Customer since<input value={client.customerSince} onChange={(e) => onChange("customerSince", e.target.value)} /></label>
       <label>Date of birth <span className="field-note">Optional</span><input type="date" value={client.dateOfBirth} onChange={(e) => onChange("dateOfBirth", e.target.value)} /></label>
+    </div></section>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Account Information</h2><p className="hint">Fields used by the independent YCB account certificate.</p></div></div><div className="grid">
       <label>Account type<input dir="ltr" value={client.accountType} onChange={(e) => onChange("accountType", e.target.value)} /></label>
       <label>Account number<input dir="ltr" value={client.accountNumber} onChange={(e) => onChange("accountNumber", e.target.value)} /></label>
       <label>Currency<select value={client.currency} onChange={(e) => onChange("currency", e.target.value)}><option>YER</option><option>USD</option><option>SAR</option></select></label>
       <label>Balance<input dir="ltr" value={client.opening} onChange={(e) => onChange("opening", e.target.value)} /></label>
+    </div></section>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Certificate Information</h2><p className="hint">Reference and issue date are used in the English and Arabic date header.</p></div></div><div className="grid">
       <label>Reference number<input dir="ltr" value={client.referenceNumber} onChange={(e) => onChange("referenceNumber", e.target.value)} /></label>
       <label>Issue date<input value={client.issueDate} onChange={(e) => onChange("issueDate", e.target.value)} /></label>
-      <label>Customer Service<input value={client.customerServiceName} onChange={(e) => onChange("customerServiceName", e.target.value)} /></label>
-      <label>Branch Manager<input value={client.branchManagerName} onChange={(e) => onChange("branchManagerName", e.target.value)} /></label>
-    </div><div className="actions"><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" onClick={print}><Printer size={17} /> Print / Save PDF</button></div></section>
-    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>Official YCB Certificate Preview</h2><p className="hint">This preview uses the official English certificate layout and assets.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Official Yemen Commercial Bank certificate preview" srcDoc={html} /></div></section>}
+    </div></section>
+    <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Authorization Information</h2><p className="hint">Save authorized names as independent YCB defaults. You can unlock and change them at any time.</p></div><LockKeyhole size={26} className="heading-icon" /></div><div className="ycb-authorization-grid">
+      {authorizationField("customerServiceName", "Customer Service", client.customerServiceName)}
+      {authorizationField("branchManagerName", "Branch Manager", client.branchManagerName)}
+    </div>{defaultMessage && <p className="hint" role="status">{defaultMessage}</p>}</section>
+    <div className="actions"><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" onClick={print}><Printer size={17} /> Print / Save PDF</button></div>
+    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>Official YCB Certificate Preview</h2><p className="hint">This preview uses the independent official English certificate layout and assets.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Official Yemen Commercial Bank certificate preview" srcDoc={html} /></div></section>}
   </main>;
 }
 
