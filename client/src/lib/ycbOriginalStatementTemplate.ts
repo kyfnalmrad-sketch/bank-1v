@@ -25,7 +25,7 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const closing = money(profile.closingBalance);
   const page = originalTemplate
     .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
-    .replace("Sana'a — Bab Al-Yemen", escapeHtml(profile.address || "—"))
+    .replace("Sana'a — Bab Al-Yemen", `${escapeHtml(profile.address || "—")}<br>Date of Birth: ${escapeHtml(profile.dateOfBirth || "—")}`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
     .replace("101-840-21102-326491-000", escapeHtml(profile.accountNumber))
     .replace("05-Feb-2025", escapeHtml(profile.periodStart))

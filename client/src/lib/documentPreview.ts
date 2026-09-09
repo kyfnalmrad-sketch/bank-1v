@@ -46,6 +46,7 @@ export type StatementPreviewInput = {
   qrUri: string;
   qrLogoUri?: string;
   customerName: string;
+  dateOfBirth?: string;
   accountNumber: string;
   momaizNo: string;
   branchName: string;
@@ -215,7 +216,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
       <img class="header-art" src="${escapeHtml(data.headerUri)}" alt="Original statement header">
       <div class="qr-wrap"><img class="qr" src="${escapeHtml(data.qrUri)}" alt="Verification QR">${data.qrLogoUri ? `<img class="qr-mark" src="${escapeHtml(data.qrLogoUri)}" alt="Logo">` : ""}</div>
       <div class="meta">
-        <div class="left-meta"><div class="meta-field"><b>Customer Name:</b><span class="field-value">${value(data.customerName)}</span></div><div class="meta-field"><b>Account Number:</b><span class="field-value">${value(data.accountNumber)}</span></div><div class="meta-field"><b>Momaiz No.:</b><span class="field-value">${value(data.momaizNo)}</span></div></div>
+        <div class="left-meta"><div class="meta-field"><b>Customer Name:</b><span class="field-value">${value(data.customerName)}${data.dateOfBirth ? `<br><b>Date of Birth:</b> ${value(data.dateOfBirth)}` : ""}</span></div><div class="meta-field"><b>Account Number:</b><span class="field-value">${value(data.accountNumber)}</span></div><div class="meta-field"><b>Momaiz No.:</b><span class="field-value">${value(data.momaizNo)}</span></div></div>
         <div class="right-meta"><div class="meta-row branch-row"><b>Branch Name:</b><span class="meta-value">${value(data.branchName)}</span></div><div class="meta-row"><b>Account Currency:</b><span class="meta-value">${value(data.currency)}</span></div><div class="meta-row date-row"><b>Date:</b><span class="meta-value">${value(data.issueDate)}</span></div></div>
       </div>
     </header>

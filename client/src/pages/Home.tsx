@@ -59,6 +59,7 @@ import {
 } from "@/lib/statementImport";
 
 type TabId = "dashboard" | "account" | "transactions" | "training" | "review" | "history" | "analytics";
+type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
@@ -74,6 +75,7 @@ type SnapshotPayload = {
   totalCreditOverride: string;
   totalDebitOverride: string;
   ycbClient?: typeof defaultYcbClient;
+  dateOfBirthPlacement: DateOfBirthPlacement;
 };
 type HistoryItem = { id: number; title: string; statement_reference: string | null; customer_name: string | null; account_number: string | null; created_at: string; updated_at: string };
 
@@ -237,6 +239,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fileName, setFileName] = useState("");
   const [referenceSource, setReferenceSource] = useState<"internal" | "excel">("internal");
   const [includeBranch, setIncludeBranch] = useState(false);
+  const [dateOfBirthPlacement, setDateOfBirthPlacement] = useState<DateOfBirthPlacement>("both");
   const [columnMap, setColumnMap] = useState<StatementColumnMap>({});
   const [mappedFields, setMappedFields] = useState<Array<{ key: keyof typeof statementFieldLabels; source: string }>>([]);
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
@@ -323,6 +326,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
     customerName: client.name,
     address: ycbClient.address,
+    dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? ycbClient.dateOfBirth : "",
     branchName: client.branch,
     accountNumber: client.accountNumber,
     accountType: client.accountType,
@@ -335,7 +339,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     totalCredit: reportedTotalCredit,
     totalDebit: reportedTotalDebit,
     issueDate: documentIssueDate,
-  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address]);
+  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
     reference: row.operationNumber,
@@ -344,14 +348,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     debit: row.debit,
     balance: row.balance,
   })), [statementRows]);
-  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(ycbClient) : renderAccountStatusPreview({
+  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
     momaizNo: client.momaizNo,
     passport: client.passport,
-    dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth),
+    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
     customerSince: formatEnglishGregorianDate(client.customerSince),
     accountType: client.accountType,
     accountNumber: client.accountNumber,
@@ -369,8 +373,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     managerName: client.managerName,
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  }), [client, dateOfBirthPlacement, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -410,6 +414,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     }
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
     setIncludeBranch(payload.includeBranch === true);
+    setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both");
     setFileName(typeof payload.fileName === "string" ? payload.fileName : "");
     setColumnMap(payload.columnMap && typeof payload.columnMap === "object" ? payload.columnMap : {});
     setMappedFields(Array.isArray(payload.mappedFields) ? payload.mappedFields : []);
@@ -466,7 +471,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     if (selectedHistoryId !== null && payload?.client) {
       if (!payload?.client) return;
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
-      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
+      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
       setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("review");
       setSelectedHistoryId(null);
     }
@@ -490,6 +495,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     qrUri: statementQrSources[pageIndex] || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
+    dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
     includeBranch,
     accountNumber: client.accountNumber,
     momaizNo: client.momaizNo,
@@ -506,7 +512,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
     pageSummary: statementPageSummaries[pageIndex],
       transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  })), [barcodeSources, client, closing, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
+  })), [barcodeSources, client, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -789,6 +795,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>العملة / Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
             <label>مصدر المرجع / Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
             <label>عمود الفرع / Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
+            <label>تاريخ الميلاد / Date of birth<select value={dateOfBirthPlacement} onChange={(event) => setDateOfBirthPlacement(event.target.value as DateOfBirthPlacement)}><option value="none">لا يظهر / Do not include</option><option value="status">في البيان فقط / Account Status only</option><option value="statement">في الكشف فقط / Account Statement only</option><option value="both">في البيان والكشف / Both documents</option></select></label>
           </div>
           <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button>{selectedBank === "ycb" && <><button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> Open Official YCB Certificate</button><button type="button" className="preview-button" onClick={() => setShowYcbStatement(true)}><FileText size={16} /> Open YCB Statement</button></>}<span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
@@ -796,7 +803,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>بيانات العميل والحساب / Customer & Account Details</h2>
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
-            {selectedBank === "ycb" && <label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label>}
+            {selectedBank === "ycb" && <label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /><span className="field-note">تاريخ الميلاد / Date of birth</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
@@ -851,7 +858,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
         </section>
         <section className="panel">
-          <h2>Financial Details</h2>
+          <h2>القيم المالية المشتركة / Shared Financial Details</h2>
+          <p className="hint">هذه القيم مصدر واحد للبيان والكشف. الرصيد النهائي يحسب تلقائيًا من الافتتاحي + إجمالي الإيداعات − إجمالي السحوبات.</p>
           <div className="grid">
             <label>Opening balance<input inputMode="decimal" dir="ltr" value={client.opening} onChange={(event) => updateClient("opening", event.target.value)} /></label>
             <label>Total credit (editable)<input inputMode="decimal" dir="ltr" value={totalCreditOverride} placeholder={formatMoney(totalCredit)} onChange={(event) => setTotalCreditOverride(event.target.value)} /></label>
