@@ -40,6 +40,8 @@ import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
+import YcbStatementWorkspace from "@/components/YcbStatementWorkspace";
+import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
@@ -228,6 +230,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
   const [ycbClient, setYcbClient] = useState(defaultYcbClient);
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
+  const [showYcbStatement, setShowYcbStatement] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
   const [fileName, setFileName] = useState("");
@@ -316,6 +319,30 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       lastReference: rows.at(-1)?.operationNumber || "",
     };
   }), [client.opening, statementPageGroups]);
+  const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
+    customerName: client.name,
+    address: "",
+    branchName: client.branch,
+    accountNumber: client.accountNumber,
+    accountType: client.accountType,
+    currency: client.currency,
+    periodStart: documentPeriodStart,
+    periodEnd: documentPeriodEnd,
+    statementReference,
+    openingBalance: money(client.opening),
+    closingBalance: reportedClosing,
+    totalCredit: reportedTotalCredit,
+    totalDebit: reportedTotalDebit,
+    issueDate: documentIssueDate,
+  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference]);
+  const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
+    date: displayStatementDate(row.date),
+    reference: row.operationNumber,
+    description: row.description,
+    credit: row.credit,
+    debit: row.debit,
+    balance: row.balance,
+  })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(ycbClient) : renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
     qrUri: statusQrSource || referenceAssets.qrLogo,
@@ -667,10 +694,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   if (selectedBank === null) {
-    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(false); if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate })); }} onLogout={() => void handleSecureLogout()} />;
+    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(false); setShowYcbStatement(false); if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate })); }} onLogout={() => void handleSecureLogout()} />;
   }
   if (selectedBank === "ycb" && showYcbCertificate) {
     return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => { setShowYcbCertificate(false); setSelectedBank(null); }} />;
+  }
+  if (selectedBank === "ycb" && showYcbStatement) {
+    return <YcbStatementWorkspace profile={ycbStatementProfile} transactions={ycbStatementTransactions} onBack={() => setShowYcbStatement(false)} />;
   }
 
   return (
@@ -759,7 +789,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>مصدر المرجع / Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
             <label>عمود الفرع / Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
           </div>
-          <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button>{selectedBank === "ycb" && <button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> Open Official YCB Certificate</button>}<span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
+          <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button>{selectedBank === "ycb" && <><button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> Open Official YCB Certificate</button><button type="button" className="preview-button" onClick={() => setShowYcbStatement(true)}><FileText size={16} /> Open YCB Statement</button></>}<span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
         <section className="panel">
           <h2>بيانات العميل والحساب / Customer & Account Details</h2>
