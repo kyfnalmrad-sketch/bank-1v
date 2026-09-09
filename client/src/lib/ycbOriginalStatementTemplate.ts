@@ -15,6 +15,9 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
 .page > .top{height:64mm!important}
 .page > .summary{margin-top:2.5mm!important}
 .page > .table{margin-top:2.5mm!important}
+.address-qr-wrap{position:relative;display:block;width:14mm;height:14mm;flex:0 0 14mm}
+.address-qr-wrap .address-qr{position:absolute;inset:0;width:14mm;height:14mm}
+.address-qr-logo{position:absolute;left:50%;top:50%;width:4.4mm;height:2.9mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
 @media print{.page{margin:0!important}.page > .top{height:64mm!important}.page > .summary{margin-top:2.5mm!important}.page > .table{margin-top:2.5mm!important}}
 </style>`;
 
@@ -43,7 +46,11 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   if (summaryStart >= 0 && tableStart > summaryStart && notesStart > tableStart) {
     return `${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
+      .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/ycb-logo-transparent.png" alt="YCB logo" /></span>`)
+      .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22')
       .replace(/Page 1 of 1/g, `Page ${pageNumber} of ${pageCount}`);
   }
-  return page.replace("</head>", `${ycbLayoutOverrides}</head>`);
+  return page.replace("</head>", `${ycbLayoutOverrides}</head>`)
+    .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/ycb-logo-transparent.png" alt="YCB logo" /></span>`)
+    .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22');
 }
