@@ -121,6 +121,7 @@ const defaultClient = {
 
 const defaultYcbClient = {
   name: "Ahmed Mohammed Al-Qahtani",
+  address: "Sana’a — Bab Al-Yemen",
   passport: "",
   branch: "Sana’a Main Branch",
   customerSince: "15/01/2020",
@@ -321,7 +322,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }), [client.opening, statementPageGroups]);
   const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
     customerName: client.name,
-    address: "",
+    address: ycbClient.address,
     branchName: client.branch,
     accountNumber: client.accountNumber,
     accountType: client.accountType,
@@ -334,7 +335,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     totalCredit: reportedTotalCredit,
     totalDebit: reportedTotalDebit,
     issueDate: documentIssueDate,
-  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference]);
+  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
     reference: row.operationNumber,
@@ -795,11 +796,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>بيانات العميل والحساب / Customer & Account Details</h2>
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
+            {selectedBank === "ycb" && <label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
-            <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
+            {selectedBank !== "ycb" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
             <label>نوع الحساب / Account type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
             <label>رقم الحساب / Account number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
