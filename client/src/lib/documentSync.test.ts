@@ -47,12 +47,12 @@ describe("applied transaction register synchronization", () => {
     const input = { customerName: "Ahmed Al-Qahtani", passport: "P1234567", address: "Sana'a", accountNumber: "YCB-1001", branchName: "AL-ZUBAIRI", currency: "YER", statementReference: "YCB-2026-001", pageNumber: 1, pageCount: 2, periodStart: "01-Jan-26", periodEnd: "31-Jan-26", issueDate: "31-Jan-26", firstReference: "0379297", lastReference: "0379302", transactionCount: 6, creditCount: 2, debitCount: 4, totalCredit: 9032, totalDebit: 4400, openingBalance: 15283, closingBalance: 19915 };
     const qr = buildYcbStatementQrPayload(input);
     const barcode = buildYcbStatementBarcodePayload(input);
-    expect(qr).toContain("CUSTOMER=Ahmed Al-Qahtani");
-    expect(qr).toContain("REF1=0379297");
-    expect(qr).toContain("CLOSE=19915.00");
+    expect(qr).toContain("N=Ahmed Al-Qahtani");
+    expect(qr).toContain("R1=0379297");
+    expect(qr).toContain("CL=19915.00");
     expect(barcode).toContain("YCB|STMT|DOC=YCB-2026-001|PAGE=1/2");
     expect(barcode).toContain("REF1=0379297|REFN=0379302|OPS=6");
-    expect(barcode).not.toContain("CUSTOMER=");
+    expect(barcode).not.toContain("N=Ahmed Al-Qahtani");
     expect(qr).not.toBe(barcode);
     expect(buildYcbStatementBarcodePayload({ ...input, pageNumber: 2 })).not.toBe(barcode);
   });

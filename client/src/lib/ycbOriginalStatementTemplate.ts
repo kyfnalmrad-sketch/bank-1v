@@ -15,9 +15,9 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
  .page > .summary{margin-top:3mm!important}
  .page > .table{margin-top:3mm!important}
-.address-qr-wrap{position:relative;display:block;width:17mm;height:17mm;flex:0 0 17mm}
-.address-qr-wrap .address-qr{position:absolute;inset:0;width:17mm;height:17mm}
-.address-qr-logo{position:absolute;left:50%;top:50%;width:5.2mm;height:3.4mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
+.address-qr-wrap{position:relative;display:block;width:20mm;height:20mm;flex:0 0 20mm}
+.address-qr-wrap .address-qr{position:absolute;inset:0;width:20mm;height:20mm;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
+.address-qr-logo{position:absolute;left:50%;top:50%;width:5.8mm;height:3.8mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
 .title-pdf417{width:52mm!important;height:10mm!important;object-fit:fill!important}
  .address-date-of-birth{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
