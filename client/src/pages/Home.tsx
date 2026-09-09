@@ -329,6 +329,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }), [client.opening, statementPageGroups]);
   const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
     customerName: client.name,
+    passport: client.passport,
     address: ycbClient.address,
     dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? ycbClient.dateOfBirth : "",
     branchName: client.branch,

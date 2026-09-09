@@ -109,3 +109,68 @@ export function buildVerificationBarcodePayload(reference: string, pageNumber: n
   const core = `${bankName}|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
   return `${core}|CHK=${verificationChecksum(core)}`;
 }
+
+export type YcbStatementCodeInput = {
+  customerName?: string;
+  passport?: string;
+  address?: string;
+  accountNumber: string;
+  branchName?: string;
+  currency: string;
+  statementReference: string;
+  pageNumber: number;
+  pageCount: number;
+  periodStart?: string;
+  periodEnd?: string;
+  issueDate?: string;
+  firstReference?: string;
+  lastReference?: string;
+  transactionCount: number;
+  creditCount: number;
+  debitCount: number;
+  totalCredit: number;
+  totalDebit: number;
+  openingBalance: number;
+  closingBalance: number;
+};
+
+/** YCB QR: identity, customer details, balances, and the page's operations summary. */
+export function buildYcbStatementQrPayload(input: YcbStatementCodeInput) {
+  return [
+    "YEMEN COMMERCIAL BANK",
+    "DOC=ACCOUNT_STATEMENT",
+    `PAGE=${input.pageNumber}/${input.pageCount}`,
+    `CUSTOMER=${qrText(input.customerName)}`,
+    `PASSPORT=${qrText(input.passport)}`,
+    `ADDRESS=${qrText(input.address)}`,
+    `BRANCH=${qrText(input.branchName)}`,
+    `ACCOUNT=${qrText(input.accountNumber)}`,
+    `CURRENCY=${qrText(input.currency)}`,
+    `PERIOD=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
+    `ISSUED=${qrText(input.issueDate)}`,
+    `REF1=${qrText(input.firstReference)}`,
+    `REFN=${qrText(input.lastReference)}`,
+    `OPS=${qrNumber(input.transactionCount)}`,
+    `CREDITS=${qrNumber(input.creditCount)};${qrMoney(input.totalCredit)}`,
+    `DEBITS=${qrNumber(input.debitCount)};${qrMoney(input.totalDebit)}`,
+    `OPEN=${qrMoney(input.openingBalance)}`,
+    `CLOSE=${qrMoney(input.closingBalance)}`,
+    `STATEMENT=${qrText(input.statementReference)}`,
+  ].join("\n");
+}
+
+/** YCB linear/PDF417 barcode: compact references and page reconciliation data. */
+export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
+  const core = [
+    "YCB",
+    "STMT",
+    `DOC=${qrText(input.statementReference).replace(/\s+/g, "-")}`,
+    `PAGE=${input.pageNumber}/${input.pageCount}`,
+    `REF1=${qrText(input.firstReference).replace(/\s+/g, "-")}`,
+    `REFN=${qrText(input.lastReference).replace(/\s+/g, "-")}`,
+    `OPS=${input.transactionCount}`,
+    `OPEN=${qrMoney(input.openingBalance)}`,
+    `CLOSE=${qrMoney(input.closingBalance)}`,
+  ].join("|");
+  return `${core}|CHK=${verificationChecksum(core)}`;
+}
