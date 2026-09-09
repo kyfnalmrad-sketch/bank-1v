@@ -31,6 +31,8 @@ export type AccountStatusPreviewInput = {
   issueDateHijri: string;
   printTime: string;
   correspondenceDate: string;
+  employeeName?: string;
+  managerName?: string;
   opening: number;
   credit: number;
   debit: number;
@@ -118,6 +120,8 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     .balance th{width:43%;text-align:left;padding-left:3mm}
     .customer-request-notice{margin:8mm 0 0;padding:2.4mm 2.6mm;border-top:.8pt solid #bcaed1;border-bottom:.8pt solid #bcaed1;background:rgba(255,255,255,.72);font-size:8.6pt;line-height:1.45;font-weight:600;text-align:justify}
     .disclaimer{position:absolute;left:17mm;right:17mm;bottom:20mm;font-size:7.7pt;line-height:1.4;color:#6b1f1f;text-align:center;border-top:.6pt solid #bcaed1;padding-top:2mm;z-index:2}
+    .signatures{position:absolute;left:4mm;right:4mm;bottom:10mm;display:grid;grid-template-columns:1fr 1fr;gap:20mm;text-align:center;color:#6b5297;font-size:14pt;line-height:1.35;z-index:3}
+    .signatures .role{font-weight:700;font-size:14pt}.signatures .name{font-weight:400;font-size:14pt;min-height:6mm}
     </style></head><body><section class="page">
     <img class="background-art" src="${escapeHtml(data.backgroundUri)}" alt="Original statement background">
     <div class="correspondence"><div><b>Date:</b> ${value(data.correspondenceDate || data.issueDate)}</div>
@@ -132,6 +136,7 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
       <table class="balance"><thead><tr><th colspan="2">BALANCE SUMMARY</th></tr></thead><tbody><tr><th>Opening Balance</th><td>${amount(data.opening)}</td></tr><tr><th>Total Credits</th><td>${amount(data.credit)}</td></tr><tr><th>Total Debits</th><td>${amount(data.debit)}</td></tr><tr><th>Closing Balance</th><td>${amount(data.closing)}</td></tr></tbody></table>
       <p class="attestation">Issued by AlKuraimi Islamic Microfinance Bank as of the statement date.</p>
       <p class="customer-request-notice">This statement has been issued at the customer’s request. The customer is requested to review the information and notify AlKuraimi Islamic Microfinance Bank of any discrepancy within fifteen (15) calendar days of receipt. After this period, the Bank shall not be responsible for claims arising from unreported discrepancies, subject to applicable law and the account terms and conditions.</p>
+      <div class="signatures"><div><div class="role">Customer Service</div><div class="name">${value(data.employeeName)}</div></div><div><div class="role">Branch Manager</div><div class="name">${value(data.managerName)}</div></div></div>
     </main>
     <div class="disclaimer">AlKuraimi Islamic Microfinance Bank</div>
   </section></body></html>`;

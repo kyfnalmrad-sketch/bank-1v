@@ -113,6 +113,8 @@ const defaultClient = {
   correspondenceDate: "",
   periodStart: "",
   periodEnd: "",
+  employeeName: "",
+  managerName: "",
 };
 
 const defaultYcbClient = {
@@ -335,6 +337,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     issueDateHijri: formatHijriDate(issueDate),
     printTime: client.printTime,
     correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
+    employeeName: client.employeeName,
+    managerName: client.managerName,
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
@@ -349,8 +353,33 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
       return;
     }
-    setClient({ ...defaultClient, ...payload.client });
-    if (selectedBank === "ycb" && payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
+    const restoredClient = { ...defaultClient, ...payload.client };
+    setClient(restoredClient);
+    if (selectedBank === "ycb") {
+      // Older YCB snapshots stored shared customer fields only in `client`.
+      // Backfill the independent certificate workspace without changing Karimi data.
+      if (!payload.ycbClient) {
+        setYcbClient((current) => ({
+          ...current,
+          name: restoredClient.name,
+          passport: restoredClient.passport,
+          branch: restoredClient.branch,
+          customerSince: restoredClient.customerSince,
+          dateOfBirth: restoredClient.dateOfBirth,
+          accountNumber: restoredClient.accountNumber,
+          accountType: restoredClient.accountType,
+          currency: restoredClient.currency,
+          opening: restoredClient.opening,
+          issueDate: restoredClient.issueDate,
+        }));
+      } else {
+        setYcbClient({
+          ...defaultYcbClient,
+          ...payload.ycbClient,
+          customerSince: payload.ycbClient.customerSince || restoredClient.customerSince,
+        });
+      }
+    }
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
     setIncludeBranch(payload.includeBranch === true);
     setFileName(typeof payload.fileName === "string" ? payload.fileName : "");
@@ -617,6 +646,26 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setYcbClient((current) => ({ ...current, [key]: value }));
   };
 
+  const refreshAllDocumentData = () => {
+    if (selectedBank === "ycb") {
+      setYcbClient((current) => ({
+        ...current,
+        name: client.name,
+        passport: client.passport,
+        branch: client.branch,
+        customerSince: client.customerSince,
+        dateOfBirth: client.dateOfBirth,
+        accountNumber: client.accountNumber,
+        accountType: client.accountType,
+        currency: client.currency,
+        opening: client.opening,
+        issueDate: client.issueDate,
+      }));
+    }
+    setReviewPreview(null);
+    setImportNote("تم تحديث بيانات المعاينة والطباعة من المدخلات الحالية / Document data refreshed.");
+  };
+
   if (selectedBank === null) {
     return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(false); if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate })); }} onLogout={() => void handleSecureLogout()} />;
   }
@@ -742,6 +791,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             </div>
           </section>
         </>}
+        {selectedBank !== "ycb" && <section className="panel karimi-signature-panel">
+          <h2>بيانات التوقيع / Signature Details</h2>
+          <p className="hint">تظهر هذه البيانات في بيان الكريمي فقط، وبنفس لون قالب البيان.</p>
+          <div className="grid">
+            <label>اسم الموظف / Employee name<input value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /></label>
+            <label>اسم المدير / Manager name<input value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /></label>
+          </div>
+        </section>}
         <section className="panel">
           <h2>Account Status Statement Fields</h2>
           <p className="hint">These fields appear only on the Account Status Statement. You can adjust the reported credit and debit totals before printing; the closing balance and status summary will update accordingly.</p>
@@ -774,6 +831,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <div className="computed-field reference-field"><span>Statement reference</span><strong dir="ltr">{statementReference}</strong><small>Stable structure based on the first imported transaction date.</small></div>
           </div>
         </section>
+        <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button></div>
       </>}
 
       {activeTab === "transactions" && <>

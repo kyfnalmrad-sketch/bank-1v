@@ -11,6 +11,8 @@ describe("reference document previews", () => {
     expect(html).toContain("th,td{border:1pt solid #6b5297;padding:1.5mm 1.3mm;vertical-align:middle;font-weight:700}");
     expect(html).toContain('class="background-art" src="/background.png"');
     expect(html).toContain("02 صفر 1448 هـ");
+    expect(html).toContain("Customer Service");
+    expect(html).toContain("Branch Manager");
   });
 
   it("keeps statement preview rows to the 18 transactions permitted per page", () => {
@@ -28,6 +30,8 @@ describe("reference document previews", () => {
     expect(html).toContain("width:43mm;height:11.5mm");
     expect(html).toContain("width:40mm;height:7.3mm");
     expect(html).toContain('class="barcode-frame"');
+    expect(html).not.toContain("Customer Service");
+    expect(html).not.toContain("Branch Manager");
     expect(html).toContain("-webkit-line-clamp:2");
     expect(html).toContain(".particular-cell .description-compact{font:700 7.55pt/2.8mm Arial,Tahoma,sans-serif;max-height:5.6mm}");
     expect(html).toContain("REF P1 of 2");
