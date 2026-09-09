@@ -521,27 +521,27 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     let cancelled = false;
     const firstSummary = statementPageSummaries[0];
-    const statusPayload = buildVerificationQrPayload({ documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
+    const statusPayload = buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : "KURAIMI ISLAMIC BANK", documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
     QRCode.toDataURL(statusPayload, { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then((source) => { if (!cancelled) setStatusQrSource(source); })
       .catch(() => { if (!cancelled) setStatusQrSource(""); });
     return () => { cancelled = true; };
-  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementPageSummaries, statementReference]);
+  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementPageSummaries, statementReference]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
+    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
     return () => { cancelled = true; };
-  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
+  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
 
   useEffect(() => {
-    const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount));
+    const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount, selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : "KURAIMI ISLAMIC BANK"));
     const generated = values.map((value) => {
-      const svg = bwipjs.toSVG({ bcid: "pdf417", text: value, scaleX: 2, scaleY: 2, padding: 4, backgroundcolor: "FFFFFF", barcolor: "6B5297" });
+      const svg = bwipjs.toSVG({ bcid: "pdf417", text: value, scaleX: 2, scaleY: 2, padding: 4, backgroundcolor: "FFFFFF", barcolor: selectedBank === "ycb" ? "2D3192" : "6B5297" });
       return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     });
     setBarcodeSources(generated);
-  }, [statementPageCount, statementReference]);
+  }, [selectedBank, statementPageCount, statementReference]);
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
     setClient((current) => ({ ...current, [key]: value }));

@@ -33,4 +33,13 @@ describe("applied transaction register synchronization", () => {
     expect(barcode).not.toContain("TRAINING");
     expect(barcode.slice(-8)).toMatch(/^[0-9A-F]{8}$/);
   });
+
+  it("uses Yemen Commercial Bank identity for YCB QR and barcode payloads", () => {
+    const qr = buildVerificationQrPayload({ bankName: "YEMEN COMMERCIAL BANK", reference: "YCB-2026-001", accountNumber: "YCB-1001", transactionCount: 0, currency: "YER", closing: 0 });
+    const barcode = buildVerificationBarcodePayload("YCB-2026-001", 1, 1, "YEMEN COMMERCIAL BANK");
+    expect(qr.startsWith("YEMEN COMMERCIAL BANK\n")).toBe(true);
+    expect(qr).not.toContain("KURAIMI ISLAMIC BANK");
+    expect(barcode.startsWith("YEMEN COMMERCIAL BANK|VERIFY|STMT|REF=YCB-2026-001|PAGE=1/1|CHK=")).toBe(true);
+    expect(barcode).not.toContain("KURAIMI ISLAMIC BANK");
+  });
 });
