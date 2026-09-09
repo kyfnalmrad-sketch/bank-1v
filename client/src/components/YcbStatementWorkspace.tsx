@@ -12,7 +12,8 @@ type Props = {
 function printHtml(html: string) {
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>YCB Statement of Account</title></head><body>${html}</body></html>`);
+  win.document.open();
+  win.document.write(html);
   win.document.close();
   win.focus();
   window.setTimeout(() => win.print(), 250);
@@ -31,6 +32,6 @@ export default function YcbStatementWorkspace({ profile, transactions, onBack }:
     <div className="panel-heading"><div><h1>Yemen Commercial Bank — Statement of Account</h1><p className="hint">هذا القسم مستقل عن الشهادة، ويستخدم نفس بيانات العميل والحركات المدخلة في النظام. لا يحتوي على توقيعات.</p></div><FileText size={28} className="heading-icon" /></div>
     <section className="panel"><div className="review-grid"><div className="validation-card"><span>Customer</span><strong>{profile.customerName || "—"}</strong><small>{profile.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>Period</span><strong>{profile.periodStart} — {profile.periodEnd}</strong><small>{profile.currency} · {profile.branchName || "—"}</small></div><div className="validation-card"><span>Transactions</span><strong>{transactions.length}</strong><small>Linked to the current data-entry register · 18 rows per page</small></div><div className="validation-card"><span>Closing balance</span><strong>{profile.closingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong><small>Calculated from the same register</small></div></div></section>
     <div className="actions"><button type="button" className="secondary-button" onClick={onBack}><ChevronLeft size={16} /> Back to YCB workspace</button><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" className="preview-button" onClick={() => printHtml(html)}><Printer size={17} /> Print / Save PDF</button></div>
-    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>YCB Statement Preview</h2><p className="hint">المعاينة والطباعة تستخدم قالب كشف بنك اليمن التجاري الأصلي المعتمد، مع تعبئة بيانات النظام وتقسيم بحد أقصى 18 عملية لكل صفحة. يتم وضع رمز QR والباركود في كل صفحة للتحقق.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Yemen Commercial Bank statement preview" srcDoc={`<!doctype html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`} /></div></section>}
+    {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>YCB Statement Preview</h2><p className="hint">المعاينة والطباعة تستخدم قالب كشف بنك اليمن التجاري الأصلي المعتمد، مع تعبئة بيانات النظام وتقسيم بحد أقصى 18 عملية لكل صفحة. يتم وضع رمز QR والباركود في كل صفحة للتحقق.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Yemen Commercial Bank statement preview" srcDoc={html} /></div></section>}
   </main>;
 }
