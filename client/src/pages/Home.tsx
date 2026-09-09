@@ -230,7 +230,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, []);
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
-  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(null);
+  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = window.localStorage.getItem("bak-web-staging-selected-bank");
+    return saved === "karimi" || saved === "ycb" ? saved : null;
+  });
   const [ycbClient, setYcbClient] = useState(defaultYcbClient);
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [showYcbStatement, setShowYcbStatement] = useState(false);
@@ -700,11 +704,20 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote("تم تحديث بيانات المعاينة والطباعة من المدخلات الحالية / Document data refreshed.");
   };
 
+  const selectBank = (bank: "karimi" | "ycb") => {
+    window.localStorage.setItem("bak-web-staging-selected-bank", bank);
+    setSelectedBank(bank);
+    setShowYcbCertificate(false);
+    setShowYcbStatement(false);
+    setActiveTab("account");
+    if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate }));
+  };
+  const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : "ycb");
   if (selectedBank === null) {
-    return <BankSelector onSelect={(bank) => { setSelectedBank(bank); setShowYcbCertificate(false); setShowYcbStatement(false); if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate })); }} onLogout={() => void handleSecureLogout()} />;
+    return <BankSelector onSelect={selectBank} onLogout={() => void handleSecureLogout()} />;
   }
   if (selectedBank === "ycb" && showYcbCertificate) {
-    return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => { setShowYcbCertificate(false); setSelectedBank(null); }} />;
+    return <YcbCertificateWorkspace client={ycbClient} onChange={updateYcbClient} onBack={() => setShowYcbCertificate(false)} />;
   }
   if (selectedBank === "ycb" && showYcbStatement) {
     return <YcbStatementWorkspace profile={ycbStatementProfile} transactions={ycbStatementTransactions} onBack={() => setShowYcbStatement(false)} />;
@@ -738,7 +751,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
-        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div></div>
+        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button><button type="button" className="bank-switch-button" onClick={switchBank}>{selectedBank === "ycb" ? "الانتقال إلى بنك الكريمي" : "الانتقال إلى بنك اليمن التجاري"}</button></div></div>
       </header>
 
       <div className="session-bar" role="status">
