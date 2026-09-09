@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, FileText, Printer } from "lucide-react";
 import { type YcbStatementProfile, type YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { renderOriginalYcbStatementPage } from "@/lib/ycbOriginalStatementTemplate";
+import { openPrintWindow } from "@/lib/printDocument";
 
 type Props = {
   profile: YcbStatementProfile;
@@ -10,13 +11,7 @@ type Props = {
 };
 
 function printHtml(html: string) {
-  const win = window.open("", "_blank");
-  if (!win) return;
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  window.setTimeout(() => win.print(), 250);
+  return openPrintWindow(html, "Yemen Commercial Bank — Statement of Account");
 }
 
 export function renderYcbStatementPages(profile: YcbStatementProfile, transactions: YcbStatementTransaction[]) {
