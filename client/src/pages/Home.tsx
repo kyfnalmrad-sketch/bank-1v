@@ -787,6 +787,22 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       </section>}
 
       {activeTab === "account" && <>
+        <section className="panel intake-hero" aria-labelledby="intake-title">
+          <div className="intake-hero-copy">
+            <span className="section-kicker">Controlled data-entry flow</span>
+            <h2 id="intake-title">Enter once, review everywhere</h2>
+            <p>Complete the customer details, import the transaction register, then verify the connected statement preview before export. The official YCB statement artwork remains unchanged.</p>
+          </div>
+          <div className="intake-steps" aria-label="Data entry steps">
+            <div className="intake-step is-current"><span>1</span><div><strong>Customer details</strong><small>Required fields</small></div></div>
+            <div className="intake-step"><span>2</span><div><strong>Excel register</strong><small>{transactions.length ? `${transactions.length} rows loaded` : "Import and review"}</small></div></div>
+            <div className="intake-step"><span>3</span><div><strong>Statement preview</strong><small>{acceptedRows.length ? "Connected to accepted rows" : "Available after import"}</small></div></div>
+          </div>
+          <div className="intake-hero-actions">
+            <button type="button" className="secondary-button" onClick={() => setActiveTab("transactions")}><FileSpreadsheet size={17} /> Go to Excel register</button>
+            <button type="button" className="preview-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}><FileText size={17} /> Check connected preview</button>
+          </div>
+        </section>
         <section className="panel">
           <h2>إعدادات الإدخال / Document Settings</h2>
           <div className="grid">
@@ -876,7 +892,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {activeTab === "transactions" && <>
         <section className="panel">
-          <h2>Transaction Import</h2>
+          <div className="panel-heading"><div><span className="section-kicker">Step 2 of 3</span><h2>Transaction Import</h2><p className="hint">Only the accepted register drives totals, QR verification, and the connected statement preview.</p></div><FileSpreadsheet size={26} className="heading-icon" /></div>
+          <div className="connection-status" role="status"><span className={acceptedRows.length ? "connection-dot is-live" : "connection-dot"} /><div><strong>{acceptedRows.length ? "Preview connection is live" : "Preview connection is waiting"}</strong><small>{acceptedRows.length ? `${acceptedRows.length} accepted transaction(s) are ready for the document preview.` : "Import and apply the register to connect transaction data to the preview."}</small></div><button type="button" className="text-button" onClick={() => setActiveTab("account")}>Back to customer details</button></div>
           <div className="import-zone">
             <div className="import-icon"><FileSpreadsheet size={28} /></div>
             <div><strong>Import Excel file</strong><p>The system identifies statement columns, then classifies rows for review within this Staging session.</p></div>
@@ -910,7 +927,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       </section>}
 
       {activeTab === "review" && <section className="panel review-panel">
-        <div className="panel-heading"><div><h2>Review & Export</h2><p className="hint">Review the statement first, then print the Account Status Statement after it as one combined PDF/print job.</p></div><FileText size={26} className="heading-icon" /></div>
+        <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job.</p></div><FileText size={26} className="heading-icon" /></div>
+        <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. The official YCB artwork, QR code, and page arrangement are preserved.</span></div>
           <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="actions document-actions"><button type="button" className="secondary-button" onClick={() => void saveStatementHistory()} disabled={createHistoryMutation.isPending || updateHistoryMutation.isPending}><Database size={17} /> {editingHistoryId ? "Update Saved Statement" : "Save to Statement History"}</button><button type="button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> View Account Status Statement</button><button type="button" className="preview-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button><button type="button" className="unified-print-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : printDocument("unified")}><Printer size={17} /> Print Unified PDF (Statement + Status)</button><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print Account Status / Save PDF</button><button type="button" className="preview-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : printDocument("accountStatement")}><Printer size={17} /> Print Account Statement / Save PDF</button><button type="button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button><button type="button" className="preview-button" disabled={selectedBank === "ycb" || downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "Opening print…" : "Print / Save Account Statement PDF"}</button><button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> Download JSON Session</button></div>
         {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">Review the original artwork, QR code, values, and page arrangement before printing or downloading.</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
