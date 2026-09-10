@@ -41,6 +41,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
+import { renderTadhamonStatement } from "@/lib/tadhamonStatementPreview";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
@@ -677,12 +678,25 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const highlights = Object.fromEntries(ycbStatementTransactions.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
     return renderYcbStatementPages(ycbStatementProfile, ycbStatementTransactions, statementQrSources, barcodeSources, highlights);
   }, [barcodeSources, selectedBank, statementQrSources, ycbStatementProfile, ycbStatementTransactions]);
-  const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, ycbApprovedStatementHtml]);
+  const tadhamonStatementHtml = useMemo(() => {
+    if (selectedBank !== "tadhamon") return "";
+    return renderTadhamonStatement({
+      customerName: client.name, branchName: client.branch, accountNumber: client.accountNumber,
+      currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
+      issueDate: documentIssueDate, statementReference, opening: money(client.opening),
+      credit: reportedTotalCredit, debit: reportedTotalDebit, closing: reportedClosing,
+      qrUri: statementQrSources[0] || referenceAssets.qrLogo, barcodeUri: barcodeSources[0] || "",
+      rows: statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance })),
+    });
+  }, [barcodeSources, client.accountNumber, client.branch, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
+  const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
     const selected = selectedBank === "ycb"
       ? { html: ycbApprovedStatementHtml, title: "Yemen Commercial Bank — Approved Statement" }
-      : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
+      : selectedBank === "tadhamon"
+        ? { html: tadhamonStatementHtml, title: "Tadhamon Bank — Statement Preview" }
+        : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
     if (!openPrintWindow(selected.html, selected.title)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
     }
@@ -691,7 +705,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const downloadPdf = async (kind: PrintDocumentKind) => {
     const selected = selectedBank === "ycb"
       ? { html: ycbApprovedStatementHtml, title: "Yemen Commercial Bank — Approved Statement" }
-      : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
+      : selectedBank === "tadhamon"
+        ? { html: tadhamonStatementHtml, title: "Tadhamon Bank — Statement Preview" }
+        : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
     setDownloadingDocument(kind);
     try {
       const opened = await downloadDocumentPdf(kind, selected.html);
@@ -728,14 +744,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote("تم تحديث بيانات المعاينة والطباعة من المدخلات الحالية / Document data refreshed.");
   };
 
-  const selectBank = (bank: "karimi" | "ycb") => {
+  const selectBank = (bank: "karimi" | "ycb" | "tadhamon") => {
     window.localStorage.setItem("bak-web-staging-selected-bank", bank);
     setSelectedBank(bank);
     setShowYcbCertificate(false);
     setActiveTab("account");
     if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate }));
   };
-  const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : "ycb");
+  const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : selectedBank === "tadhamon" ? "karimi" : "ycb");
   if (selectedBank === null) {
     return <BankSelector onSelect={selectBank} onLogout={() => void handleSecureLogout()} />;
   }
@@ -749,10 +765,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       <nav className="bank-workspace-tabs" aria-label="مساحات البنوك">
         <button type="button" className={selectedBank === "karimi" ? "is-active" : ""} onClick={() => selectBank("karimi")}><strong>بنك الكريمي <span>AlKuraimi Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button>
         <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button>
-        <button type="button" className="is-coming" disabled><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>قيد التجهيز · Coming soon</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
+        <button type="button" className={selectedBank === "tadhamon" ? "is-active" : ""} onClick={() => selectBank("tadhamon")}><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
       </nav>
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
-        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : "AlKuraimi Bank"}</small></div></div>
+        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : selectedBank === "tadhamon" ? "Tadhamon Bank" : "AlKuraimi Bank"}</small></div></div>
         <div className="sidebar-section-label">مساحة العمل / Workspace</div>
         <button type="button" className={activeTab === "dashboard" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("dashboard")}><LayoutDashboard size={18} /><span>لوحة التحكم<small>Dashboard</small></span></button>
         <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
