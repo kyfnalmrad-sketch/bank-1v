@@ -93,7 +93,7 @@ function assemblePrintablePages(pages: string[]) {
 
   return first
     .replace(/<head([^>]*)>/i, `<head$1>${laterStyles}`)
-    .replace("</head>", "<style>.print-page-break{display:block;height:0;break-before:page;page-break-before:always}.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head>")
+    .replace("</head>", "<style>@media print{.print-page-break{display:block;height:0;break-before:page!important;page-break-before:always!important}.page{break-inside:avoid!important;break-after:page!important;page-break-inside:avoid!important;page-break-after:always!important}.page:last-of-type{break-after:auto!important;page-break-after:auto!important}}</style></head>")
     .replace("</body>", `${laterBodies}</body>`);
 }
 
