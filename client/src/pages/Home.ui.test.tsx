@@ -74,11 +74,11 @@ describe("Home applied transaction register", () => {
     expect(preview.getAttribute("srcdoc")).toContain("header-art");
     expect(preview.getAttribute("srcdoc")).toContain("05/08/2026");
 
-    fireEvent.click(screen.getByRole("button", { name: "Print Account Status / Save PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "طباعة بيان البنك / Print Bank Status" }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(1));
     expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("<title>Account Status Statement</title>"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Print Account Statement / Save PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "طباعة كشف الحساب / Print Account Statement" }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(2));
     const statementHtml = host.write.mock.calls.at(-1)?.[0] as string;
     expect(statementHtml).toContain("<title>Account Statement</title>");
@@ -102,7 +102,7 @@ describe("Home applied transaction register", () => {
     expect(screen.getByDisplayValue("30.00")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
-    fireEvent.click(screen.getByRole("button", { name: "View Account Status Statement" }));
+    fireEvent.click(screen.getByRole("button", { name: "معاينة بيان البنك / Bank Status Preview" }));
     const preview = await screen.findByTitle("Account Status Statement print preview");
     expect(preview.getAttribute("srcdoc")).toContain("Total Credits</th><td>120.00</td>");
     expect(preview.getAttribute("srcdoc")).toContain("Total Debits</th><td>30.00</td>");
