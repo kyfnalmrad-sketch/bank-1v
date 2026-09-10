@@ -88,12 +88,12 @@ function assemblePrintablePages(pages: string[]) {
     .map((page) => page.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] || "")
     .join("");
   const laterBodies = remaining
-    .map((page) => page.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || "")
+    .map((page) => `<div class="print-page-break" aria-hidden="true"></div>${page.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || ""}`)
     .join("");
 
   return first
     .replace(/<head([^>]*)>/i, `<head$1>${laterStyles}`)
-    .replace("</head>", "<style>.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head>")
+    .replace("</head>", "<style>.print-page-break{display:block;height:0;break-before:page;page-break-before:always}.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head>")
     .replace("</body>", `${laterBodies}</body>`);
 }
 

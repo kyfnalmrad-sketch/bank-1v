@@ -47,6 +47,8 @@ describe("separate document printing", () => {
     const html = assembleUnifiedDocumentHtml(statement, status);
     expect(html.indexOf("ACCOUNT STATUS")).toBeLessThan(html.indexOf("ACCOUNT STATEMENT"));
     expect(html).toContain("break-after:page");
+    expect(html).toContain("break-before:page");
+    expect(html).toContain("print-page-break");
     expect(html).toContain(".statement{color:red}");
     expect(html).toContain(".status{color:blue}");
     expect(html).not.toContain("<iframe");
