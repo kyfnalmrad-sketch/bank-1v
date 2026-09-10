@@ -825,6 +825,16 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <button type="button" className="preview-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}><FileText size={17} /> Check connected preview</button>
           </div>
         </section>
+        {selectedBank === "ycb" && <section className="panel ycb-workflow-board" aria-labelledby="ycb-workflow-title">
+          <div className="panel-heading"><div><span className="section-kicker">YCB workspace prototype</span><h2 id="ycb-workflow-title">مسار العمل المنظم للبنك التجاري اليمني</h2><p className="hint">هذه طبقة تنظيم للواجهة فقط. نفس المسارات الحالية والبيانات والقوالب الرسمية تبقى مرتبطة دون تغيير.</p></div><ClipboardList size={26} className="heading-icon" /></div>
+          <div className="ycb-workflow-grid">
+            <button type="button" className="ycb-workflow-card is-active" onClick={() => setActiveTab("account")}><span>01</span><strong>المعلومات الشخصية والمرجعية</strong><small>العميل، الحساب، الفرع، المرجع، وتواريخ المستند</small></button>
+            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("transactions")}><span>02</span><strong>السجلات والاستيراد</strong><small>Excel، السحب، التعديل، القبول، والتحديث</small></button>
+            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان</strong><small>كشف الحساب والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setShowYcbStatement(true)} disabled={!acceptedRows.length}>معاينة الكشف</button><button type="button" onClick={() => setActiveTab("training")}>معاينة البيان</button></div></div>
+            <div className="ycb-workflow-card ycb-workflow-card-static"><span>04</span><strong>التصدير والطباعة</strong><small>المعاينة الفردية، الكلية، والطباعة أو الحفظ كـ PDF</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setActiveTab("review")}>فتح التصدير</button><button type="button" onClick={() => printDocument("unified")}>طباعة الكل</button></div></div>
+            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("history")}><span>05</span><strong>السجلات السابقة</strong><small>حفظ اللقطات، الترحيل، التحديث، والتعديل دون خلط بين البنكين</small></button>
+          </div>
+        </section>}
         <section className="panel">
           <h2>إعدادات الإدخال / Document Settings</h2>
           <div className="grid">

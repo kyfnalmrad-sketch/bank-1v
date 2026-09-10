@@ -121,8 +121,8 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     .balance th{width:43%;text-align:left;padding-left:3mm}
     .customer-request-notice{margin:8mm 0 0;padding:2.4mm 2.6mm;border-top:.8pt solid #bcaed1;border-bottom:.8pt solid #bcaed1;background:rgba(255,255,255,.72);font-size:8.6pt;line-height:1.45;font-weight:600;text-align:justify}
     .disclaimer{position:absolute;left:17mm;right:17mm;bottom:20mm;font-size:7.7pt;line-height:1.4;color:#6b1f1f;text-align:center;border-top:.6pt solid #bcaed1;padding-top:2mm;z-index:2}
-    .signatures{position:absolute;left:4mm;right:4mm;bottom:10mm;display:grid;grid-template-columns:1fr 1fr;gap:20mm;text-align:center;color:#6b5297;font-size:14pt;line-height:1.35;z-index:3}
-    .signatures .role{font-weight:700;font-size:14pt}.signatures .name{font-weight:400;font-size:14pt;min-height:6mm}
+    .signatures{position:absolute;left:4mm;right:4mm;bottom:10mm;display:grid;grid-template-columns:1fr 1fr;gap:20mm;text-align:center;color:#000;font-size:12pt;line-height:1.35;z-index:3}
+    .signatures .role{font-weight:700;font-size:12pt}.signatures .name{font-weight:400;font-size:12pt;color:#000;min-height:6mm}
     </style></head><body><section class="page">
     <img class="background-art" src="${escapeHtml(data.backgroundUri)}" alt="Original statement background">
     <div class="correspondence"><div><b>Date:</b> ${value(data.correspondenceDate || data.issueDate)}</div>
