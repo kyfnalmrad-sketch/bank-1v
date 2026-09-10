@@ -739,7 +739,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       <nav className="bank-workspace-tabs" aria-label="مساحات البنوك">
         <button type="button" className={selectedBank === "karimi" ? "is-active" : ""} onClick={() => selectBank("karimi")}><strong>بنك الكريمي <span>AlKuraimi Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button>
         <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button>
-        <button type="button" className="is-coming" disabled><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>قيد التجهيز · Coming soon</small></button>
+        <button type="button" className="is-coming" disabled><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>قيد التجهيز · Coming soon</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
       </nav>
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
         <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : "AlKuraimi Bank"}</small></div></div>
@@ -764,7 +764,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
-        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button><button type="button" className="bank-switch-button" onClick={switchBank}>{selectedBank === "ycb" ? "الانتقال إلى بنك الكريمي" : "الانتقال إلى بنك اليمن التجاري"}</button></div></div>
+        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
       </header>
 
       <nav className="sr-only" aria-label="System sections">
@@ -777,7 +777,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       <div className="session-bar" role="status">
         <div className="session-user"><span className="session-avatar">{(user.name || user.email || "مستخدم").slice(0, 1).toUpperCase()}</span><span><b>{user.name || "مستخدم مصادق"}</b><small>{user.email || "جلسة عمل آمنة"}</small></span></div>
-        <div className="session-meta"><span><LockKeyhole size={14} /> جلسة آمنة · تنتهي بعد 6 ساعات</span><a className="conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a><button type="button" onClick={() => void handleSecureLogout()}><LogOut size={15} /> تسجيل الخروج</button></div>
+        <div className="session-meta"><span><LockKeyhole size={14} /> جلسة آمنة · تنتهي بعد 6 ساعات</span><button type="button" onClick={() => void handleSecureLogout()}><LogOut size={15} /> تسجيل الخروج</button></div>
       </div>
 
       <section className="reference-strip" aria-label="Staging status">
@@ -820,16 +820,16 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <p>{selectedBank === "ycb" ? "مساحة البنك التجاري اليمني: أدخل البيانات مرة واحدة، ثم راجع الكشف والبيان والتصدير من نفس السجل." : "مساحة بنك الكريمي: أدخل البيانات مرة واحدة، ثم راجع البيان والكشف والتصدير من نفس السجل."}</p>
           </div>
           <div className="intake-steps" aria-label="Data entry steps">
-            <div className="intake-step is-current"><span>1</span><div><strong>Customer details</strong><small>Required fields</small></div></div>
-            <div className="intake-step"><span>2</span><div><strong>Excel register</strong><small>{transactions.length ? `${transactions.length} rows loaded` : "Import and review"}</small></div></div>
-            <div className="intake-step"><span>3</span><div><strong>Statement preview</strong><small>{acceptedRows.length ? "Connected to accepted rows" : "Available after import"}</small></div></div>
+            <div className="intake-step is-current"><span>1</span><div><strong>المعلومات / Customer Details</strong><small>الحقول المطلوبة / Required fields</small></div></div>
+            <div className="intake-step"><span>2</span><div><strong>الاستيراد / Excel Register</strong><small>{transactions.length ? `${transactions.length} rows loaded` : "استيراد ومراجعة / Import and review"}</small></div></div>
+            <div className="intake-step"><span>3</span><div><strong>المعاينة / Statement Preview</strong><small>{acceptedRows.length ? "مرتبطة بالحركات المقبولة / Connected" : "بعد الاستيراد / After import"}</small></div></div>
           </div>
         </section>
         <section className="panel">
-          <h2>إعدادات الإدخال / Document Settings</h2>
+          <h2>إعدادات الإدخال / Data Entry Settings</h2>
           <div className="grid">
-            <label>النظام / System<select value="STATEMENTS" disabled><option>نظام إصدار كشفي</option></select></label>
-            <label>لغة المستند / Document language<select value="en" disabled><option value="en">English</option></select></label>
+            <label>النظام / System<select value="STATEMENTS" disabled><option>نظام إصدار كشفي / Statement Issuance</option></select></label>
+            <label>لغة المستند / Document Language<select value="en" disabled><option value="en">ثنائي اللغة / Bilingual</option></select></label>
             <label>العملة / Currency<select value={client.currency} onChange={(event) => updateClient("currency", event.target.value)}><option>USD</option><option>YER</option><option>SAR</option></select></label>
             <label>مصدر المرجع / Reference source<select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value as "internal" | "excel")}><option value="internal">Generate internal reference</option><option value="excel">Use Excel reference</option></select></label>
             <label>عمود الفرع / Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
@@ -838,33 +838,33 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button><span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
         <section className="panel">
-          <h2>بيانات العميل والحساب / Customer & Account Details</h2>
+          <h2>المعلومات الشخصية / Customer Information</h2>
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
-            {selectedBank === "ycb" && <label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /><span className="field-note">تاريخ الميلاد / Date of birth</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label>}
+            {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of Birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label></>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
             {selectedBank !== "ycb" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
-            <label>نوع الحساب / Account type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
-            <label>رقم الحساب / Account number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
+            <label>نوع الحساب / Account Type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
+            <label>رقم الحساب / Account Number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
         </section>
         {selectedBank === "ycb" && <>
           <section className="panel ycb-entry-panel">
-            <h2>Certificate Information</h2>
-            <p className="hint">YCB-only fields. The optional reference is placed in the certificate header when provided.</p>
+            <h2>معلومات الشهادة / Certificate Information</h2>
+            <p className="hint">حقول خاصة بالبنك التجاري اليمني فقط / YCB-only fields. The optional reference appears in the certificate header.</p>
             <div className="grid">
-              <label>Reference number <span className="field-note">Optional</span><input dir="ltr" value={ycbClient.referenceNumber} onChange={(event) => updateYcbClient("referenceNumber", event.target.value)} placeholder="YCB-2026-001" /></label>
+              <label>الرقم المرجعي / Reference Number <span className="field-note">اختياري / Optional</span><input aria-label="Reference number" dir="ltr" value={ycbClient.referenceNumber} onChange={(event) => updateYcbClient("referenceNumber", event.target.value)} placeholder="YCB-2026-001" /></label>
             </div>
           </section>
           <section className="panel ycb-entry-panel">
-            <h2>Authorization Information</h2>
-            <p className="hint">These names are used in the YCB certificate signature area and remain separate from the AlKuraimi workspace.</p>
+            <h2>بيانات الاعتماد / Authorization Information</h2>
+            <p className="hint">تُستخدم هذه الأسماء في توقيع شهادة YCB فقط / These names remain separate from the AlKuraimi workspace.</p>
             <div className="grid">
-              <label>Customer Service<input dir="ltr" value={ycbClient.customerServiceName} onChange={(event) => updateYcbClient("customerServiceName", event.target.value)} placeholder="Authorized employee name" /></label>
-              <label>Branch Manager<input dir="ltr" value={ycbClient.branchManagerName} onChange={(event) => updateYcbClient("branchManagerName", event.target.value)} placeholder="Branch manager name" /></label>
+              <label>خدمة العملاء / Customer Service<input aria-label="Customer Service" dir="ltr" value={ycbClient.customerServiceName} onChange={(event) => updateYcbClient("customerServiceName", event.target.value)} placeholder="Authorized employee name" /></label>
+              <label>مدير الفرع / Branch Manager<input aria-label="Branch Manager" dir="ltr" value={ycbClient.branchManagerName} onChange={(event) => updateYcbClient("branchManagerName", event.target.value)} placeholder="Branch manager name" /></label>
             </div>
           </section>
         </>}
@@ -877,36 +877,36 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
         </section>}
         <section className="panel">
-          <h2>Account Status Statement Fields</h2>
-          <p className="hint">These fields appear only on the Account Status Statement. You can adjust the reported credit and debit totals before printing; the closing balance and status summary will update accordingly.</p>
+          <h2>بيان الحالة / Account Status Fields</h2>
+          <p className="hint">هذه الحقول تظهر في بيان الحالة فقط / These fields appear only on the Account Status Statement. Totals update before printing.</p>
           <div className="grid">
-            <label>Issue date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
-            <label>Hijri issue date <span className="field-note">Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
-            <label>Print time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
-            <label>Correspondence date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
+            <label>تاريخ الإصدار / Issue Date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
+            <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
+            <label>وقت الطباعة / Print Time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
+            <label>تاريخ المراسلة / Correspondence Date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
           </div>
         </section>
         <section className="panel">
-          <h2>Account Statement Fields</h2>
-          <p className="hint">Leave the start and end dates blank to derive them from the first and last accepted Excel transaction.</p>
+          <h2>فترة كشف الحساب / Account Statement Period</h2>
+          <p className="hint">اترك التاريخين فارغين لاستخدام أول وآخر حركة مقبولة / Leave dates blank to derive them from accepted Excel transactions.</p>
           <div className="grid">
-            <label>Statement start date<input type="date" lang="en-GB" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
-            <label>Statement end date<input type="date" lang="en-GB" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
-            <div className="computed-field"><span>Statement pages</span><strong>{statementPageCount}</strong><small>Maximum 18 transactions per page.</small></div>
+            <label>بداية الكشف / Statement Start Date<input type="date" lang="en-GB" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
+            <label>نهاية الكشف / Statement End Date<input type="date" lang="en-GB" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
+            <div className="computed-field"><span>صفحات الكشف / Statement Pages</span><strong>{statementPageCount}</strong><small>حد أقصى 18 حركة / Maximum 18 transactions per page.</small></div>
           </div>
         </section>
         <section className="panel">
-          <h2>القيم المالية المشتركة / Shared Financial Details</h2>
-          <p className="hint">هذه القيم مصدر واحد للبيان والكشف. الرصيد النهائي يحسب تلقائيًا من الافتتاحي + إجمالي الإيداعات − إجمالي السحوبات.</p>
+          <h2>البيانات المالية / Financial Details</h2>
+          <p className="hint">مصدر موحد للبيان والكشف / Shared source for both documents. Closing balance is calculated automatically.</p>
           <div className="grid">
-            <label>Opening balance<input inputMode="decimal" dir="ltr" value={client.opening} onChange={(event) => updateClient("opening", event.target.value)} /></label>
-            <label>Total credit (editable)<input inputMode="decimal" dir="ltr" value={totalCreditOverride} placeholder={formatMoney(totalCredit)} onChange={(event) => setTotalCreditOverride(event.target.value)} /></label>
-            <label>Total debit (editable)<input inputMode="decimal" dir="ltr" value={totalDebitOverride} placeholder={formatMoney(totalDebit)} onChange={(event) => setTotalDebitOverride(event.target.value)} /></label>
-            <div className="computed-field"><span>Reported credit</span><strong>{formatMoney(reportedTotalCredit)}</strong><small>{totalCreditOverride.trim() ? "Manual override" : "From accepted transactions"}</small></div>
-            <div className="computed-field"><span>Reported debit</span><strong>{formatMoney(reportedTotalDebit)}</strong><small>{totalDebitOverride.trim() ? "Manual override" : "From accepted transactions"}</small></div>
-            <div className="computed-field"><span>Reported closing balance</span><strong>{formatMoney(reportedClosing)}</strong></div>
-            <div className="computed-field"><span>Accepted transactions</span><strong>{acceptedRows.length}</strong></div>
-            <div className="computed-field reference-field"><span>Statement reference</span><strong dir="ltr">{statementReference}</strong><small>Stable structure based on the first imported transaction date.</small></div>
+            <label>الرصيد الافتتاحي / Opening Balance<input inputMode="decimal" dir="ltr" value={client.opening} onChange={(event) => updateClient("opening", event.target.value)} /></label>
+            <label>إجمالي الإيداع / Total Credit <span className="field-note">قابل للتعديل / Editable</span><input aria-label="Total credit (editable)" inputMode="decimal" dir="ltr" value={totalCreditOverride} placeholder={formatMoney(totalCredit)} onChange={(event) => setTotalCreditOverride(event.target.value)} /></label>
+            <label>إجمالي السحب / Total Debit <span className="field-note">قابل للتعديل / Editable</span><input aria-label="Total debit (editable)" inputMode="decimal" dir="ltr" value={totalDebitOverride} placeholder={formatMoney(totalDebit)} onChange={(event) => setTotalDebitOverride(event.target.value)} /></label>
+            <div className="computed-field"><span>الإيداع المعتمد / Reported Credit</span><strong>{formatMoney(reportedTotalCredit)}</strong><small>{totalCreditOverride.trim() ? "تعديل يدوي / Manual override" : "من الحركات المقبولة / From accepted transactions"}</small></div>
+            <div className="computed-field"><span>السحب المعتمد / Reported Debit</span><strong>{formatMoney(reportedTotalDebit)}</strong><small>{totalDebitOverride.trim() ? "تعديل يدوي / Manual override" : "من الحركات المقبولة / From accepted transactions"}</small></div>
+            <div className="computed-field"><span>الرصيد الختامي / Closing Balance</span><strong>{formatMoney(reportedClosing)}</strong></div>
+            <div className="computed-field"><span>الحركات المقبولة / Accepted Transactions</span><strong>{acceptedRows.length}</strong></div>
+            <div className="computed-field reference-field"><span>مرجع الكشف / Statement Reference</span><strong dir="ltr">{statementReference}</strong><small>مرجع ثابت مبني على أول تاريخ مستورد / Stable reference.</small></div>
           </div>
         </section>
         <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button></div>
@@ -915,7 +915,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "transactions" && <>
         <section className="panel">
           <div className="panel-heading"><div><span className="section-kicker">Step 2 of 3</span><h2>Transaction Import</h2><p className="hint">Only the accepted register drives totals, QR verification, and the connected statement preview.</p></div><FileSpreadsheet size={26} className="heading-icon" /></div>
-          <div className="connection-status" role="status"><span className={acceptedRows.length ? "connection-dot is-live" : "connection-dot"} /><div><strong>{acceptedRows.length ? "Preview connection is live" : "Preview connection is waiting"}</strong><small>{acceptedRows.length ? `${acceptedRows.length} accepted transaction(s) are ready for the document preview.` : "Import and apply the register to connect transaction data to the preview."}</small></div><button type="button" className="text-button" onClick={() => setActiveTab("account")}>Back to customer details</button></div>
+          <div className="connection-status" role="status"><span className={acceptedRows.length ? "connection-dot is-live" : "connection-dot"} /><div><strong>{acceptedRows.length ? "Preview connection is live" : "Preview connection is waiting"}</strong><small>{acceptedRows.length ? `${acceptedRows.length} accepted transaction(s) are ready for the document preview.` : "Import and apply the register to connect transaction data to the preview."}</small></div></div>
           <div className="import-zone">
             <div className="import-icon"><FileSpreadsheet size={28} /></div>
             <div><strong>Import Excel file</strong><p>The system identifies statement columns, then classifies rows for review within this Staging session.</p></div>
@@ -928,10 +928,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="hint">Only fields detected from the file are shown. The system does not create One, Two, or Three columns and does not invent headings from transaction rows.</p>
           <div className="mapped-fields">{visibleMappedFields.map((field) => <div className="mapped-field" key={field.key}><span>{statementFieldLabels[field.key]}</span><strong dir="ltr">{field.source}</strong></div>)}</div>
         </section>}
-        <section className="panel workflow-panel">
-          <h2>Workflow</h2>
-          <ol className="workflow-steps"><li>Choose an Excel file.</li><li>Review the detected columns.</li><li>Review accepted and rejected rows.</li><li>Open the document preview and export options.</li></ol>
-        </section>
         {transactions.length > 0 && <section className="panel preview-panel">
           <div className="panel-heading"><div><h2>Editable Transaction Register</h2><p className="hint">Edit the values directly, then apply the register to update the financial totals, documents, QR code, and print output together. Rejected transactions remain visible for review and are re-evaluated when the description changes.</p></div><span className="summary-chip">{transactions.filter((item) => !item.rejected).length} accepted · {draftRejectedRows.length} rejected</span></div>
           <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th>{selectedBank === "ycb" && <th>Highlight</th>}<th>Status</th></tr></thead><tbody>
