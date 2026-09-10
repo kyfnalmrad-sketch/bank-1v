@@ -22,14 +22,16 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
  .top [style*="border-top:1px solid #d1d7dc"]{border-top:0!important;padding-top:0!important}
  .customer-dob{margin-top:1.6mm;font-size:8pt;line-height:1.18}
+ .identity-field{border:1px solid #b7c1c8;padding:1.2mm 1.5mm;margin-bottom:1mm;background:rgba(255,255,255,.9)}
+ .identity-field .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
+ .identity-field .field-value{display:block;margin-top:.7mm}
  .address-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;margin-top:1mm}
- .address-grid .address-field{min-width:0}
+ .address-grid .address-field{min-width:0;border:1px solid #b7c1c8;padding:1.2mm 1.5mm;background:rgba(255,255,255,.9)}
  .address-grid .field-label,.customer-dob .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .address-grid .field-value,.customer-dob .field-value{display:block;margin-top:.7mm}
- .summary{grid-template-columns:repeat(4,1fr) 25mm!important}
+ .summary{grid-template-columns:repeat(4,1fr) 27mm!important;height:24mm!important}
  .code-sum{display:flex;align-items:center;justify-content:center;gap:1mm;padding:1mm;border-left:1px solid #b2bec7}
- .summary-qr{width:11mm;height:11mm;object-fit:contain}
- .summary-barcode{width:12mm;height:6mm;object-fit:fill}
+ .summary-qr{width:22mm;height:22mm;object-fit:contain}
  .financial-code .address-qr{width:13mm!important;height:13mm!important}
  .financial-code .title-pdf417{width:29mm!important;height:7mm!important;margin:0!important}
  .row{grid-template-columns:13% 14% 43% 8% 8% 14%!important}
@@ -57,7 +59,7 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const debit = money(profile.totalDebit);
   const closing = money(profile.closingBalance);
   const page = originalTemplate
-    .replace("Arafat Ali Saleh Dilla", `${escapeHtml(profile.customerName)}<div class="customer-dob"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>`)
+    .replace(/<div style="font-weight:800;font-style:italic;text-transform:uppercase">Customer Name<\/div><div style="margin-top:1mm">Arafat Ali Saleh Dilla<\/div>/, `<div class="identity-field"><span class="field-label">Customer Name:</span><span class="field-value">${escapeHtml(profile.customerName)}</span></div><div class="identity-field"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>`)
     .replace(/<div style="border-top:1px solid #d1d7dc;margin-top:2.2mm;padding-top:1.8mm;font-weight:800;font-style:italic;text-transform:uppercase">Address<\/div>/, "")
     .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div><div class="address-field"><span class="field-label">Place of Birth:</span><span class="field-value">${escapeHtml(profile.placeOfBirth || "—")}</span></div></div></div><div style="padding:4mm 2mm;text-align:center`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
@@ -68,6 +70,7 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
     .replace(/<div class="screenbar">[\s\S]*?<\/div>/, "")
     .replace("Tadhamon Bank · Confidential — Internal Use Only", "Tadhamon Bank")
     .replace("Tadhamon-STMT-2025-001", escapeHtml(profile.statementReference))
+    .replace(/<div style="font-size:7.5pt;color:#425766;margin-top:1.4mm">Tadhamon Bank<\/div>/, "")
     .replace(/border-top:1px solid #d1d7dc;/g, "")
     .replace(/<footer class="footer">[\s\S]*?<\/footer>/, "");
   const withCodeAssets = (html: string) => {
@@ -86,13 +89,11 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
     return withCodeAssets(`${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`)
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
       .replace(/<img class="address-qr"[^>]*>/g, "")
-      .replace(/<img class="title-pdf417"[^>]*>/g, "")
       .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22')
       .replace(/Page 1 of 1/g, `Page ${pageNumber} of ${pageCount}`);
   }
   return withCodeAssets(page.replace("</head>", `${ycbLayoutOverrides}</head>`))
     .replace(/<img class="address-qr"[^>]*>/g, "")
-    .replace(/<img class="title-pdf417"[^>]*>/g, "")
     .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22');
 }
 
