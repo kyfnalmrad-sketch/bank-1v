@@ -702,7 +702,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
-    const statementHtml = selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : printableStatementHtml;
+    const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     if (!openPrintWindow(selected.html, selected.title)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
@@ -710,7 +710,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
-    const statementHtml = selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : printableStatementHtml;
+    const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     setDownloadingDocument(kind);
     try {
