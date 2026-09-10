@@ -40,10 +40,10 @@ import { referenceAssets } from "@/lib/reference-assets";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
-import YcbStatementWorkspace from "@/components/YcbStatementWorkspace";
+import YcbStatementWorkspace, { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
-import { buildVerificationBarcodePayload, buildVerificationQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
+import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
@@ -532,18 +532,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } }))).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
+    const buildInput = (rows: YcbStatementTransaction[], pageNumber: number) => ({ customerName: ycbStatementProfile.customerName, passport: ycbStatementProfile.passport, address: ycbStatementProfile.address, accountNumber: ycbStatementProfile.accountNumber, branchName: ycbStatementProfile.branchName, currency: ycbStatementProfile.currency, statementReference: ycbStatementProfile.statementReference, pageNumber, pageCount: statementPageCount, periodStart: ycbStatementProfile.periodStart, periodEnd: ycbStatementProfile.periodEnd, issueDate: ycbStatementProfile.issueDate, firstReference: rows[0]?.reference, lastReference: rows.at(-1)?.reference, transactionCount: rows.length, creditCount: rows.filter((row) => (row.credit || 0) > 0).length, debitCount: rows.filter((row) => (row.debit || 0) > 0).length, totalCredit: rows.reduce((sum, row) => sum + (row.credit || 0), 0), totalDebit: rows.reduce((sum, row) => sum + (row.debit || 0), 0), openingBalance: rows[0] ? rows[0].balance - (rows[0].credit || 0) + (rows[0].debit || 0) : ycbStatementProfile.openingBalance, closingBalance: rows.at(-1)?.balance ?? ycbStatementProfile.closingBalance });
+    const ycbSources = Promise.all(ycbStatementTransactions.length ? statementPageGroups.map((rows, pageIndex) => QRCode.toDataURL(buildYcbStatementQrPayload(buildInput(ycbStatementTransactions.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE), pageIndex + 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })) : [QRCode.toDataURL(buildYcbStatementQrPayload(buildInput([], 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })]);
+    const legacySources = Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: summary.openingBalance, currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }), { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })));
+    (selectedBank === "ycb" ? ycbSources : legacySources).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
     return () => { cancelled = true; };
-  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementReference]);
+  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementReference, ycbStatementProfile, ycbStatementTransactions]);
 
   useEffect(() => {
-    const values = Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount, selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : "KURAIMI ISLAMIC BANK"));
+    const values = selectedBank === "ycb"
+      ? statementPageGroups.map((rows, pageIndex) => buildYcbStatementBarcodePayload({ customerName: ycbStatementProfile.customerName, passport: ycbStatementProfile.passport, address: ycbStatementProfile.address, accountNumber: ycbStatementProfile.accountNumber, branchName: ycbStatementProfile.branchName, currency: ycbStatementProfile.currency, statementReference: ycbStatementProfile.statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: ycbStatementProfile.periodStart, periodEnd: ycbStatementProfile.periodEnd, issueDate: ycbStatementProfile.issueDate, firstReference: rows[0]?.operationNumber, lastReference: rows.at(-1)?.operationNumber, transactionCount: rows.length, creditCount: rows.filter((row) => row.credit > 0).length, debitCount: rows.filter((row) => row.debit > 0).length, totalCredit: rows.reduce((sum, row) => sum + row.credit, 0), totalDebit: rows.reduce((sum, row) => sum + row.debit, 0), openingBalance: statementPageSummaries[pageIndex]?.openingBalance ?? ycbStatementProfile.openingBalance, closingBalance: statementPageSummaries[pageIndex]?.closingBalance ?? ycbStatementProfile.closingBalance }))
+      : Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount, "KURAIMI ISLAMIC BANK"));
     const generated = values.map((value) => {
       const svg = bwipjs.toSVG({ bcid: "pdf417", text: value, scaleX: 2, scaleY: 2, padding: 4, backgroundcolor: "FFFFFF", barcolor: selectedBank === "ycb" ? "2D3192" : "6B5297" });
       return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     });
     setBarcodeSources(generated);
-  }, [selectedBank, statementPageCount, statementReference]);
+  }, [selectedBank, statementPageCount, statementReference, statementPageGroups, statementPageSummaries, ycbStatementProfile]);
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
     setClient((current) => ({ ...current, [key]: value }));
@@ -666,7 +671,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote(`Register changes applied. ${transactions.filter((item) => !item.rejected).length} accepted transaction(s) now drive the documents, QR code, and print output.`);
   };
 
-  const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? accountStatusHtml : assemblePrintableStatementHtml(statementPageHtml), [accountStatusHtml, selectedBank, statementPageHtml]);
+  const ycbApprovedStatementHtml = useMemo(() => {
+    if (selectedBank !== "ycb") return "";
+    const highlights = Object.fromEntries(ycbStatementTransactions.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
+    return renderYcbStatementPages(ycbStatementProfile, ycbStatementTransactions, statementQrSources, barcodeSources, highlights);
+  }, [barcodeSources, selectedBank, statementQrSources, ycbStatementProfile, ycbStatementTransactions]);
+  const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
     const selected = selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
