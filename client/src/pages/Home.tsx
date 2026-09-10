@@ -469,6 +469,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const openStatementHistory = async (id: number) => {
     setSelectedHistoryId(id);
+    setActiveTab("account");
   };
 
   useEffect(() => {
@@ -477,7 +478,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       if (!payload?.client) return;
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
-      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("review");
+      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("account");
       setSelectedHistoryId(null);
     }
   }, [getHistoryQuery.data, selectedHistoryId]);
@@ -823,20 +824,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <div className="intake-step"><span>2</span><div><strong>Excel register</strong><small>{transactions.length ? `${transactions.length} rows loaded` : "Import and review"}</small></div></div>
             <div className="intake-step"><span>3</span><div><strong>Statement preview</strong><small>{acceptedRows.length ? "Connected to accepted rows" : "Available after import"}</small></div></div>
           </div>
-          <div className="intake-hero-actions">
-            <button type="button" className="secondary-button" onClick={() => setActiveTab("transactions")}><FileSpreadsheet size={17} /> Go to Excel register</button>
-            <button type="button" className="preview-button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}><FileText size={17} /> Check connected preview</button>
-          </div>
-        </section>
-        <section className="panel ycb-workflow-board" aria-labelledby="ycb-workflow-title">
-          <div className="panel-heading"><div><span className="section-kicker">{selectedBank === "ycb" ? "YCB workspace" : "Karimi workspace"}</span><h2 id="ycb-workflow-title">مسار العمل المنظم — {selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</h2><p className="hint">هذه طبقة تنظيم مشتركة للواجهتين. نفس المسارات والبيانات والقوالب الرسمية تبقى مرتبطة دون تغيير.</p></div><ClipboardList size={26} className="heading-icon" /></div>
-          <div className="ycb-workflow-grid">
-            <button type="button" className="ycb-workflow-card is-active" onClick={() => setActiveTab("account")}><span>01</span><strong>المعلومات الشخصية والمرجعية <em>Identity & Reference</em></strong><small>العميل، الحساب، الفرع، المرجع، وتواريخ المستند</small></button>
-            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("transactions")}><span>02</span><strong>السجلات والاستيراد <em>Records & Import</em></strong><small>Excel، السحب، التعديل، القبول، والتحديث</small></button>
-            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان <em>Official Previews</em></strong><small>الكشف والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}>معاينة الكشف · Statement</button><button type="button" onClick={() => setActiveTab("review")}>معاينة البيان · Status</button></div></div>
-            <div className="ycb-workflow-card ycb-workflow-card-static"><span>04</span><strong>التصدير والطباعة <em>Export & Print</em></strong><small>المعاينة الفردية، الكلية، والطباعة أو الحفظ كـ PDF</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setActiveTab("review")}>فتح التصدير · Open</button><button type="button" onClick={() => printDocument("unified")}>طباعة الكل · Print all</button></div></div>
-            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("history")}><span>05</span><strong>السجلات السابقة <em>History & Updates</em></strong><small>حفظ اللقطات، الترحيل، التحديث، والتعديل دون خلط بين البنكين</small></button>
-          </div>
         </section>
         <section className="panel">
           <h2>إعدادات الإدخال / Document Settings</h2>
@@ -848,7 +835,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>عمود الفرع / Statement branch column<select value={includeBranch ? "yes" : "no"} onChange={(event) => setIncludeBranch(event.target.value === "yes")}><option value="no">Do not add Branch column</option><option value="yes">Add Branch column from Excel</option></select></label>
             <label>تاريخ الميلاد / Date of birth<select value={dateOfBirthPlacement} onChange={(event) => setDateOfBirthPlacement(event.target.value as DateOfBirthPlacement)}><option value="none">لا يظهر / Do not include</option><option value="status">في البيان فقط / Account Status only</option><option value="statement">في الكشف فقط / Account Statement only</option><option value="both">في البيان والكشف / Both documents</option></select></label>
           </div>
-          <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button>{selectedBank === "ycb" && <><button type="button" className="secondary-button bank-certificate-button" onClick={() => setShowYcbCertificate(true)}><FileText size={16} /> Open Official YCB Certificate</button><button type="button" className="preview-button" onClick={() => setShowYcbStatement(true)}><FileText size={16} /> Open YCB Statement</button></>}<span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
+          <div className="actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={17} /> Save snapshot to database</button><span className="hint" aria-live="polite">{snapshotStatusLabel}</span></div>
         </section>
         <section className="panel">
           <h2>بيانات العميل والحساب / Customer & Account Details</h2>
@@ -954,13 +941,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         </section>}
       </>}
 
-      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)}><FolderOpen size={16} /> Open / Edit</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
-      {activeTab === "review" && <section className="panel statement-preview-panel">
-        <div className="panel-heading"><div><h2>{selectedBank === "ycb" ? "Yemen Commercial Bank Certificate" : "Account Status Statement"}</h2><p className="hint">{selectedBank === "ycb" ? "قالب شهادة البنك التجاري اليمني مرتبط بمدخلات هذا المسار." : "HTML preview based on the Prototype 0.5.1 reference rules without redesign."}</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
-        <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
-        <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button></div>
-      </section>}
-
+      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> {getHistoryQuery.isLoading && selectedHistoryId === item.id ? "Loading…" : "Edit"}</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job.</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. The official YCB artwork, QR code, and page arrangement are preserved.</span></div>
