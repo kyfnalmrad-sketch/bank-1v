@@ -20,6 +20,19 @@ const renderRow = (item: YcbStatementTransaction, highlight = "") => {
 };
 const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
+ .top [style*="border-top:1px solid #d1d7dc"]{border-top:0!important;padding-top:0!important}
+ .customer-dob{margin-top:1.6mm;font-size:8pt;line-height:1.18}
+ .address-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;margin-top:1mm}
+ .address-grid .address-field{min-width:0}
+ .address-grid .field-label,.customer-dob .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
+ .address-grid .field-value,.customer-dob .field-value{display:block;margin-top:.7mm}
+ .summary{grid-template-columns:repeat(4,1fr) 25mm!important}
+ .code-sum{display:flex;align-items:center;justify-content:center;gap:1mm;padding:1mm;border-left:1px solid #b2bec7}
+ .summary-qr{width:11mm;height:11mm;object-fit:contain}
+ .summary-barcode{width:12mm;height:6mm;object-fit:fill}
+ .financial-code .address-qr{width:13mm!important;height:13mm!important}
+ .financial-code .title-pdf417{width:29mm!important;height:7mm!important;margin:0!important}
+ .row{grid-template-columns:13% 14% 43% 8% 8% 14%!important}
  .page > .summary{margin-top:3mm!important}
  .page > .table{margin-top:3mm!important}
 .address-qr-wrap{position:relative;display:block;width:20mm;height:20mm;flex:0 0 20mm}
@@ -44,8 +57,9 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const debit = money(profile.totalDebit);
   const closing = money(profile.closingBalance);
   const page = originalTemplate
-    .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
-    .replace("Sana'a — Bab Al-Yemen", `${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>`)
+    .replace("Arafat Ali Saleh Dilla", `${escapeHtml(profile.customerName)}<div class="customer-dob"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>`)
+    .replace(/<div style="border-top:1px solid #d1d7dc;margin-top:2.2mm;padding-top:1.8mm;font-weight:800;font-style:italic;text-transform:uppercase">Address<\/div>/, "")
+    .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div><div class="address-field"><span class="field-label">Place of Birth:</span><span class="field-value">${escapeHtml(profile.placeOfBirth || "—")}</span></div></div></div><div style="padding:4mm 2mm;text-align:center`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
     .replace("101-840-21102-326491-000", escapeHtml(profile.accountNumber))
     .replace("05-Feb-2025", escapeHtml(profile.periodStart))
@@ -53,7 +67,9 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
     .replace(/(<b>Currency:<\/b>\s*)USD(\s*&nbsp;\s*&nbsp;\s*<b>Page:<\/b>\s*)1 of 1/, `$1${escapeHtml(profile.currency)}$2${pageNumber} of ${pageCount}`)
     .replace(/<div class="screenbar">[\s\S]*?<\/div>/, "")
     .replace("Tadhamon Bank · Confidential — Internal Use Only", "Tadhamon Bank")
-    .replace("Tadhamon-STMT-2025-001", escapeHtml(profile.statementReference));
+    .replace("Tadhamon-STMT-2025-001", escapeHtml(profile.statementReference))
+    .replace(/border-top:1px solid #d1d7dc;/g, "")
+    .replace(/<footer class="footer">[\s\S]*?<\/footer>/, "");
   const withCodeAssets = (html: string) => {
     let next = html;
     if (qrUri) next = next.replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);
@@ -64,17 +80,19 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const summaryStart = page.indexOf('<section class="summary">');
   const tableStart = page.indexOf('<section class="table">');
   const notesStart = page.indexOf('<section class="notes">');
-  const summary = `<section class="summary"><div class="sum"><div class="label">Opening Balance</div><strong>${opening}</strong></div><div class="sum"><div class="label">Total Credit</div><strong>${credit}</strong></div><div class="sum"><div class="label">Total Debit</div><strong>${debit}</strong></div><div class="sum"><div class="label">Closing Balance</div><strong>${closing}</strong></div></section>`;
+  const summary = `<section class="summary"><div class="sum"><div class="label">Opening Balance</div><strong>${opening}</strong></div><div class="sum"><div class="label">Total Credit</div><strong>${credit}</strong></div><div class="sum"><div class="label">Total Debit</div><strong>${debit}</strong></div><div class="sum"><div class="label">Closing Balance</div><strong>${closing}</strong></div><div class="code-sum"><img class="summary-qr" src="${escapeHtml(qrUri)}" alt="QR statement data"><img class="summary-barcode" src="${escapeHtml(barcodeUri)}" alt="Statement barcode"></div></section>`;
   const table = `<section class="table"><div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${credit}</div><div class="cell amount">${debit}</div><div class="cell amount balance">${closing}</div></div></section>`;
   if (summaryStart >= 0 && tableStart > summaryStart && notesStart > tableStart) {
     return withCodeAssets(`${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`)
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
-      .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/tadhamon/STMTDM1-official-background.png" alt="Tadhamon logo" /></span>`)
+      .replace(/<img class="address-qr"[^>]*>/g, "")
+      .replace(/<img class="title-pdf417"[^>]*>/g, "")
       .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22')
       .replace(/Page 1 of 1/g, `Page ${pageNumber} of ${pageCount}`);
   }
   return withCodeAssets(page.replace("</head>", `${ycbLayoutOverrides}</head>`))
-    .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/tadhamon/STMTDM1-official-background.png" alt="Tadhamon logo" /></span>`)
+    .replace(/<img class="address-qr"[^>]*>/g, "")
+    .replace(/<img class="title-pdf417"[^>]*>/g, "")
     .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22');
 }
 
