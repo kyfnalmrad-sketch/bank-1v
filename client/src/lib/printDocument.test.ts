@@ -65,6 +65,15 @@ describe("separate document printing", () => {
     expect(html).not.toContain("unified-page-frame");
   });
 
+  it("extracts every full HTML page from a multi-page statement file", () => {
+    const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">STATUS</section></body></html>";
+    const statement = [1, 2, 3].map((page) => `<html><head><style>.statement-${page}{color:red}</style></head><body><section class=\"page\">STATEMENT PAGE ${page}</section></body></html>`).join("");
+    const html = assembleUnifiedDocumentHtml(statement, status);
+    expect(html.match(/STATEMENT PAGE/g)).toHaveLength(3);
+    expect(html.indexOf("STATEMENT PAGE 1")).toBeLessThan(html.indexOf("STATEMENT PAGE 2"));
+    expect(html.indexOf("STATEMENT PAGE 2")).toBeLessThan(html.indexOf("STATEMENT PAGE 3"));
+  });
+
   it("selects the unified print package and uses a stable filename", () => {
     const accountStatus = "<html><head></head><body>status</body></html>";
     const accountStatement = "<html><head></head><body>statement</body></html>";

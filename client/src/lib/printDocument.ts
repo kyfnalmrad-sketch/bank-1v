@@ -102,7 +102,9 @@ export function assemblePrintableStatementHtml(pages: string[]) {
 }
 
 function extractHtmlPart(html: string, tag: "head" | "body") {
-  return html.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] || "";
+  return Array.from(html.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "gi")))
+    .map((match) => match[1])
+    .join("\n");
 }
 
 function scopeCss(css: string, scope: string) {
