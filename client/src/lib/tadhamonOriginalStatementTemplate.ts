@@ -79,7 +79,7 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
 }
 
 export function renderTadhamonStatementPages(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], qrSources: string[] = [], barcodeSources: string[] = [], rowHighlights: Record<string, string> = {}) {
-  const pageSize = 18;
+  const pageSize = 15;
   const pageCount = Math.max(1, Math.ceil(transactions.length / pageSize));
   return Array.from({ length: pageCount }, (_, index) => renderOriginalTadhamonStatementPage({ ...profile, pageNumber: index + 1, pageCount }, transactions.slice(index * pageSize, (index + 1) * pageSize), index + 1, pageCount, qrSources[index], barcodeSources[index], rowHighlights)).join("<div style='page-break-after:always'></div>");
 }
