@@ -736,6 +736,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     <div className="app-shell" dir="rtl">
       <div className="desktop-fan desktop-fan-one" aria-hidden="true" />
       <div className="desktop-fan desktop-fan-two" aria-hidden="true" />
+      <nav className="bank-workspace-tabs" aria-label="مساحات البنوك">
+        <button type="button" className={selectedBank === "karimi" ? "is-active" : ""} onClick={() => selectBank("karimi")}><strong>بنك الكريمي <span>AlKuraimi Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button>
+        <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button>
+        <button type="button" className="is-coming" disabled><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>قيد التجهيز · Coming soon</small></button>
+      </nav>
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
         <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : "AlKuraimi Bank"}</small></div></div>
         <div className="sidebar-section-label">مساحة العمل / Workspace</div>
@@ -828,11 +833,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <section className="panel ycb-workflow-board" aria-labelledby="ycb-workflow-title">
           <div className="panel-heading"><div><span className="section-kicker">{selectedBank === "ycb" ? "YCB workspace" : "Karimi workspace"}</span><h2 id="ycb-workflow-title">مسار العمل المنظم — {selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</h2><p className="hint">هذه طبقة تنظيم مشتركة للواجهتين. نفس المسارات والبيانات والقوالب الرسمية تبقى مرتبطة دون تغيير.</p></div><ClipboardList size={26} className="heading-icon" /></div>
           <div className="ycb-workflow-grid">
-            <button type="button" className="ycb-workflow-card is-active" onClick={() => setActiveTab("account")}><span>01</span><strong>المعلومات الشخصية والمرجعية</strong><small>العميل، الحساب، الفرع، المرجع، وتواريخ المستند</small></button>
-            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("transactions")}><span>02</span><strong>السجلات والاستيراد</strong><small>Excel، السحب، التعديل، القبول، والتحديث</small></button>
-            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان</strong><small>الكشف والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}>معاينة الكشف</button><button type="button" onClick={() => setActiveTab("training")}>معاينة البيان</button></div></div>
-            <div className="ycb-workflow-card ycb-workflow-card-static"><span>04</span><strong>التصدير والطباعة</strong><small>المعاينة الفردية، الكلية، والطباعة أو الحفظ كـ PDF</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setActiveTab("review")}>فتح التصدير</button><button type="button" onClick={() => printDocument("unified")}>طباعة الكل</button></div></div>
-            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("history")}><span>05</span><strong>السجلات السابقة</strong><small>حفظ اللقطات، الترحيل، التحديث، والتعديل دون خلط بين البنكين</small></button>
+            <button type="button" className="ycb-workflow-card is-active" onClick={() => setActiveTab("account")}><span>01</span><strong>المعلومات الشخصية والمرجعية <em>Identity & Reference</em></strong><small>العميل، الحساب، الفرع، المرجع، وتواريخ المستند</small></button>
+            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("transactions")}><span>02</span><strong>السجلات والاستيراد <em>Records & Import</em></strong><small>Excel، السحب، التعديل، القبول، والتحديث</small></button>
+            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان <em>Official Previews</em></strong><small>الكشف والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}>معاينة الكشف · Statement</button><button type="button" onClick={() => setActiveTab("training")}>معاينة البيان · Status</button></div></div>
+            <div className="ycb-workflow-card ycb-workflow-card-static"><span>04</span><strong>التصدير والطباعة <em>Export & Print</em></strong><small>المعاينة الفردية، الكلية، والطباعة أو الحفظ كـ PDF</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setActiveTab("review")}>فتح التصدير · Open</button><button type="button" onClick={() => printDocument("unified")}>طباعة الكل · Print all</button></div></div>
+            <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("history")}><span>05</span><strong>السجلات السابقة <em>History & Updates</em></strong><small>حفظ اللقطات، الترحيل، التحديث، والتعديل دون خلط بين البنكين</small></button>
           </div>
         </section>
         <section className="panel">
