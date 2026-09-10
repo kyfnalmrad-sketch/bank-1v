@@ -385,10 +385,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
-    snapshotRestored.current = true;
     const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
-    if (payload?.schemaVersion !== 1 || (payload.bankId && payload.bankId !== selectedBank) || !payload.client) {
-      if (payload?.bankId && payload.bankId !== selectedBank) setImportNote(`تنبيه: توجد بيانات محفوظة لبنك مختلف (${payload.bankId === "ycb" ? "بنك اليمن التجاري" : payload.bankId === "tadhamon" ? "بنك التضامن" : "بنك الكريمي"}) ولم يتم استعادتها داخل مساحة البنك الحالي.`);
+    if (payload?.bankId && payload.bankId !== selectedBank) return;
+    snapshotRestored.current = true;
+    if (payload?.schemaVersion !== 1 || !payload.client) {
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
       return;
     }
@@ -750,10 +750,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const selectBank = (bank: "karimi" | "ycb" | "tadhamon") => {
     window.localStorage.setItem("bak-web-staging-selected-bank", bank);
+    snapshotRestored.current = false;
+    setSnapshotState("loading");
+    setReviewPreview(null);
+    setDownloadingDocument(null);
+    setRawRows([]);
+    setTransactions([]);
+    setAppliedTransactions([]);
+    setColumnMap({});
+    setMappedFields([]);
+    setTotalCreditOverride("");
+    setTotalDebitOverride("");
+    setRegisterDirty(false);
+    setFileName("");
+    setClient(bank === "ycb" ? { ...defaultClient, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate } : { ...defaultClient });
     setSelectedBank(bank);
     setShowYcbCertificate(false);
     setActiveTab("account");
-    if (bank === "ycb") setClient((current) => ({ ...current, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate }));
   };
   const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : selectedBank === "tadhamon" ? "karimi" : "ycb");
   if (selectedBank === null) {
