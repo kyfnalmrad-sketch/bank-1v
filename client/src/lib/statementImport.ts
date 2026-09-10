@@ -16,6 +16,7 @@ export type ImportedTransaction = {
   rejectionReason?: string;
   personName?: string;
   suggestedDescription?: string;
+  highlightColor?: string;
 };
 
 export type HeaderDiscovery = {

@@ -1,4 +1,4 @@
-export type YcbStatementTransaction = { date: string; reference: string; description: string; credit?: number; debit?: number; balance: number };
+export type YcbStatementTransaction = { date: string; reference: string; description: string; credit?: number; debit?: number; balance: number; highlightColor?: string };
 export type YcbStatementProfile = { customerName: string; passport: string; address: string; dateOfBirth: string; branchName: string; accountNumber: string; accountType: string; currency: string; periodStart: string; periodEnd: string; statementReference: string; openingBalance: number; closingBalance: number; totalCredit: number; totalDebit: number; issueDate: string; pageNumber?: number; pageCount?: number };
 const esc = (value: unknown) => String(value ?? "—").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const money = (value: number | undefined) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

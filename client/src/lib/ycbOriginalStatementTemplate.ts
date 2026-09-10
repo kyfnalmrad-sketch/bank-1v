@@ -1,4 +1,4 @@
-import originalTemplate from "./ycb-statement-stage1-revised.html?raw";
+import originalTemplate from "./ycb-approved-statement-template.html?raw";
 import type { YcbStatementProfile, YcbStatementTransaction } from "./ycbStatementPreview";
 
 const escapeHtml = (value: unknown) => String(value ?? "")
@@ -14,7 +14,9 @@ const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
   const style = safeHighlight ? ` style="--custom-row-color:${safeHighlight};background-color:${safeHighlight}"` : "";
   const cellStyle = safeHighlight ? ` style="background-color:${safeHighlight}!important;background:${safeHighlight}!important;color:#1B365D!important"` : "";
-  return `<div class="row${item.credit ? " credit-row" : ""}${safeHighlight ? " custom-row" : ""}"${style}><div class="cell centered"${cellStyle}>${escapeHtml(item.date)}</div><div class="cell centered"${cellStyle}>${escapeHtml(item.reference)}</div><div class="cell"${cellStyle}>${escapeHtml(item.description)}</div><div class="cell amount"${cellStyle}>${item.credit ? money(item.credit) : "—"}</div><div class="cell amount"${cellStyle}>${item.debit ? money(item.debit) : "—"}</div><div class="cell amount balance"${cellStyle}>${money(item.balance)}</div></div>`;
+  const reference = escapeHtml(item.reference);
+  const click = ` onclick="window.parent.postMessage({type:'ycb-highlight',reference:'${reference}'},'*')" title="Click to highlight"`;
+  return `<div class="row${item.credit ? " credit-row" : ""}${safeHighlight ? " custom-row" : ""}" data-reference="${reference}"${style}${click}><div class="cell centered"${cellStyle}>${escapeHtml(item.date)}</div><div class="cell centered"${cellStyle}>${reference}</div><div class="cell"${cellStyle}>${escapeHtml(item.description)}</div><div class="cell amount"${cellStyle}>${item.credit ? money(item.credit) : "—"}</div><div class="cell amount"${cellStyle}>${item.debit ? money(item.debit) : "—"}</div><div class="cell amount balance"${cellStyle}>${money(item.balance)}</div></div>`;
 };
 const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
