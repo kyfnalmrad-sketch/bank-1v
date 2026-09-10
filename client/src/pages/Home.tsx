@@ -58,7 +58,7 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
-type TabId = "dashboard" | "account" | "transactions" | "training" | "review" | "history" | "analytics";
+type TabId = "dashboard" | "account" | "transactions" | "review" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
@@ -94,7 +94,6 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "dashboard", label: "لوحة التحكم / Dashboard" },
   { id: "account", label: "الإدخال / Data Entry" },
   { id: "transactions", label: "استيراد Excel / Excel Import" },
-  { id: "training", label: "بيان الحالة / Account Status" },
   { id: "review", label: "المعاينة والطباعة / Preview & Print" },
   { id: "history", label: "السجلات / Records" },
   { id: "analytics", label: "المؤشرات / Analytics" },
@@ -747,8 +746,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <button type="button" className={activeTab === "dashboard" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("dashboard")}><LayoutDashboard size={18} /><span>لوحة التحكم<small>Dashboard</small></span></button>
         <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
         <button type="button" className={activeTab === "transactions" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("transactions")}><Receipt size={18} /><span>استيراد Excel<small>Excel Import</small></span></button>
-        <button type="button" className={activeTab === "training" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("training")}><CreditCard size={18} /><span>بيان الحالة<small>Account Status</small></span></button>
-        <button type="button" className={activeTab === "review" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("review")}><ClipboardList size={18} /><span>المعاينة والطباعة<small>Preview & Print</small></span></button>
+        <button type="button" className={activeTab === "review" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("review")}><ClipboardList size={18} /><span>المعاينة<small>Preview & Print</small></span></button>
         <button type="button" className={activeTab === "history" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("history")}><Receipt size={18} /><span>السجلات<small>Records</small></span></button>
         <button type="button" className={activeTab === "analytics" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("analytics")}><BarChart3 size={18} /><span>المؤشرات<small>Analytics</small></span></button>
         <div className="sidebar-spacer" />
@@ -768,6 +766,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button><button type="button" className="bank-switch-button" onClick={switchBank}>{selectedBank === "ycb" ? "الانتقال إلى بنك الكريمي" : "الانتقال إلى بنك اليمن التجاري"}</button></div></div>
       </header>
 
+      <nav className="sr-only" aria-label="System sections">
+        {tabs.map((tab) => (
+          <button key={tab.id} className={activeTab === tab.id ? "is-active" : ""} onClick={() => setActiveTab(tab.id)} type="button">
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
       <div className="session-bar" role="status">
         <div className="session-user"><span className="session-avatar">{(user.name || user.email || "مستخدم").slice(0, 1).toUpperCase()}</span><span><b>{user.name || "مستخدم مصادق"}</b><small>{user.email || "جلسة عمل آمنة"}</small></span></div>
         <div className="session-meta"><span><LockKeyhole size={14} /> جلسة آمنة · تنتهي بعد 6 ساعات</span><a className="conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a><button type="button" onClick={() => void handleSecureLogout()}><LogOut size={15} /> تسجيل الخروج</button></div>
@@ -778,14 +784,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div><span>Staging database</span><strong>{stagingHealth.isLoading ? "Checking…" : stagingHealth.data ? `${stagingHealth.data.tableCount} tables ready` : "Unavailable"}</strong></div>
         <div><span>Reference documents</span><strong>No visual changes</strong></div>
       </section>
-
-      <nav className="ui-tabs" aria-label="System sections">
-        {tabs.map((tab) => (
-          <button key={tab.id} className={`ui-tab ${activeTab === tab.id ? "is-active" : ""}`} onClick={() => setActiveTab(tab.id)} type="button">
-            {tab.label}
-          </button>
-        ))}
-      </nav>
 
       {tabWarnings.length > 0 && <aside className="tab-warning" role="status">
         <AlertTriangle size={18} />
@@ -835,7 +833,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="ycb-workflow-grid">
             <button type="button" className="ycb-workflow-card is-active" onClick={() => setActiveTab("account")}><span>01</span><strong>المعلومات الشخصية والمرجعية <em>Identity & Reference</em></strong><small>العميل، الحساب، الفرع، المرجع، وتواريخ المستند</small></button>
             <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("transactions")}><span>02</span><strong>السجلات والاستيراد <em>Records & Import</em></strong><small>Excel، السحب، التعديل، القبول، والتحديث</small></button>
-            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان <em>Official Previews</em></strong><small>الكشف والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}>معاينة الكشف · Statement</button><button type="button" onClick={() => setActiveTab("training")}>معاينة البيان · Status</button></div></div>
+            <div className="ycb-workflow-card ycb-workflow-card-static"><span>03</span><strong>المعاينتان الرسميتان <em>Official Previews</em></strong><small>الكشف والبيان مرتبطان ببيانات الإدخال نفسها</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => selectedBank === "ycb" ? setShowYcbStatement(true) : setActiveTab("review")} disabled={!acceptedRows.length}>معاينة الكشف · Statement</button><button type="button" onClick={() => setActiveTab("review")}>معاينة البيان · Status</button></div></div>
             <div className="ycb-workflow-card ycb-workflow-card-static"><span>04</span><strong>التصدير والطباعة <em>Export & Print</em></strong><small>المعاينة الفردية، الكلية، والطباعة أو الحفظ كـ PDF</small><div className="ycb-workflow-mini-actions"><button type="button" onClick={() => setActiveTab("review")}>فتح التصدير · Open</button><button type="button" onClick={() => printDocument("unified")}>طباعة الكل · Print all</button></div></div>
             <button type="button" className="ycb-workflow-card" onClick={() => setActiveTab("history")}><span>05</span><strong>السجلات السابقة <em>History & Updates</em></strong><small>حفظ اللقطات، الترحيل، التحديث، والتعديل دون خلط بين البنكين</small></button>
           </div>
@@ -957,7 +955,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       </>}
 
       {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)}><FolderOpen size={16} /> Open / Edit</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
-      {activeTab === "training" && <section className="panel statement-preview-panel">
+      {activeTab === "review" && <section className="panel statement-preview-panel">
         <div className="panel-heading"><div><h2>{selectedBank === "ycb" ? "Yemen Commercial Bank Certificate" : "Account Status Statement"}</h2><p className="hint">{selectedBank === "ycb" ? "قالب شهادة البنك التجاري اليمني مرتبط بمدخلات هذا المسار." : "HTML preview based on the Prototype 0.5.1 reference rules without redesign."}</p></div><button className="secondary-button" type="button" onClick={() => setActiveTab("review")}><ChevronLeft size={16} /> Back to review</button></div>
         <div className="document-frame-wrap"><iframe className="document-frame" title="Account Status Statement reference preview" srcDoc={accountStatusHtml} /></div>
         <div className="actions"><button type="button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> Print / Save PDF</button><button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "Opening print…" : "Print / Save Account Status PDF"}</button></div>
