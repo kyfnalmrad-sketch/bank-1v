@@ -105,8 +105,45 @@ function extractHtmlPart(html: string, tag: "head" | "body") {
   return html.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] || "";
 }
 
+function scopeCss(css: string, scope: string) {
+  return css.replace(/([^{}]+)\{([^{}]*)\}/g, (full, selector: string, declarations: string) => {
+    const trimmed = selector.trim();
+    if (!trimmed || trimmed.startsWith("@") || /^(from|to|\d+%)$/.test(trimmed)) return full;
+    const scoped = trimmed.split(",").map((part) => {
+      const item = part.trim();
+      if (!item) return item;
+      if (item === "html" || item === "body" || item === "html,body") return scope;
+      if (item.startsWith("html ")) return `${scope} ${item.slice(5)}`;
+      if (item.startsWith("body ")) return `${scope} ${item.slice(5)}`;
+      if (item === ":root") return scope;
+      return `${scope} ${item}`;
+    }).join(", ");
+    return `${scoped}{${declarations}}`;
+  });
+}
+
+function extractScopedStyles(html: string, scope: string) {
+  return Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi))
+    .map((match) => scopeCss(match[1], scope))
+    .join("\n");
+}
+
 export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accountStatusHtml: string) {
-  return assemblePrintablePages([accountStatusHtml, accountStatementHtml]);
+  const parts = [
+    { html: accountStatusHtml, scope: "[data-print-part=account-status]" },
+    { html: accountStatementHtml, scope: "[data-print-part=account-statement]" },
+  ].filter((part) => part.html);
+  if (!parts.length) return "";
+  const styles = parts.map((part) => extractScopedStyles(part.html, part.scope)).join("\n");
+  const bodies = parts.map((part) => `<section class="print-part" data-print-part="${part.scope.includes("status") ? "account-status" : "account-statement"}">${extractHtmlPart(part.html, "body")}</section>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${styles}
+    @page{size:A4 portrait;margin:0}
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    html,body{margin:0;padding:0;background:#fff}
+    .print-part{display:block;break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid}
+    .print-part+.print-part{break-before:page;page-break-before:always}
+    .print-part:last-child{break-after:auto;page-break-after:auto}
+  </style></head><body>${bodies}</body></html>`;
 }
 
 export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string) {
