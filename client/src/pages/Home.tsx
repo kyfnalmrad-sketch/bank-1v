@@ -702,22 +702,16 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
-    const selected = selectedBank === "ycb"
-      ? { html: ycbApprovedStatementHtml, title: "Yemen Commercial Bank — Approved Statement" }
-      : selectedBank === "tadhamon"
-        ? { html: tadhamonStatementHtml, title: "Tadhamon Bank — Statement Preview" }
-        : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
+    const statementHtml = selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : printableStatementHtml;
+    const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     if (!openPrintWindow(selected.html, selected.title)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
     }
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
-    const selected = selectedBank === "ycb"
-      ? { html: ycbApprovedStatementHtml, title: "Yemen Commercial Bank — Approved Statement" }
-      : selectedBank === "tadhamon"
-        ? { html: tadhamonStatementHtml, title: "Tadhamon Bank — Statement Preview" }
-        : selectPrintableDocument(kind, accountStatusHtml, printableStatementHtml);
+    const statementHtml = selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : printableStatementHtml;
+    const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     setDownloadingDocument(kind);
     try {
       const opened = await downloadDocumentPdf(kind, selected.html);
@@ -993,6 +987,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="review-action-group">
             <span className="review-action-label">الطباعة / Print</span>
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>
+            <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
