@@ -63,7 +63,7 @@ type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
-  bankId: "karimi" | "ycb";
+  bankId: "karimi" | "ycb" | "tadhamon";
   client: typeof defaultClient;
   referenceSource: "internal" | "excel";
   includeBranch: boolean;
@@ -229,10 +229,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, []);
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
-  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(() => {
+  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | "tadhamon" | null>(() => {
     if (typeof window === "undefined") return null;
     const saved = window.localStorage.getItem("bak-web-staging-selected-bank");
-    return saved === "karimi" || saved === "ycb" ? saved : null;
+    return saved === "karimi" || saved === "ycb" || saved === "tadhamon" ? saved : null;
   });
   const [ycbClient, setYcbClient] = useState(defaultYcbClient);
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
@@ -255,7 +255,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [statusQrSource, setStatusQrSource] = useState("");
   const [statementQrSources, setStatementQrSources] = useState<string[]>([]);
   const [barcodeSources, setBarcodeSources] = useState<string[]>([]);
-  const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : "bak-web-staging-karimi";
+  const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : selectedBank === "tadhamon" ? "bak-web-staging-tadhamon" : "bak-web-staging-karimi";
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-descriptions`));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-names`));
   useEffect(() => {
@@ -353,7 +353,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     highlightColor: row.highlightColor,
   })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
-    backgroundUri: referenceAssets.statementBackground,
+    backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon/tadhamon-status-official-background.png" : referenceAssets.statementBackground,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
@@ -378,7 +378,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, dateOfBirthPlacement, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -592,11 +592,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const file = event.target.files?.[0];
     if (!file) return;
     const fileIdentity = file.name.toLowerCase();
-    const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : "بنك الكريمي";
-    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي" : "بنك اليمن التجاري";
+    const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي";
+    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي" : selectedBank === "tadhamon" ? "بنك اليمن التجاري أو الكريمي" : "بنك اليمن التجاري أو التضامن";
     const looksLikeOtherBank = selectedBank === "ycb"
       ? /karimi|kuraimi|alkuraimi|الكريمي/.test(fileIdentity)
-      : /ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity);
+      : selectedBank === "tadhamon"
+        ? /karimi|kuraimi|alkuraimi|الكريمي|ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity)
+        : /ycb|yemen|commercial|اليمن|التجاري|tadhamon|تضامن/.test(fileIdentity);
     if (looksLikeOtherBank && !window.confirm(`تنبيه: اسم الملف يبدو تابعاً لـ ${otherBankLabel} بينما المسار الحالي هو ${currentBankLabel}. هل تريد استيراده إلى المسار الحالي؟`)) {
       setImportNote(`تم إلغاء الاستيراد: الملف يبدو تابعاً لـ ${otherBankLabel}.`);
       fileInput.value = "";
