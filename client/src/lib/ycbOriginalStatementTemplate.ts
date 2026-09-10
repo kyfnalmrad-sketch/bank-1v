@@ -10,7 +10,12 @@ const escapeHtml = (value: unknown) => String(value ?? "")
 
 const money = (value: number) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const renderRow = (item: YcbStatementTransaction) => `<div class="row${item.credit ? " credit-row" : ""}"><div class="cell centered">${escapeHtml(item.date)}</div><div class="cell centered">${escapeHtml(item.reference)}</div><div class="cell">${escapeHtml(item.description)}</div><div class="cell amount">${item.credit ? money(item.credit) : "—"}</div><div class="cell amount">${item.debit ? money(item.debit) : "—"}</div><div class="cell amount balance">${money(item.balance)}</div></div>`;
+const renderRow = (item: YcbStatementTransaction, highlight = "") => {
+  const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
+  const style = safeHighlight ? ` style="--custom-row-color:${safeHighlight};background-color:${safeHighlight}"` : "";
+  const cellStyle = safeHighlight ? ` style="background-color:${safeHighlight}!important;background:${safeHighlight}!important;color:#1B365D!important"` : "";
+  return `<div class="row${item.credit ? " credit-row" : ""}${safeHighlight ? " custom-row" : ""}"${style}><div class="cell centered"${cellStyle}>${escapeHtml(item.date)}</div><div class="cell centered"${cellStyle}>${escapeHtml(item.reference)}</div><div class="cell"${cellStyle}>${escapeHtml(item.description)}</div><div class="cell amount"${cellStyle}>${item.credit ? money(item.credit) : "—"}</div><div class="cell amount"${cellStyle}>${item.debit ? money(item.debit) : "—"}</div><div class="cell amount balance"${cellStyle}>${money(item.balance)}</div></div>`;
+};
 const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
  .page > .summary{margin-top:3mm!important}
@@ -23,10 +28,15 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .address-date-of-birth .value{display:block;margin-top:.7mm;font-weight:400}
  .page > .notes{margin-top:3mm!important}
+ .row:nth-child(odd):not(.head):not(.total) .cell{background:#E2E6EA}
+ .row.credit-row .cell{background:#E8F8F5;color:#1B365D}
+ .row.credit-row .cell.amount:first-of-type{color:#117A65;font-weight:700}
+ .row.custom-row .cell{background-color:var(--custom-row-color)!important;background:var(--custom-row-color)!important;color:#1B365D!important}
+ .row.custom-row .balance{background-color:var(--custom-row-color)!important;background:var(--custom-row-color)!important;color:#1B365D!important}
  @media print{.page{margin:0!important}.page > .top{height:68mm!important}.page > .summary{margin-top:3mm!important}.page > .table{margin-top:3mm!important}.page > .notes{margin-top:3mm!important}}
 </style>`;
 
-export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], pageNumber: number, pageCount: number, qrUri = "", barcodeUri = "") {
+export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], pageNumber: number, pageCount: number, qrUri = "", barcodeUri = "", rowHighlights: Record<string, string> = {}) {
   const opening = money(profile.openingBalance);
   const credit = money(profile.totalCredit);
   const debit = money(profile.totalDebit);
@@ -50,7 +60,7 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const tableStart = page.indexOf('<section class="table">');
   const notesStart = page.indexOf('<section class="notes">');
   const summary = `<section class="summary"><div class="sum"><div class="label">Opening Balance</div><strong>${opening}</strong></div><div class="sum"><div class="label">Total Credit</div><strong>${credit}</strong></div><div class="sum"><div class="label">Total Debit</div><strong>${debit}</strong></div><div class="sum"><div class="label">Closing Balance</div><strong>${closing}</strong></div></section>`;
-  const table = `<section class="table"><div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>${transactions.map(renderRow).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${credit}</div><div class="cell amount">${debit}</div><div class="cell amount balance">${closing}</div></div></section>`;
+  const table = `<section class="table"><div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${credit}</div><div class="cell amount">${debit}</div><div class="cell amount balance">${closing}</div></div></section>`;
   if (summaryStart >= 0 && tableStart > summaryStart && notesStart > tableStart) {
     return withCodeAssets(`${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`)
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
