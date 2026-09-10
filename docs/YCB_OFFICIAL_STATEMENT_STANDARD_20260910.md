@@ -22,6 +22,7 @@
 | اختبارات الحمولة وعدم التكرار | `client/src/lib/documentSync.test.ts` |
 | سكربت المعاينة المرجعية | `preview/generate_ycb_barcode_preview.mjs` |
 | معاينة PDF المرجعية الحالية | `preview/ycb-barcode-updated-preview.pdf` |
+| مسار PDF القديم المتوافق | `preview/ycb-statement-stage1-revised-preview.pdf` (نسخة مطابقة للمرجع الحالي) |
 
 ## 3. قاعدة المسار الموحد
 
