@@ -25,7 +25,7 @@ export function synchronizeDocumentData(transactions: ImportedTransaction[], ope
 }
 
 export type VerificationQrInput = {
-  bankName?: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK";
+  bankName?: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" | "TADHAMON BANK";
   reference: string;
   accountNumber: string;
   customerName?: string;
@@ -104,7 +104,7 @@ export function buildVerificationQrPayload(input: VerificationQrInput) {
   return lines.join("\n");
 }
 
-export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number, bankName: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" = "KURAIMI ISLAMIC BANK") {
+export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number, bankName: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" | "TADHAMON BANK" = "KURAIMI ISLAMIC BANK") {
   const normalizedReference = qrText(reference).replace(/\s+/g, "-");
   const core = `${bankName}|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
   return `${core}|CHK=${verificationChecksum(core)}`;
