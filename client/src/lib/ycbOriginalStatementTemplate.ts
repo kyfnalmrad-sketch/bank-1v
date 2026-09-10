@@ -54,9 +54,12 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
     .replace(/<div class="screenbar">[\s\S]*?<\/div>/, "")
     .replace("Yemen Commercial Bank · Confidential — Internal Use Only", "Yemen Commercial Bank")
     .replace("YCB-STMT-2025-001", escapeHtml(profile.statementReference));
-  const withCodeAssets = (html: string) => html
-    .replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`)
-    .replace(/(<img class="title-pdf417" src=")[^"]*(")/, `$1${escapeHtml(barcodeUri)}$2`);
+  const withCodeAssets = (html: string) => {
+    let next = html;
+    if (qrUri) next = next.replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);
+    if (barcodeUri) next = next.replace(/(<img class="title-pdf417" src=")[^"]*(")/, `$1${escapeHtml(barcodeUri)}$2`);
+    return next;
+  };
 
   const summaryStart = page.indexOf('<section class="summary">');
   const tableStart = page.indexOf('<section class="table">');
