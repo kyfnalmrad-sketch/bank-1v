@@ -25,11 +25,14 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .identity-field{border:1px solid #b7c1c8;padding:1.2mm 1.5mm;margin-bottom:1mm;background:rgba(255,255,255,.9)}
  .identity-field .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .identity-field .field-value{display:block;margin-top:.7mm}
- .address-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;margin-top:1mm}
- .address-grid .address-field{min-width:0;border:1px solid #b7c1c8;padding:1.2mm 1.5mm;background:rgba(255,255,255,.9)}
+ .address-grid{display:block;margin-top:1mm}
+ .address-grid .address-field{min-width:0;border:0;border-bottom:1px solid #b7c1c8;padding:1.2mm 0;background:transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .address-grid .field-label,.customer-dob .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .address-grid .field-value,.customer-dob .field-value{display:block;margin-top:.7mm}
- .summary{grid-template-columns:repeat(4,1fr) 27mm!important;height:24mm!important}
+ .summary{grid-template-columns:1fr 27mm!important;height:auto!important;min-height:24mm!important}
+ .summary .sum{grid-column:1;display:grid;grid-template-columns:1fr auto;align-items:center;padding:1.4mm 2mm;border-right:0;border-bottom:1px solid #b2bec7}
+ .summary .sum:last-of-type{border-bottom:0}
+ .summary .code-sum{grid-column:2;grid-row:1 / span 4}
  .code-sum{display:flex;align-items:center;justify-content:center;gap:1mm;padding:1mm;border-left:1px solid #b2bec7}
  .summary-qr{width:22mm;height:22mm;object-fit:contain}
  .financial-code .address-qr{width:13mm!important;height:13mm!important}
@@ -59,9 +62,9 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const debit = money(profile.totalDebit);
   const closing = money(profile.closingBalance);
   const page = originalTemplate
-    .replace(/<div style="font-weight:800;font-style:italic;text-transform:uppercase">Customer Name<\/div><div style="margin-top:1mm">Arafat Ali Saleh Dilla<\/div>/, `<div class="identity-field"><span class="field-label">Customer Name:</span><span class="field-value">${escapeHtml(profile.customerName)}</span></div><div class="identity-field"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>`)
+    .replace(/<div style="font-weight:800;font-style:italic;text-transform:uppercase">Customer Name<\/div><div style="margin-top:1mm">Arafat Ali Saleh Dilla<\/div>/, `<div class="identity-field"><span class="field-label">Customer Name:</span><span class="field-value">${escapeHtml(profile.customerName)}</span></div><div class="identity-field"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div><div class="identity-field"><span class="field-label">Place of Birth:</span><span class="field-value">${escapeHtml(profile.placeOfBirth || "—")}</span></div>`)
     .replace(/<div style="border-top:1px solid #d1d7dc;margin-top:2.2mm;padding-top:1.8mm;font-weight:800;font-style:italic;text-transform:uppercase">Address<\/div>/, "")
-    .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div><div class="address-field"><span class="field-label">Place of Birth:</span><span class="field-value">${escapeHtml(profile.placeOfBirth || "—")}</span></div></div></div><div style="padding:4mm 2mm;text-align:center`)
+    .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div></div></div><div style="padding:4mm 2mm;text-align:center`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
     .replace("101-840-21102-326491-000", escapeHtml(profile.accountNumber))
     .replace("05-Feb-2025", escapeHtml(profile.periodStart))
