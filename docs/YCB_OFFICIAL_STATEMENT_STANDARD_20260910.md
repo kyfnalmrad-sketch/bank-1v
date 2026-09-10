@@ -16,13 +16,12 @@
 |---|---|
 | واجهة كشف الحساب، المعاينة والطباعة | `client/src/components/YcbStatementWorkspace.tsx` |
 | القالب الرسمي واستبدال بيانات العميل | `client/src/lib/ycbOriginalStatementTemplate.ts` |
-| الأصل المرئي الرسمي للبنك | `client/src/lib/ycb-statement-stage1-revised.html` |
+| الأصل المرئي الرسمي للبنك | `client/src/lib/ycb-approved-statement-template.html` |
 | نوع بيانات الكشف | `client/src/lib/ycbStatementPreview.ts` |
 | حمولة QR والباركود والتحقق | `client/src/lib/documentSync.ts` |
 | اختبارات الحمولة وعدم التكرار | `client/src/lib/documentSync.test.ts` |
-| سكربت المعاينة المرجعية | `preview/generate_ycb_barcode_preview.mjs` |
+| صفحة HTML الرسمية المرجعية | `preview/Arafat Ali Saleh Dilla Statement.html` |
 | معاينة PDF المرجعية الحالية | `preview/ycb-barcode-updated-preview.pdf` |
-| مسار PDF القديم المتوافق | `preview/ycb-statement-stage1-revised-preview.pdf` (نسخة مطابقة للمرجع الحالي) |
 | النموذج الرسمي الافتراضي المعتمد | `preview/Arafat Ali Saleh Dilla Statement.pdf` |
 | معاينة HTML الرسمية الافتراضية | `preview/Arafat Ali Saleh Dilla Statement.html` |
 
@@ -112,16 +111,7 @@ pnpm build
 git diff --check
 ```
 
-لإنشاء المعاينة المرجعية الحالية:
-
-```bash
-node preview/generate_ycb_barcode_preview.mjs
-chromium --headless --no-sandbox --disable-gpu \
-  --hide-scrollbars --window-size=1240,1754 \
-  --screenshot=preview/ycb-barcode-updated-preview.png \
-  --print-to-pdf=preview/ycb-barcode-updated-preview.pdf \
-  file:///home/ubuntu/bank-karimi-web-staging/preview/ycb-barcode-updated-preview.html
-```
+المعاينة المرجعية الثابتة هي `preview/Arafat Ali Saleh Dilla Statement.html`، وملف PDF المعتمد هو `preview/Arafat Ali Saleh Dilla Statement.pdf`. لا يجوز إعادة توليد كشف YCB من قالب Stage 1 أو من مولد بديل؛ المعاينة والطباعة داخل النظام تستخدمان `renderOriginalYcbStatementPage` و`ycb-approved-statement-template.html` فقط.
 
 ## 9. سجل الاعتماد
 
