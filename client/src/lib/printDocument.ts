@@ -140,8 +140,10 @@ export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accoun
     @page{size:A4 portrait;margin:0}
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
     html,body{margin:0;padding:0;background:#fff}
-    .print-part{display:block;break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid}
+    .print-part{display:block;break-after:page;page-break-after:always}
     .print-part+.print-part{break-before:page;page-break-before:always}
+    .print-part .page{break-inside:avoid!important;page-break-inside:avoid!important;break-after:page!important;page-break-after:always!important}
+    .print-part:last-child .page:last-of-type{break-after:auto!important;page-break-after:auto!important}
     .print-part:last-child{break-after:auto;page-break-after:auto}
   </style></head><body>${bodies}</body></html>`;
 }

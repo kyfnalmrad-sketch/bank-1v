@@ -49,6 +49,7 @@ describe("separate document printing", () => {
     expect(html).toContain("break-after:page");
     expect(html).toContain("break-before:page");
     expect(html).toContain("print-part+.print-part");
+    expect(html).toContain(".print-part .page");
     expect(html).toContain(".statement{color:red}");
     expect(html).toContain(".status{color:blue}");
     expect(html).not.toContain("<iframe");
