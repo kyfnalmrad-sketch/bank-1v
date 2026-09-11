@@ -79,9 +79,10 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
     .replace(/<div class="screenbar">[\s\S]*?<\/div>/, "")
     .replace("Tadhamon Bank · Confidential — Internal Use Only", "Tadhamon Bank")
     .replace("Tadhamon-STMT-2025-001", escapeHtml(profile.statementReference))
+    .replace("TAD-STMT-2025-001", escapeHtml(profile.statementReference))
     .replace(/<div style="font-size:7.5pt;color:#425766;margin-top:1.4mm">Tadhamon Bank<\/div>/, "")
     .replace(/border-top:1px solid #d1d7dc;/g, "")
-    .replace(/<footer class="footer">[\s\S]*?<\/footer>/, "");
+    .replace(/<footer class="footer">[\s\S]*?<\/footer>/, `<footer class="footer"><span>Tadhamon Bank - R.Y.</span><span>Statement Reference: ${escapeHtml(profile.statementReference)}</span><span>Page ${pageNumber} of ${pageCount}</span></footer>`);
   const withCodeAssets = (html: string) => {
     let next = html;
     if (qrUri) next = next.replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);

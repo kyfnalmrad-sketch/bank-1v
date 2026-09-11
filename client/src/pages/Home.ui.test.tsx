@@ -118,16 +118,27 @@ describe("Home applied transaction register", () => {
     expect(screen.queryByText(/Momaiz No\./)).toBeNull();
   });
 
-  it("isolates Tadhamon review actions to the official statement template", () => {
+  it("keeps all Tadhamon review actions but routes them to the official statement template", async () => {
+    const host = mockPrintWindow();
+    vi.stubGlobal("open", host.open);
     render(<Home />);
     fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
     fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
 
-    expect(screen.getByRole("button", { name: /معاينة كشف التضامن الرسمي/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /معاينة بيان البنك/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /طباعة بيان البنك/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /طباعة موحدة/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /طباعة كشف التضامن الرسمي/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /حفظ كشف التضامن الرسمي PDF/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /معاينة بيان البنك/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "View Account Statement" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /طباعة بيان البنك/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /طباعة موحدة/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /طباعة كشف الحساب/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /حفظ بيان البنك PDF/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /حفظ كشف الحساب PDF/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /طباعة بيان البنك/ }));
+    await waitFor(() => expect(host.write).toHaveBeenCalledWith(expect.stringContaining("Statement of Account")));
+    expect(host.write).toHaveBeenLastCalledWith(expect.not.stringContaining("Account Status Statement"));
+
+    fireEvent.click(screen.getByRole("button", { name: /طباعة موحدة/ }));
+    await waitFor(() => expect(host.open).toHaveBeenCalledTimes(2));
+    expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("Statement of Account"));
   });
 });

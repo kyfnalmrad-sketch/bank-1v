@@ -28,8 +28,10 @@ describe("approved Tadhamon statement template", () => {
     expect(html).toContain("LIVE-ROW-1");
     expect(html).toContain("P1234567");
     expect(html).toContain("05:30:00");
+    expect(html).toContain("11-Sep-2026");
     expect(html).toContain("Passport Number:");
     expect(html).toContain("Print Date:");
+    expect(html).toContain("TAD-STMT-2025-001");
     expect(html).toContain("class=\"code-sum\"");
   });
 
