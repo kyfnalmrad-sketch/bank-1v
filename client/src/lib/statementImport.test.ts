@@ -99,6 +99,11 @@ describe("statement Excel import", () => {
     expect(formatImportedDate("2026/08/04")).toBe("2026-08-04");
   });
 
+  it("keeps the original Excel date so later edits can be flagged", () => {
+    const transaction = buildImportedTransactions([["2026-08-04", "Cash deposit", "TAD-1", "", 100, 100]], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true)[0];
+    expect(transaction.sourceDate).toBe("2026-08-04");
+  });
+
   it("renders ISO transaction dates separately as an English statement date", () => {
     expect(displayStatementDate("2026-08-04")).toBe("04/08/2026");
   });
