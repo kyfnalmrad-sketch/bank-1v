@@ -1074,7 +1074,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="review-action-group">
             <span className="review-action-label">الطباعة / Print</span>
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> {selectedBank === "tadhamon" ? "طباعة بيان الحالة — بنك التضامن / Print Tadhamon Status" : "طباعة بيان البنك / Print Bank Status"}</button>
-            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>}
+            <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> الطباعة الموحدة للبيان والكشف / Unified: Status then Statement</button>
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
