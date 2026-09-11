@@ -732,7 +732,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
       statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
       totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate,
-      printTime: client.printTime,
+      printTime: client.printTime, employeeName: client.employeeName, managerName: client.managerName,
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
@@ -955,9 +955,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             </div>
           </section>
         </>}
-        {selectedBank === "karimi" && <section className="panel karimi-signature-panel">
+        {(selectedBank === "karimi" || selectedBank === "tadhamon") && <section className="panel karimi-signature-panel">
           <h2>بيانات التوقيع / Signature Details</h2>
-          <p className="hint">تظهر هذه البيانات في بيان الكريمي فقط، وبنفس لون قالب البيان.</p>
+          <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان.</p>
           <div className="grid">
             <label>اسم الموظف / Employee name<input value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /></label>
             <label>اسم المدير / Manager name<input value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /></label>

@@ -62,10 +62,10 @@ describe("Home applied transaction register", () => {
   it("shows Tadhamon-only statement fields in the Tadhamon workspace", () => {
     render(<Home />);
     fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
-    expect(screen.getByText(/بيانات كشف التضامن/)).toBeTruthy();
-    expect(screen.getByPlaceholderText("Address as shown on the statement")).toBeTruthy();
+    expect(screen.getByText(/فترة كشف الحساب/)).toBeTruthy();
+    expect(screen.getByPlaceholderText("Street, area, city")).toBeTruthy();
     expect(screen.getByPlaceholderText("City, country")).toBeTruthy();
-    expect(screen.queryByText(/بيانات التوقيع \/ Signature Details/)).toBeNull();
+    expect(screen.getByText(/بيانات التوقيع \/ Signature Details/)).toBeTruthy();
   });
   it("applies an edited date to the printed account statement while each print button opens only its matching document", async () => {
     const host = mockPrintWindow();

@@ -46,6 +46,8 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   }
   page = page.replace(/class="summary-qr"/, 'class="code-sum"');
   if (!profile.passport.trim()) page = page.replace(/<div class="address-date-of-birth">[\s\S]*?<\/div>/, "");
+  const signatures = `<div class="statement-signatures" style="min-height:25mm;display:flex;flex-direction:column;justify-content:center;gap:3mm;text-align:center;font-size:7.2pt;color:#344b5b"><div><span style="display:block;font-weight:800;text-transform:uppercase">Customer Service</span><strong style="display:block;margin-top:1mm;font-size:8.2pt">${escapeHtml(profile.employeeName || "—")}</strong></div><div><span style="display:block;font-weight:800;text-transform:uppercase">Branch Manager</span><strong style="display:block;margin-top:1mm;font-size:8.2pt">${escapeHtml(profile.managerName || "—")}</strong></div></div>`;
+  page = page.replace(/<div class="stamp-box"><\/div>/, signatures);
   page = page.replace(/<footer class="footer">[\s\S]*?<\/footer>/, `<footer class="footer"><span>Tadhamon Bank - R.Y.</span><span>Statement Reference: ${escapeHtml(profile.statementReference)}</span><span>Page ${pageNumber} of ${pageCount}</span></footer>`);
   if (qrUri) page = page.replace(/(<div class="code-sum">\s*<img[^>]*src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);
   return page;
