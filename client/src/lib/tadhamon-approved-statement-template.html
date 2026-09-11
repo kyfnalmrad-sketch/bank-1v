@@ -15,10 +15,11 @@
 </style>
 <style id="statement-layout-updates">
 /* Keep the QR/PDF417 area above the table and visually transparent. */
-.summary-qr{position:absolute!important;top:50%!important;right:-22mm!important;transform:translateY(-50%)!important;z-index:5!important;width:19.5mm!important;height:19.5mm!important;display:flex!important;align-items:center!important;justify-content:center!important;background:transparent!important;border:0!important;margin:0!important;opacity:1!important}
+.summary-qr{position:absolute!important;top:0!important;right:-22mm!important;transform:none!important;z-index:5!important;width:19.5mm!important;height:22mm!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;background:transparent!important;border:0!important;margin:0!important;opacity:1!important}
+.summary-qr::after{content:"";position:absolute;left:0;right:0;bottom:0;border-bottom:1px solid rgba(8,125,150,.45)}
 .summary-qr .address-qr{width:19.5mm!important;height:19.5mm!important;background:transparent!important;mix-blend-mode:multiply!important;opacity:1!important}
 .summary .sum:nth-child(4){border-right:0!important}
-.summary{position:relative!important;width:calc(100% - 22mm)!important;height:19.5mm!important;min-height:19.5mm!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;overflow:visible!important}
+.summary{position:relative!important;width:calc(100% - 22mm)!important;height:22mm!important;min-height:22mm!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;overflow:visible!important}
 .table{position:relative;z-index:1}
 
 /* Passport is a distinct header field; optional glove number takes no space when empty. */
