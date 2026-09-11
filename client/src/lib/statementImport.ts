@@ -347,7 +347,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const balanceCell = getCell(row, map.balance);
       const date = formatImportedDate(getCell(row, map.date));
       const balance = balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell);
-      const internalOperationNumber = operationNumber(date, `${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
+      const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
       return {
         rowNumber: index + 1,
         date,
