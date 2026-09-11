@@ -53,13 +53,17 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
 
 export function renderTadhamonStatementPages(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], qrSources: string[] = [], barcodeSources: string[] = [], rowHighlights: Record<string, string> = {}) {
   const pageSize = 15;
-  return renderOriginalTadhamonStatementPage(
-    { ...profile, pageNumber: 1, pageCount: 1 },
-    transactions.slice(0, pageSize),
-    1,
-    1,
-    qrSources[0] || "",
-    barcodeSources[0] || "",
-    rowHighlights,
-  );
+  const pageCount = Math.max(1, Math.ceil(transactions.length / pageSize));
+  return Array.from({ length: pageCount }, (_, index) => {
+    const pageNumber = index + 1;
+    return renderOriginalTadhamonStatementPage(
+      { ...profile, pageNumber, pageCount },
+      transactions.slice(index * pageSize, (index + 1) * pageSize),
+      pageNumber,
+      pageCount,
+      qrSources[index] || qrSources[0] || "",
+      barcodeSources[index] || barcodeSources[0] || "",
+      rowHighlights,
+    );
+  });
 }

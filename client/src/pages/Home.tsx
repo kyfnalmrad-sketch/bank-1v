@@ -708,7 +708,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
-    return renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights);
+    return assemblePrintableStatementHtml(renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights));
   }, [barcodeSources, client, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 

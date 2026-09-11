@@ -45,11 +45,13 @@ describe("approved Tadhamon statement template", () => {
       debit: 1,
       balance: 100 - index,
     }));
-    const html = renderTadhamonStatementPages(profile, transactions);
-    expect(html).toContain("LIVE-ROW-15");
-    expect(html).not.toContain("LIVE-ROW-16");
-    expect(html).not.toContain("page-break-after:always");
-    expect(html).not.toContain("summary-barcode");
+    const pages = renderTadhamonStatementPages(profile, transactions);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]).toContain("LIVE-ROW-15");
+    expect(pages[0]).not.toContain("LIVE-ROW-16");
+    expect(pages[1]).toContain("LIVE-ROW-16");
+    expect(pages[1]).toContain("Page 2 of 2");
+    expect(pages.join("\n")).not.toContain("summary-barcode");
   });
 
   it("omits the passport field when no passport is supplied", () => {
