@@ -72,6 +72,13 @@ describe("statement Excel import", () => {
     expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("FT000001");
   });
 
+  it("uses the Excel reference as the operation number when Excel is the selected reference source", () => {
+    const transactions = buildImportedTransactions([
+      ["04/02/2026", "Cash deposit", "TAD-OP-1001", "", 100, 100],
+    ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true);
+    expect(transactions[0]).toMatchObject({ externalReference: "TAD-OP-1001", operationNumber: "TAD-OP-1001" });
+  });
+
   it("stores imported Excel dates in ISO format for native date editing", () => {
     expect(formatImportedDate(46057)).toBe("2026-02-04");
     expect(formatImportedDate("04/08/2026")).toBe("2026-08-04");
