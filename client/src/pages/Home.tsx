@@ -42,6 +42,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
 import { renderTadhamonStatementPages } from "@/lib/tadhamonOriginalStatementTemplate";
+import { renderTadhamonFastStatementPages } from "@/lib/tadhamonFastStatementTemplate";
 import { renderTadhamonOfficialStatusPreview } from "@/lib/tadhamonOfficialStatusTemplate";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
@@ -61,7 +62,7 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
-type TabId = "dashboard" | "account" | "transactions" | "review" | "history" | "analytics";
+type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
@@ -98,6 +99,7 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "account", label: "الإدخال / Data Entry" },
   { id: "transactions", label: "استيراد Excel / Excel Import" },
   { id: "review", label: "المعاينة والطباعة / Preview & Print" },
+  { id: "fastStatement", label: "طبعة كشف حساب سريع / Quick Statement" },
   { id: "history", label: "السجلات / Records" },
   { id: "analytics", label: "المؤشرات / Analytics" },
 ];
@@ -751,6 +753,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
     return assemblePrintableStatementHtml(renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights));
   }, [barcodeSources, client, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
+  const tadhamonFastStatementHtml = useMemo(() => {
+    if (selectedBank !== "tadhamon") return "";
+    const profile: YcbStatementProfile = { customerName: client.name, passport: client.passport, address: client.address, placeOfBirth: client.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate };
+    const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
+    return renderTadhamonFastStatementPages(profile, rows, Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string])));
+  }, [client, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementReference, statementRows]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
@@ -847,6 +855,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
         <button type="button" className={activeTab === "transactions" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("transactions")}><Receipt size={18} /><span>استيراد Excel<small>Excel Import</small></span></button>
         <button type="button" className={activeTab === "review" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => { setActiveTab("review"); setReviewPreview("accountStatement"); }}><ClipboardList size={18} /><span>معاينة البيان<small>Statement Preview</small></span></button>
+        {selectedBank === "tadhamon" && <button type="button" className={activeTab === "fastStatement" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("fastStatement")}><FileText size={18} /><span>طبعة كشف حساب سريع<small>Quick Statement Print</small></span></button>}
         <button type="button" className={activeTab === "history" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("history")}><Receipt size={18} /><span>السجلات<small>Records</small></span></button>
         <button type="button" className={activeTab === "analytics" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("analytics")}><BarChart3 size={18} /><span>المؤشرات<small>Analytics</small></span></button>
         <div className="sidebar-spacer" />
@@ -909,6 +918,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div className="panel-heading"><div><h2>المؤشرات / Analytics</h2><p className="hint">رسوم توضيحية للعمليات والأفراد والسجلات الحالية.</p></div><BarChart3 size={26} className="heading-icon" /></div>
         <div className="metric-grid metric-grid-focused"><div className="metric-card"><span>إجمالي العملاء / Total Customers</span><strong>{acceptedRows.length}</strong><small>All accepted records</small></div><div className="metric-card metric-card-primary"><span>بدون تكرار / Unique Customers</span><strong>{uniquePeopleCount}</strong><small>{customerQualityRate}% data quality</small></div><div className="metric-card metric-card-alert"><span>التكرار / Duplicate Records</span><strong>{duplicatePeopleCount}</strong><small>{duplicateRate}% requires review</small></div><div className="metric-card metric-card-quality"><span>جودة البيانات / Data Quality</span><strong>{customerQualityRate}%</strong><small>Unique customer ratio</small></div></div>
         <div className="dashboard-grid"><div className="chart-card"><h3>مقارنة العملاء / Customer Comparison</h3><div className="comparison-bars"><div><span>بدون تكرار / Unique</span><i style={{ width: `${customerQualityRate}%` }}><b>{uniquePeopleCount}</b></i></div><div><span>مكرر / Duplicate</span><i className="duplicate-bar" style={{ width: `${duplicateRate}%` }}><b>{duplicatePeopleCount}</b></i></div></div></div><div className="chart-card"><h3>مراجعة البيانات / Data Review</h3><div className="review-score"><strong>{customerQualityRate >= 90 ? "ممتاز / Excellent" : customerQualityRate >= 70 ? "جيد / Good" : "يحتاج مراجعة / Review"}</strong><span>{acceptedRows.length ? `${duplicatePeopleCount} سجل مكرر من أصل ${acceptedRows.length}` : "أضف بيانات العملاء لبدء التحليل"}</span></div></div></div>
+      </section>}
+
+      {activeTab === "fastStatement" && selectedBank === "tadhamon" && <section className="panel print-preview-panel" dir="rtl">
+        <div className="panel-heading"><div><h2>طبعة كشف حساب سريع / Quick Account Statement</h2><p className="hint">مسار مستقل وسريع يعتمد على نفس بيانات العميل والسجل المعتمد، ولا يغيّر القالب الرسمي أو تصميم بيان الحالة.</p></div><FileText size={26} className="heading-icon" /></div>
+        <div className="review-grid"><div className="validation-card"><span>العميل / Customer</span><strong>{client.name || "—"}</strong><small>{client.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>الرصيد الختامي / Closing</span><strong>{formatMoney(reportedClosing)}</strong><small>{client.currency}</small></div><div className="validation-card"><span>العمليات / Transactions</span><strong>{acceptedRows.length}</strong><small>From the applied register</small></div><div className="validation-card"><span>الفترة / Period</span><strong>{documentPeriodStart} — {documentPeriodEnd}</strong><small>Quick print only</small></div></div>
+        <div className="actions"><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><Printer size={17} /> معاينة / Print</button><button type="button" onClick={() => void downloadDocumentPdf("accountStatement", tadhamonFastStatementHtml)}><Download size={17} /> حفظ PDF</button></div>
+        {transactions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Color</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>{transactions.map((row) => <tr key={`fast-${row.rowNumber}-${row.operationNumber}`}><td>{displayStatementDate(row.date)}</td><td dir="ltr">{row.operationNumber}</td><td><input aria-label={`Quick highlight ${row.operationNumber}`} type="color" value={row.highlightColor || "#ffed00"} onChange={(event) => updateTransactionHighlight(row.operationNumber, event.target.value)} /></td><td>{row.description}</td><td>{row.debit ? formatMoney(row.debit) : "—"}</td><td>{row.credit ? formatMoney(row.credit) : "—"}</td><td>{formatMoney(row.balance || 0)}</td></tr>)}</tbody></table></div>}
+        <div className="document-frame-wrap"><iframe className="document-frame" title="Tadhamon quick account statement preview" srcDoc={tadhamonFastStatementHtml} /></div>
       </section>}
 
       {activeTab === "account" && <>
