@@ -194,3 +194,13 @@ export async function deleteStatementHistory(id: number, workspaceKey: string) {
   await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1 AND workspace_key = $2", [id, workspaceKey]);
   return { deleted: true as const };
 }
+
+export async function clearStatementHistory(workspaceKey: string) {
+  if (!process.env.RENDER_POSTGRES_URL) return { deleted: false as const, count: 0, reason: "database-unavailable" as const };
+  await ensureRenderStagingSchema();
+  const result = await getRenderPool().query<{ count: string }>(
+    "WITH removed AS (DELETE FROM staging_statement_history WHERE workspace_key = $1 RETURNING id) SELECT COUNT(*)::text AS count FROM removed",
+    [workspaceKey],
+  );
+  return { deleted: true as const, count: Number(result.rows[0]?.count || 0) };
+}
