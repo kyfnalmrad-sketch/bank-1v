@@ -62,6 +62,14 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
+const formatMorningTime = (value: string) => {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+  if (match) {
+    const hour = Number(match[1]);
+    return `${String(hour % 12 || 12).padStart(2, "0")}:${match[2]} AM`;
+  }
+  return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
+};
 type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "barcodes" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
@@ -355,8 +363,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     closingBalance: reportedClosing,
     totalCredit: reportedTotalCredit,
     totalDebit: reportedTotalDebit,
-    issueDate: documentIssueDate,
-  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
+    issueDate: documentPrintDate,
+  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, client.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
     reference: row.operationNumber,
@@ -385,9 +393,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     credit: reportedTotalCredit,
     debit: reportedTotalDebit,
     closing: reportedClosing,
-    issueDate: formatEnglishGregorianDate(issueDate),
+    issueDate: formatEnglishGregorianDate(client.printDate || issueDate),
     issueDateHijri: formatHijriDate(issueDate),
-    printTime: client.printTime,
+    printTime: formatMorningTime(client.printTime),
     correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
     periodStart: documentPeriodStart,
     periodEnd: documentPeriodEnd,
@@ -413,15 +421,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     credit: reportedTotalCredit,
     debit: reportedTotalDebit,
     closing: reportedClosing,
-    issueDate: formatEnglishGregorianDate(issueDate),
+    issueDate: formatEnglishGregorianDate(client.printDate || issueDate),
     issueDateHijri: formatHijriDate(issueDate),
-    printTime: client.printTime,
+    printTime: formatMorningTime(client.printTime),
     correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
     employeeName: client.employeeName,
     managerName: client.managerName,
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, dateOfBirthPlacement, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
+  }), [client, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
   const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
@@ -594,7 +602,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     momaizNo: client.momaizNo,
     branchName: client.branch,
     currency: client.currency,
-    issueDate: documentIssueDate,
+    issueDate: documentPrintDate,
     periodStart: documentPeriodStart,
     periodEnd: documentPeriodEnd,
     statementReference,
@@ -610,7 +618,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     let cancelled = false;
     const firstSummary = statementPageSummaries[0];
-    const statusPayload = buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(issueDate), issueDateHijri: formatHijriDate(issueDate) });
+    const statusPayload = buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(client.printDate || issueDate), issueDateHijri: formatHijriDate(issueDate) });
     QRCode.toDataURL(statusPayload, { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then((source) => { if (!cancelled) setStatusQrSource(source); })
       .catch(() => { if (!cancelled) setStatusQrSource(""); });
@@ -624,7 +632,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const legacySources = Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(
       selectedBank === "tadhamon"
         ? buildTadhamonStatementQrPayload({ customerName: client.name, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), address: client.address, placeOfBirth: client.placeOfBirth, accountNumber: client.accountNumber, branchName: client.branch, currency: client.currency, statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd })
-        : buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(client.opening), currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }),
+        : buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(client.opening), currency: client.currency, closing: summary.closingBalance, issueDate: documentPrintDate }),
       { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })));
     (selectedBank === "ycb" ? ycbSources : legacySources).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
     return () => { cancelled = true; };
@@ -799,7 +807,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
       statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
       totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate,
-      printTime: client.printTime,
+      printTime: formatMorningTime(client.printTime),
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
@@ -807,7 +815,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [barcodeSources, client, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const tadhamonFastStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
-    const profile = { customerName: client.name, passport: client.momaizNo || client.passport, address: client.address, placeOfBirth: client.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: client.customerSince, holderNameAr: client.name, statementTime: client.printTime, qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
+    const profile = { customerName: client.name, passport: client.momaizNo || client.passport, address: client.address, placeOfBirth: client.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: client.customerSince, holderNameAr: client.name, statementTime: formatMorningTime(client.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
     const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: fastHighlightColors[row.rowNumber] || "#ffed00" }));
     const fastHighlights = Object.fromEntries(rows.filter((row) => row.highlightColor && row.highlightColor.toLowerCase() !== "#ffed00").map((row) => [row.reference, row.highlightColor as string]));
     return renderTadhamonFastStatementPages(profile, rows, fastHighlights);
@@ -1024,7 +1032,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
-            <label>تاريخ بدء العميل / Customer since {selectedBank === "tadhamon" && <span className="field-note">يظهر في بيان الحالة / Shown on status statement</span>}<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
+            <label>تاريخ بدء العميل / Customer since {selectedBank === "tadhamon" && <span className="field-note">يظهر في بيان الحالة / Shown on status statement</span>}<input type="date" lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} /></label>
             {selectedBank !== "ycb" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
             <label>نوع الحساب / Account Type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
             <label>رقم الحساب / Account Number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>

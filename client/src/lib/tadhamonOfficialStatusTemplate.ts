@@ -9,6 +9,7 @@ const esc = (value: unknown) => String(value ?? "—")
   .replace(/'/g, "&#039;");
 
 const text = (value: unknown) => esc(value || "—");
+const shortName = (value: unknown) => { const parts = String(value || "").trim().split(/\s+/).filter(Boolean); return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0] || "—"; };
 const money = (value: number) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const replaceId = (html: string, id: string, value: unknown) => html.replace(new RegExp(`(<(?:span|div)[^>]*id="${id}"[^>]*>)[\\s\\S]*?(</(?:span|div)>)`), `$1${text(value)}$2`);
 
@@ -40,6 +41,6 @@ export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewIn
   html = replaceId(html, "outPlace", data.placeOfBirth || "Sana'a, Yemen");
   html = replaceId(html, "outPeriodStart", data.periodStart || data.correspondenceDate);
   html = replaceId(html, "outPeriodEnd", data.periodEnd || data.customerSince);
-  html = html.replace(/<div class="header-qr-right-label">[\s\S]*?<\/div>/, `<div class="header-qr-right-label">${text(data.customerName)}</div>`);
+  html = html.replace(/<div class="header-qr-right-label">[\s\S]*?<\/div>/, `<div class="header-qr-right-label">${text(shortName(data.customerName))}</div>`);
   return html;
 }

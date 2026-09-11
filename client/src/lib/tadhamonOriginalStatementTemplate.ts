@@ -8,7 +8,7 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/\"/g, "&quot;")
   .replace(/'/g, "&#39;");
 const money = (value: number | undefined) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentAdenTime = () => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "Asia/Aden" }).format(new Date());
+const currentAdenTime = () => new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
 
 const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
