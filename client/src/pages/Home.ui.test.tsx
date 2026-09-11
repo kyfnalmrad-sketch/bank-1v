@@ -47,6 +47,12 @@ function mockPrintWindow() {
 }
 
 describe("Home applied transaction register", () => {
+  it("shows isolated Karimi, YCB, and Tadhamon workspaces", () => {
+    render(<Home />);
+    expect(screen.getByRole("button", { name: /بنك الكريمي/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /بنك اليمن التجاري/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /بنك التضامن/ })).toBeTruthy();
+  });
   afterEach(cleanup);
 
   beforeEach(() => {

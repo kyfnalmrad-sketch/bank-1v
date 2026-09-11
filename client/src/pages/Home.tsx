@@ -63,7 +63,7 @@ type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
   schemaVersion: 1;
-  bankId: "karimi" | "ycb";
+  bankId: "karimi" | "ycb" | "tadhamon";
   client: typeof defaultClient;
   referenceSource: "internal" | "excel";
   includeBranch: boolean;
@@ -232,10 +232,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, []);
   const handleSecureLogout = async () => { clearSessionToken(); await logout(); };
   const stagingHealth = trpc.staging.health.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
-  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | null>(() => {
+  const [selectedBank, setSelectedBank] = useState<"karimi" | "ycb" | "tadhamon" | null>(() => {
     if (typeof window === "undefined") return null;
     const saved = window.localStorage.getItem("bak-web-staging-selected-bank");
-    return saved === "karimi" || saved === "ycb" ? saved : null;
+    return saved === "karimi" || saved === "ycb" || saved === "tadhamon" ? saved : null;
   });
   const [ycbClient, setYcbClient] = useState(defaultYcbClient);
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
@@ -258,7 +258,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [statusQrSource, setStatusQrSource] = useState("");
   const [statementQrSources, setStatementQrSources] = useState<string[]>([]);
   const [barcodeSources, setBarcodeSources] = useState<string[]>([]);
-  const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : "bak-web-staging-karimi";
+  const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : selectedBank === "tadhamon" ? "bak-web-staging-tadhamon" : "bak-web-staging-karimi";
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-descriptions`));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-names`));
   useEffect(() => {
@@ -382,7 +382,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, dateOfBirthPlacement, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank || "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -605,8 +605,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const file = event.target.files?.[0];
     if (!file) return;
     const fileIdentity = file.name.toLowerCase();
-    const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : "بنك الكريمي";
-    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي" : "بنك اليمن التجاري";
+    const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي";
+    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي أو التضامن" : selectedBank === "tadhamon" ? "بنك اليمن التجاري أو الكريمي" : "بنك اليمن التجاري أو التضامن";
     const looksLikeOtherBank = selectedBank === "ycb"
       ? /karimi|kuraimi|alkuraimi|الكريمي/.test(fileIdentity)
       : /ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity);
@@ -737,7 +737,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote("تم تحديث بيانات المعاينة والطباعة من المدخلات الحالية / Document data refreshed.");
   };
 
-  const selectBank = (bank: "karimi" | "ycb") => {
+  const selectBank = (bank: "karimi" | "ycb" | "tadhamon") => {
     window.localStorage.setItem("bak-web-staging-selected-bank", bank);
     snapshotRestored.current = false;
     setSnapshotState("loading");
@@ -757,7 +757,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setShowYcbCertificate(false);
     setActiveTab("account");
   };
-  const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : "ycb");
+  const switchBank = () => selectBank(selectedBank === "karimi" ? "ycb" : selectedBank === "ycb" ? "tadhamon" : "karimi");
   if (selectedBank === null) {
     return <BankSelector onSelect={selectBank} onLogout={() => void handleSecureLogout()} />;
   }
@@ -770,10 +770,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       <div className="desktop-fan desktop-fan-two" aria-hidden="true" />
       <nav className="bank-workspace-tabs" aria-label="مساحات البنوك">
         <button type="button" className={selectedBank === "karimi" ? "is-active" : ""} onClick={() => selectBank("karimi")}><strong>بنك الكريمي <span>AlKuraimi Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button>
-        <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
+        <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button>
+        <button type="button" className={selectedBank === "tadhamon" ? "is-active" : ""} onClick={() => selectBank("tadhamon")}><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>مساحة مستقلة · مرحلة التأسيس</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
       </nav>
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
-        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : "AlKuraimi Bank"}</small></div></div>
+        <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : selectedBank === "tadhamon" ? "Tadhamon Bank" : "AlKuraimi Bank"}</small></div></div>
         <div className="sidebar-section-label">مساحة العمل / Workspace</div>
         <button type="button" className={activeTab === "dashboard" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("dashboard")}><LayoutDashboard size={18} /><span>لوحة التحكم<small>Dashboard</small></span></button>
         <button type="button" className={activeTab === "account" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("account")}><Building2 size={18} /><span>الإدخال<small>Data Entry</small></span></button>
@@ -792,10 +793,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div>
             <p className="eyebrow">منصة داخلية لإصدار ومراجعة الكشوف</p>
           <h1>نظام إصدار كشفي</h1>
-          <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
+          <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : selectedBank === "tadhamon" ? "بنك التضامن · مساحة مستقلة قيد البناء" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
-        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
+        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : selectedBank === "tadhamon" ? "بنك التضامن · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
       </header>
 
       <nav className="sr-only" aria-label="System sections">
@@ -848,7 +849,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="intake-hero-copy">
             <span className="section-kicker">Controlled data-entry flow</span>
             <h2 id="intake-title">إدخال واحد، مراجعة كاملة</h2>
-            <p>{selectedBank === "ycb" ? "مساحة البنك التجاري اليمني: أدخل البيانات مرة واحدة، ثم راجع الكشف والبيان والتصدير من نفس السجل." : "مساحة بنك الكريمي: أدخل البيانات مرة واحدة، ثم راجع البيان والكشف والتصدير من نفس السجل."}</p>
+            <p>{selectedBank === "ycb" ? "مساحة البنك التجاري اليمني: أدخل البيانات مرة واحدة، ثم راجع الكشف والبيان والتصدير من نفس السجل." : selectedBank === "tadhamon" ? "مساحة بنك التضامن: تم تأسيس العزل، وسيُربط القالب الرسمي في المرحلة الثالثة." : "مساحة بنك الكريمي: أدخل البيانات مرة واحدة، ثم راجع البيان والكشف والتصدير من نفس السجل."}</p>
           </div>
           <div className="intake-steps" aria-label="Data entry steps">
             <div className="intake-step is-current"><span>1</span><div><strong>المعلومات / Customer Details</strong><small>الحقول المطلوبة / Required fields</small></div></div>
