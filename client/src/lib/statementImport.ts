@@ -26,6 +26,34 @@ export type HeaderDiscovery = {
   mappedFields: Array<{ key: StatementColumnKey; source: string }>;
 };
 
+export type ImportedStatementProfile = Partial<Record<
+  "customerName" | "passport" | "address" | "branch" | "accountNumber" | "customerSince" | "dateOfBirth" | "placeOfBirth" | "accountType" | "currency" | "openingBalance" | "issueDate" | "printDate" | "periodStart" | "periodEnd" | "employeeName" | "managerName" | "totalCredit" | "totalDebit" | "closingBalance",
+  string
+>>;
+
+const profileAliases: Record<keyof ImportedStatementProfile, readonly string[]> = {
+  customerName: ["customer name", "client name", "account holder", "اسم العميل", "اسم العميل صاحب الحساب", "اسم صاحب الحساب"],
+  passport: ["passport", "passport number", "رقم الجواز"],
+  address: ["address", "العنوان"],
+  branch: ["branch", "branch name", "اسم الفرع", "الفرع"],
+  accountNumber: ["account number", "account no", "رقم الحساب"],
+  customerSince: ["customer since", "account opening date", "تاريخ فتح الحساب", "العميل منذ"],
+  dateOfBirth: ["date of birth", "birth date", "تاريخ الميلاد"],
+  placeOfBirth: ["place of birth", "birth place", "مكان الميلاد"],
+  accountType: ["account type", "نوع الحساب"],
+  currency: ["currency", "العملة"],
+  openingBalance: ["opening balance", "الرصيد الافتتاحي"],
+  issueDate: ["issue date", "statement date", "تاريخ الإصدار", "تاريخ البيان"],
+  printDate: ["print date", "تاريخ الطباعة"],
+  periodStart: ["period start", "statement start", "بداية الكشف"],
+  periodEnd: ["period end", "statement end", "نهاية الكشف"],
+  employeeName: ["employee name", "customer service", "اسم الموظف", "خدمة العملاء"],
+  managerName: ["manager name", "branch manager", "اسم المدير", "مدير الفرع"],
+  totalCredit: ["total credit", "total deposits", "إجمالي الدائن", "إجمالي الإيداعات"],
+  totalDebit: ["total debit", "total withdrawals", "إجمالي المدين", "إجمالي المسحوبات"],
+  closingBalance: ["closing balance", "final balance", "الرصيد الختامي", "الرصيد النهائي"],
+};
+
 const aliases: Record<StatementColumnKey, readonly string[]> = {
   date: ["date", "posting date", "transaction date", "value date", "تاريخ", "تاريخ الحركة"],
   description: ["description", "movement description", "narration", "details", "particular", "particulars", "وصف العملية", "الوصف", "بيان الحركة"],
@@ -55,6 +83,21 @@ export function normalizeHeader(value: unknown) {
 }
 
 const normalizedAliases = Object.fromEntries(Object.entries(aliases).map(([key, values]) => [key, values.map(normalizeHeader)])) as Record<StatementColumnKey, string[]>;
+const normalizedProfileAliases = Object.fromEntries(Object.entries(profileAliases).map(([key, values]) => [key, values.map(normalizeHeader)])) as Record<keyof ImportedStatementProfile, string[]>;
+
+export function extractStatementProfile(matrix: unknown[][], beforeRow = matrix.length) {
+  const profile: ImportedStatementProfile = {};
+  const keys = Object.keys(normalizedProfileAliases) as Array<keyof ImportedStatementProfile>;
+  matrix.slice(0, beforeRow).forEach((row) => {
+    if (row.length < 2) return;
+    const key = normalizeHeader(row[0]);
+    const field = keys.find((candidate) => normalizedProfileAliases[candidate].includes(key));
+    if (!field || profile[field] !== undefined) return;
+    const value = String(row[1] ?? "").trim();
+    if (value) profile[field] = value;
+  });
+  return profile;
+}
 
 function asNumber(value: unknown) {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;

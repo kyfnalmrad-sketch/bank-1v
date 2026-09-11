@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import * as XLSX from "xlsx";
-import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
+import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, extractStatementProfile, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
 
 describe("statement Excel import", () => {
   it("selects the actual Arabic heading row after preface rows without inventing columns", () => {
@@ -10,6 +10,11 @@ describe("statement Excel import", () => {
     expect(discovered?.headerRowIndex).toBe(3);
     expect(discovered?.headers).toEqual(["تاريخ الحركة", "وصف العملية", "مدين", "دائن", "المرجع الخارجي"]);
     expect(discovered?.map).toMatchObject({ date: 0, description: 1, debit: 2, credit: 3, reference: 4 });
+  });
+
+  it("extracts supported customer and summary fields from a two-column preface", () => {
+    const matrix = [["Customer Name", "Sample Customer"], ["Account Number", "0000000000"], ["Opening Balance", "3500"], ["Closing Balance", "23231"], ["Date", "Description", "Debit", "Credit", "Balance"], ["2026-02-01", "Deposit", "", "100", "3600"]];
+    expect(extractStatementProfile(matrix, 4)).toMatchObject({ customerName: "Sample Customer", accountNumber: "0000000000", openingBalance: "3500", closingBalance: "23231" });
   });
 
   it("ignores One, Two and Three headings and rejects an ambiguous duplicate heading row", () => {
