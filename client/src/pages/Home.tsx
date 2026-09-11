@@ -41,10 +41,10 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
-import { renderTadhamonStatementPages } from "@/lib/tadhamonStatementTemplate";
+import { renderTadhamonStatementPages } from "@/lib/tadhamonOriginalStatementTemplate";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
-import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
+import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildTadhamonStatementQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
@@ -358,7 +358,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     highlightColor: row.highlightColor,
   })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
-    backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon-status-background.png" : referenceAssets.statementBackground,
+    backgroundUri: referenceAssets.statementBackground,
     bankName: selectedBank === "tadhamon" ? "Tadhamon Bank" : undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
@@ -384,7 +384,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, dateOfBirthPlacement, documentIssueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank || "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
@@ -547,7 +547,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const buildInput = (rows: YcbStatementTransaction[], pageNumber: number) => ({ customerName: ycbStatementProfile.customerName, passport: ycbStatementProfile.passport, address: ycbStatementProfile.address, accountNumber: ycbStatementProfile.accountNumber, branchName: ycbStatementProfile.branchName, currency: ycbStatementProfile.currency, statementReference: ycbStatementProfile.statementReference, pageNumber, pageCount: statementPageCount, periodStart: ycbStatementProfile.periodStart, periodEnd: ycbStatementProfile.periodEnd, issueDate: ycbStatementProfile.issueDate, firstReference: rows[0]?.reference, lastReference: rows.at(-1)?.reference, transactionCount: rows.length, creditCount: rows.filter((row) => (row.credit || 0) > 0).length, debitCount: rows.filter((row) => (row.debit || 0) > 0).length, totalCredit: rows.reduce((sum, row) => sum + (row.credit || 0), 0), totalDebit: rows.reduce((sum, row) => sum + (row.debit || 0), 0), openingBalance: rows[0] ? rows[0].balance - (rows[0].credit || 0) + (rows[0].debit || 0) : ycbStatementProfile.openingBalance, closingBalance: rows.at(-1)?.balance ?? ycbStatementProfile.closingBalance });
     const ycbSources = Promise.all(ycbStatementTransactions.length ? statementPageGroups.map((rows, pageIndex) => QRCode.toDataURL(buildYcbStatementQrPayload(buildInput(ycbStatementTransactions.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE), pageIndex + 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })) : [QRCode.toDataURL(buildYcbStatementQrPayload(buildInput([], 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })]);
     const legacySources = Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(
-      buildVerificationQrPayload({ bankName: selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(client.opening), currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }),
+      selectedBank === "tadhamon"
+        ? buildTadhamonStatementQrPayload({ customerName: client.name, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), address: client.address, placeOfBirth: client.placeOfBirth, accountNumber: client.accountNumber, branchName: client.branch, currency: client.currency, statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd })
+        : buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(client.opening), currency: client.currency, closing: summary.closingBalance, issueDate: documentIssueDate }),
       { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })));
     (selectedBank === "ycb" ? ycbSources : legacySources).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
     return () => { cancelled = true; };
@@ -608,10 +610,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     if (!file) return;
     const fileIdentity = file.name.toLowerCase();
     const currentBankLabel = selectedBank === "ycb" ? "بنك اليمن التجاري" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي";
-    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي أو التضامن" : selectedBank === "tadhamon" ? "بنك اليمن التجاري أو الكريمي" : "بنك اليمن التجاري أو التضامن";
+    const otherBankLabel = selectedBank === "ycb" ? "بنك الكريمي" : selectedBank === "tadhamon" ? "بنك اليمن التجاري أو الكريمي" : "بنك اليمن التجاري أو التضامن";
     const looksLikeOtherBank = selectedBank === "ycb"
       ? /karimi|kuraimi|alkuraimi|الكريمي/.test(fileIdentity)
-      : /ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity);
+      : selectedBank === "tadhamon"
+        ? /karimi|kuraimi|alkuraimi|الكريمي|ycb|yemen|commercial|اليمن|التجاري/.test(fileIdentity)
+        : /ycb|yemen|commercial|اليمن|التجاري|tadhamon|تضامن/.test(fileIdentity);
     if (looksLikeOtherBank && !window.confirm(`تنبيه: اسم الملف يبدو تابعاً لـ ${otherBankLabel} بينما المسار الحالي هو ${currentBankLabel}. هل تريد استيراده إلى المسار الحالي؟`)) {
       setImportNote(`تم إلغاء الاستيراد: الملف يبدو تابعاً لـ ${otherBankLabel}.`);
       fileInput.value = "";
@@ -690,7 +694,22 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const highlights = Object.fromEntries(ycbStatementTransactions.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
     return renderYcbStatementPages(ycbStatementProfile, ycbStatementTransactions, statementQrSources, barcodeSources, highlights);
   }, [barcodeSources, selectedBank, statementQrSources, ycbStatementProfile, ycbStatementTransactions]);
-  const tadhamonStatementHtml = useMemo(() => selectedBank !== "tadhamon" ? "" : renderTadhamonStatementPages(ycbStatementProfile, ycbStatementTransactions, statementQrSources, barcodeSources, Object.fromEntries(ycbStatementTransactions.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]))), [barcodeSources, selectedBank, statementQrSources, ycbStatementProfile, ycbStatementTransactions]);
+  const tadhamonStatementHtml = useMemo(() => {
+    if (selectedBank !== "tadhamon") return "";
+    const profile: YcbStatementProfile = {
+      customerName: client.name, passport: client.passport, address: client.address,
+      placeOfBirth: client.placeOfBirth,
+      dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
+      branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType,
+      currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
+      statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
+      totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate,
+      printTime: client.printTime,
+    };
+    const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
+    const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
+    return renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights);
+  }, [barcodeSources, client, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
@@ -714,6 +733,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     } finally {
       setDownloadingDocument(null);
     }
+  };
+  const openTadhamonStatement = () => {
+    setReviewPreview("accountStatement");
+    setActiveTab("review");
   };
 
   const updateYcbClient = (key: keyof typeof ycbClient, value: string) => {
@@ -760,7 +783,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setShowYcbCertificate(false);
     setActiveTab("account");
   };
-  const switchBank = () => selectBank(selectedBank === "karimi" ? "ycb" : selectedBank === "ycb" ? "tadhamon" : "karimi");
+  const switchBank = () => selectBank(selectedBank === "ycb" ? "karimi" : selectedBank === "tadhamon" ? "karimi" : "ycb");
   if (selectedBank === null) {
     return <BankSelector onSelect={selectBank} onLogout={() => void handleSecureLogout()} />;
   }
@@ -774,7 +797,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       <nav className="bank-workspace-tabs" aria-label="مساحات البنوك">
         <button type="button" className={selectedBank === "karimi" ? "is-active" : ""} onClick={() => selectBank("karimi")}><strong>بنك الكريمي <span>AlKuraimi Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button>
         <button type="button" className={selectedBank === "ycb" ? "is-active" : ""} onClick={() => selectBank("ycb")}><strong>البنك التجاري اليمني <span>Yemen Commercial Bank</span></strong><small>YCB · مساحة مستقلة · Independent workspace</small></button>
-        <button type="button" className={selectedBank === "tadhamon" ? "is-active" : ""} onClick={() => selectBank("tadhamon")}><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>مساحة مستقلة · مرحلة التأسيس</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
+        <button type="button" className={selectedBank === "tadhamon" ? "is-active" : ""} onClick={() => selectBank("tadhamon")}><strong>بنك التضامن <span>Tadhamon Bank</span></strong><small>مساحة مستقلة · Independent workspace</small></button><a className="bank-conduct-link" href="https://good-conduct-training.onrender.com/" target="_blank" rel="noreferrer">حسن السيرة والسلوك</a>
       </nav>
       <aside className="desktop-sidebar" aria-label="التنقل الرئيسي / Main navigation">
         <div className="sidebar-brand"><span className="sidebar-logo"><Shield size={24} /></span><div><strong>{selectedBank === "ycb" ? "البنك التجاري اليمني" : selectedBank === "tadhamon" ? "بنك التضامن" : "بنك الكريمي"}</strong><small>{selectedBank === "ycb" ? "Yemen Commercial Bank" : selectedBank === "tadhamon" ? "Tadhamon Bank" : "AlKuraimi Bank"}</small></div></div>
@@ -796,7 +819,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div>
             <p className="eyebrow">منصة داخلية لإصدار ومراجعة الكشوف</p>
           <h1>نظام إصدار كشفي</h1>
-          <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : selectedBank === "tadhamon" ? "بنك التضامن · مساحة مستقلة قيد البناء" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
+          <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : selectedBank === "tadhamon" ? "بنك التضامن · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
         <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : selectedBank === "tadhamon" ? "بنك التضامن · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
@@ -852,7 +875,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="intake-hero-copy">
             <span className="section-kicker">Controlled data-entry flow</span>
             <h2 id="intake-title">إدخال واحد، مراجعة كاملة</h2>
-            <p>{selectedBank === "ycb" ? "مساحة البنك التجاري اليمني: أدخل البيانات مرة واحدة، ثم راجع الكشف والبيان والتصدير من نفس السجل." : selectedBank === "tadhamon" ? "مساحة بنك التضامن: تم تأسيس العزل، وسيُربط القالب الرسمي في المرحلة الثالثة." : "مساحة بنك الكريمي: أدخل البيانات مرة واحدة، ثم راجع البيان والكشف والتصدير من نفس السجل."}</p>
+            <p>{selectedBank === "ycb" ? "مساحة البنك التجاري اليمني: أدخل البيانات مرة واحدة، ثم راجع الكشف والبيان والتصدير من نفس السجل." : selectedBank === "tadhamon" ? "مساحة بنك التضامن: أدخل البيانات مرة واحدة، ثم راجع الكشف الرسمي والتصدير من مسار مستقل." : "مساحة بنك الكريمي: أدخل البيانات مرة واحدة، ثم راجع البيان والكشف والتصدير من نفس السجل."}</p>
           </div>
           <div className="intake-steps" aria-label="Data entry steps">
             <div className="intake-step is-current"><span>1</span><div><strong>المعلومات / Customer Details</strong><small>الحقول المطلوبة / Required fields</small></div></div>
@@ -877,11 +900,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
             {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of Birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label></>}
-            {selectedBank === "karimi" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
+            {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
+            {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
-            {(selectedBank === "karimi" || selectedBank === "tadhamon") && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
+            {selectedBank !== "ycb" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
             <label>نوع الحساب / Account Type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
             <label>رقم الحساب / Account Number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
@@ -903,16 +927,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             </div>
           </section>
         </>}
-        {selectedBank === "tadhamon" && <section className="panel tadhamon-entry-panel">
-          <h2>بيانات كشف التضامن / Tadhamon Statement Fields</h2>
-          <p className="hint">هذه الحقول تخص مساحة بنك التضامن فقط، وتُحفظ في Snapshot وHistory الخاصين بالتضامن.</p>
-          <div className="grid">
-            <label>العنوان / Address<input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Address as shown on the statement" /></label>
-            <label>مكان الميلاد / Place of birth<input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label>
-            <label>تاريخ الميلاد / Date of birth<input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
-            <label>تاريخ الطباعة / Print date<input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>
-          </div>
-        </section>}
         {selectedBank === "karimi" && <section className="panel karimi-signature-panel">
           <h2>بيانات التوقيع / Signature Details</h2>
           <p className="hint">تظهر هذه البيانات في بيان الكريمي فقط، وبنفس لون قالب البيان.</p>
@@ -926,7 +940,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="hint">هذه الحقول تظهر في بيان الحالة فقط / These fields appear only on the Account Status Statement. Totals update before printing.</p>
           <div className="grid">
             <label>تاريخ الإصدار / Issue Date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
-            {selectedBank === "tadhamon" && <label>تاريخ الطباعة / Print Date<input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>}
+            {selectedBank === "tadhamon" && <label>تاريخ الطباعة / Print Date <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>}
             <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
             <label>وقت الطباعة / Print Time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
             <label>تاريخ المراسلة / Correspondence Date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
@@ -955,7 +969,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <div className="computed-field reference-field"><span>مرجع الكشف / Statement Reference</span><strong dir="ltr">{statementReference}</strong><small>مرجع ثابت مبني على أول تاريخ مستورد / Stable reference.</small></div>
           </div>
         </section>
-        <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button></div>
+        <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button>{selectedBank === "tadhamon" && <button type="button" className="preview-button" onClick={openTadhamonStatement}><FileText size={17} /> فتح كشف الحساب الأصلي / Open Original Account Statement</button>}</div>
       </>}
 
       {activeTab === "transactions" && <>
@@ -985,9 +999,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> {getHistoryQuery.isLoading && selectedHistoryId === item.id ? "Loading…" : "Edit"}</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "review" && <section className="panel review-panel">
-        <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review the Tadhamon Bank statement on the official letterhead with its QR code, generated data, and one barcode." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
-        <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon Bank letterhead is preserved, with QR, statement data, and one barcode inside the statement." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
-          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
+        <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
+        <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
+          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" || selectedBank === "tadhamon" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : selectedBank === "tadhamon" ? "Customer name and account number are required for Tadhamon." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="review-actions" aria-label="Document actions / إجراءات المستندات">
           <div className="review-action-group">
             <span className="review-action-label">البيانات / Data</span>
@@ -996,23 +1010,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
           <div className="review-action-group">
             <span className="review-action-label">المعاينة / Preview</span>
-            <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> معاينة بيان البنك / Bank Status Preview</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> معاينة بيان البنك / Bank Status Preview</button>}
             <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">الطباعة / Print</span>
-            <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>
-            <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>}
+            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>}
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">حفظ PDF / Save PDF</span>
-            <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>}
             <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "جارٍ الفتح… / Opening…" : "حفظ كشف الحساب PDF / Save Account Statement PDF"}</button>
           </div>
           <button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> تنزيل جلسة JSON / Download Session JSON</button>
         </div>
-        {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">{"Review the original artwork, QR code, values, and page arrangement before printing or downloading."}</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
+        {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">{selectedBank === "tadhamon" && reviewPreview === "accountStatement" ? "The Tadhamon preview is isolated to the official statement template and current Tadhamon register." : "Review the original artwork, QR code, values, and page arrangement before printing or downloading."}</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
 
       <footer className="app-footer"><img src={referenceAssets.footerStrip} alt="Original footer reference"/><span>Independent Web Staging edition — Prototype 0.5.1 reference remains unchanged.</span></footer>
