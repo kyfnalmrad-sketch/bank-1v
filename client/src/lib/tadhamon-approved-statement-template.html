@@ -15,9 +15,9 @@
 </style>
 <style id="statement-layout-updates">
 /* Keep the QR/PDF417 area above the table and visually transparent. */
-.summary-qr{top:-5.2mm!important;right:-22mm!important;z-index:5!important;width:19.5mm!important;height:19.5mm!important;background:transparent!important;mix-blend-mode:multiply;opacity:.94}
+.summary-qr{top:50%!important;right:-22mm!important;transform:translateY(-50%)!important;z-index:5!important;width:19.5mm!important;height:19.5mm!important;background:transparent!important;mix-blend-mode:multiply;opacity:.94}
 .summary-qr .address-qr{width:19.5mm!important;height:19.5mm!important;background:transparent!important;mix-blend-mode:multiply}
-.summary{overflow:visible!important}
+.summary{position:relative!important;width:calc(100% - 22mm)!important;overflow:visible!important}
 .table{position:relative;z-index:1}
 
 /* Passport is a distinct header field; optional glove number takes no space when empty. */
