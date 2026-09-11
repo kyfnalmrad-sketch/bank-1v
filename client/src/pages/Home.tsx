@@ -720,7 +720,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const selected = selectPrintableDocument(selectedKind, accountStatusHtml, statementHtml);
     setDownloadingDocument(kind);
     try {
-      const opened = await downloadDocumentPdf(kind, selected.html);
+      const opened = await downloadDocumentPdf(selectedKind, selected.html);
       setImportNote(opened ? `${selected.title} print dialog opened. Choose Save as PDF to create the file.` : "The PDF print window could not be opened. Please allow pop-ups for this site and try again.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);

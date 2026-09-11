@@ -140,5 +140,9 @@ describe("Home applied transaction register", () => {
     fireEvent.click(screen.getByRole("button", { name: /طباعة موحدة/ }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(2));
     expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("Statement of Account"));
+
+    fireEvent.click(screen.getByRole("button", { name: /حفظ بيان البنك PDF/ }));
+    await waitFor(() => expect(host.open).toHaveBeenCalledTimes(3));
+    expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("<title>Account Statement</title>"));
   });
 });
