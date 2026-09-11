@@ -33,6 +33,7 @@ describe("approved Tadhamon statement template", () => {
     expect(html).toContain("Print Date:");
     expect(html).toContain("TAD-STMT-2025-001");
     expect(html).toContain("class=\"code-sum\"");
+    expect(html).toContain(".summary-qr,.code-sum");
     expect(html).not.toContain("summary-barcode");
   });
 
