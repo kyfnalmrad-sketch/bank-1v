@@ -23,9 +23,9 @@ describe("Tadhamon quick statement template", () => {
       issueDate: "11 September 2026",
     }, []);
 
-    expect(html).toContain("Customer ID / Person No.");
-    expect(html).toContain("PERSON-123");
+    expect(html).toContain("Account Opening Date");
+    expect(html).toContain("Reference");
     expect(html).toContain("white-space:nowrap");
-    expect(html).toContain("Account: 0000000000");
+    expect(html).toContain("Total Balance:");
   });
 });

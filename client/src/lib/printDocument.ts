@@ -6,7 +6,7 @@ export type PrintableWindow = {
 };
 
 export type PrintHost = { open: (url?: string, target?: string) => PrintableWindow | null };
-export type PrintDocumentKind = "accountStatus" | "accountStatement" | "unified";
+export type PrintDocumentKind = "accountStatus" | "accountStatement" | "unified" | "unifiedAll";
 
 const safeTitle = (title: string) => title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const printAssetStyles = "<style id=\"print-asset-preservation\">@media print{html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style>";
@@ -150,9 +150,14 @@ export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accoun
   </style></head><body>${bodies}</body></html>`;
 }
 
-export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string) {
+export function assembleUnifiedAllDocumentHtml(accountStatusHtml: string, accountStatementHtml: string, quickStatementHtml: string) {
+  return assembleUnifiedDocumentHtml(assembleUnifiedDocumentHtml(accountStatementHtml, accountStatusHtml), quickStatementHtml);
+}
+
+export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string, quickStatementHtml = "") {
   if (kind === "accountStatus") return { html: accountStatusHtml, title: "Account Status Statement" };
   if (kind === "unified") return { html: assembleUnifiedDocumentHtml(accountStatementHtml, accountStatusHtml), title: "Unified Account Statement Package" };
+  if (kind === "unifiedAll") return { html: assembleUnifiedAllDocumentHtml(accountStatusHtml, accountStatementHtml, quickStatementHtml), title: "Unified Statement Package — Status, Account, Quick" };
   return { html: accountStatementHtml, title: "Account Statement" };
 }
 
@@ -161,7 +166,7 @@ export function directPdfFilename(kind: PrintDocumentKind, issueDate?: string) {
   const dateToken = normalizedDate.length >= 8
     ? normalizedDate.slice(0, 8)
     : new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const prefix = kind === "accountStatus" ? "Account-Status-Statement" : kind === "unified" ? "Unified-Account-Statement-Package" : "Account-Statement";
+  const prefix = kind === "accountStatus" ? "Account-Status-Statement" : kind === "unifiedAll" ? "Unified-Status-Account-Quick-Package" : kind === "unified" ? "Unified-Account-Statement-Package" : "Account-Statement";
   return `${prefix}-${dateToken}.pdf`;
 }
 
