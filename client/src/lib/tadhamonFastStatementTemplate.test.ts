@@ -21,11 +21,14 @@ describe("Tadhamon quick statement template", () => {
       totalCredit: 0,
       totalDebit: 0,
       issueDate: "11 September 2026",
+      qrUri: "data:image/png;base64,TEST",
     }, []);
 
     expect(html).toContain("Account Opening Date");
     expect(html).toContain("Reference");
     expect(html).toContain("white-space:nowrap");
     expect(html).toContain("Total Balance:");
+    expect(html).toContain("class=\"qr-image\"");
+    expect(html).toContain("data:image/png;base64,TEST");
   });
 });
