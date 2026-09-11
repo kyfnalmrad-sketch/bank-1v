@@ -1,3 +1,4 @@
+import officialTemplate from "./tadhamon-official-letterhead.html?raw";
 import type { AccountStatusPreviewInput } from "./documentPreview";
 
 const esc = (value: unknown) => String(value ?? "—")
@@ -7,10 +8,34 @@ const esc = (value: unknown) => String(value ?? "—")
   .replace(/"/g, "&quot;")
   .replace(/'/g, "&#039;");
 
+const text = (value: unknown) => esc(value || "—");
 const money = (value: number) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const replaceId = (html: string, id: string, value: unknown) => html.replace(new RegExp(`(<(?:span|div)[^>]*id="${id}"[^>]*>)[\\s\\S]*?(</(?:span|div)>)`), `$1${text(value)}$2`);
 
+/** The official Tadhamon package is kept as the source of truth for the status certificate. */
 export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewInput) {
-  return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Tadhamon Bank - Account Status Statement</title><style>
-@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#e9eef4}body{font-family:Arial,Calibri,sans-serif;color:#172a63}.page{position:relative;width:210mm;height:297mm;margin:0 auto;background:#fff url('${esc(data.backgroundUri)}') center/100% 100% no-repeat;overflow:hidden}.page:before{content:"بنك التضامن\\A Tadhamon Bank - R.Y";white-space:pre;position:absolute;z-index:0;top:132mm;left:18mm;right:18mm;text-align:center;font-family:Arial,Tahoma,sans-serif;font-size:27pt;line-height:1.35;font-weight:700;letter-spacing:1px;color:#1685a0;opacity:.105;transform:rotate(-28deg);pointer-events:none}.header-qr{position:absolute;z-index:2;top:4mm;right:16mm;width:25mm;height:25mm;object-fit:contain}.header-qr-label{position:absolute;z-index:2;top:29mm;right:16mm;width:25mm;text-align:center;font:700 8px Arial,sans-serif;color:#172a63;white-space:nowrap}.header-meta{position:absolute;top:47mm;left:16mm;width:82mm;text-align:left;font-size:10pt;line-height:1.65;color:#172a63}.header-hijri{position:absolute;top:47mm;right:16mm;width:82mm;text-align:right;direction:rtl;font-size:10pt;line-height:1.65;color:#172a63}.header-customer-since{position:absolute;top:58mm;right:16mm;width:82mm;text-align:right;font-size:9.5pt;line-height:1.4;color:#b28a2e;font-weight:700}.content{position:absolute;z-index:1;top:72mm;left:16mm;right:16mm}.title{text-align:center;font-size:24pt;font-weight:400;letter-spacing:.2px;text-transform:uppercase;text-decoration:underline;text-decoration-thickness:1.2pt;text-underline-offset:2.2pt;margin:9mm 0 10mm}.body{width:182mm;margin:0 auto;font-size:15pt;font-weight:400;line-height:1.45;text-align:justify;color:#151b29}.body p{margin:0 0 6mm}.body .strong{font-size:15pt;font-weight:700}.table{width:100%;border-collapse:collapse;margin:3mm 0 4mm;font-size:11pt;text-align:center}.table th,.table td{border:1pt solid #1685a0;padding:2mm 1.5mm;vertical-align:middle;font-weight:700}.table th{background:#e6f2f4;color:#172a63}.table .label{text-align:left;width:40%}.disclaimer{font-size:10.5pt;line-height:1.35;margin:7mm auto 0;color:#a30000;text-align:center;border-top:.6pt solid #b8cbd0;padding-top:2mm}.signatures{display:grid;grid-template-columns:1fr 1fr;column-gap:24mm;margin:7mm 0 0}.signature{text-align:center;font-size:12pt;line-height:1.3;color:#151b29;min-height:17mm}.signature .role{display:block;font-weight:700;font-size:16pt}.signature .name{display:block;font-weight:400;font-size:14pt;white-space:nowrap}.signature .stamp-space{display:block;height:5mm}.notice{display:none}@media print{body{background:#fff}.page{margin:0}}
-</style></head><body><section class="page"><img class="header-qr" src="${esc(data.qrUri)}" alt="Tadhamon verification QR"><div class="header-qr-label">QR Verification</div><div class="header-meta"><div><b>Date:</b> ${esc(data.issueDate)}</div><div><b>Enclosures:</b> Statement PDF — ${esc(data.enclosurePages)} page</div><div><b>Reference:</b> ${esc(data.referenceNo)}</div></div><div class="header-hijri"><div><b>التاريخ الهجري:</b> ${esc(data.issueDateHijri)}</div><div><b>وقت الطباعة:</b> ${esc(data.printTime)}</div></div><div class="header-customer-since">Customer Since: ${esc(data.customerSince)}</div><main class="content"><h1 class="title">Account Status Statement</h1><section class="body"><p class="strong">This statement reflects the account information recorded by Tadhamon Bank as of the selected statement date.</p><p><b>Customer Name:</b> ${esc(data.customerName)} &nbsp;&nbsp;&nbsp; <b>Momaiz No.:</b> ${esc(data.momaizNo)}<br><b>Passport Number:</b> ${esc(data.passport)} &nbsp;&nbsp;&nbsp; <b>Date of Birth:</b> ${esc(data.dateOfBirth)}</p><table class="table"><tr><th>Account Type</th><th>Account Number</th><th>Branch Name</th><th>Account Currency</th></tr><tr><td>${esc(data.accountType)}</td><td>${esc(data.accountNumber)}</td><td>${esc(data.branchName)}</td><td>${esc(data.currency)}</td></tr></table><table class="table"><tr><th colspan="2">BALANCE SUMMARY</th></tr><tr><td class="label">Opening Balance</td><td>${money(data.opening)}</td></tr><tr><td class="label">Total Credits</td><td>${money(data.credit)}</td></tr><tr><td class="label">Total Debits</td><td>${money(data.debit)}</td></tr><tr><td class="label">Closing Balance</td><td>${money(data.closing)}</td></tr></table><p>Issued by Tadhamon Bank as of the statement date.</p><p class="disclaimer">This statement has been issued at the customer’s request. The customer is requested to review the information and notify Tadhamon Bank of any discrepancy within fifteen (15) calendar days of receipt.</p><div class="signatures"><div class="signature"><span class="role">Customer Service</span><span class="name">${esc(data.employeeName || "")}</span><span class="stamp-space"></span>________________</div><div class="signature"><span class="role">Branch Manager</span><span class="name">${esc(data.managerName || "")}</span><span class="stamp-space"></span>________________</div></div></section></main><div class="notice">This document is generated from the official Tadhamon Bank status-statement template.</div></section></body></html>`;
+  let html = officialTemplate
+    .replace(/<form class="controls"[\s\S]*?<\/form>/, "")
+    .replace(/<script src="qrcode-bundle\.js"><\/script>[\s\S]*?<script>[\s\S]*?<\/script>/, "")
+    .replace("official-paper/page-1.png", esc(data.backgroundUri))
+    .replace('src="qr-client.png"', `src="${esc(data.qrUri)}"`)
+    .replace("SAMPLE CUSTOMER", text(data.customerName))
+    .replace("0000000000", text(data.accountNumber))
+    .replace("0.00 YER", `${money(data.closing)} ${text(data.currency)}`)
+    .replace(/<span class="strong">Current Account<\/span>/, `<span class="strong">${text(data.accountType)}<\/span>`)
+    .replace(/<span class="name">—<\/span>/g, (() => {
+      let count = 0;
+      return () => `<span class="name">${text(count++ === 0 ? data.employeeName : data.managerName)}</span>`;
+    })());
+
+  html = replaceId(html, "outReference", data.referenceNo);
+  html = replaceId(html, "outDate", data.issueDate);
+  html = replaceId(html, "outHijri", data.issueDateHijri);
+  html = replaceId(html, "outSince", data.customerSince);
+  html = replaceId(html, "outCustomer", data.customerName);
+  html = replaceId(html, "outAccount", data.accountNumber);
+  html = replaceId(html, "outBalance", `${money(data.closing)} ${data.currency}`);
+  html = replaceId(html, "outDateBody", data.issueDate);
+  html = html.replace(/<div class="header-qr-right-label">[\s\S]*?<\/div>/, `<div class="header-qr-right-label">${text(data.customerName)}</div>`);
+  return html;
 }

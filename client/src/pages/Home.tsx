@@ -362,7 +362,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
-    qrUri: statusQrSource || referenceAssets.qrBrandLogo,
+    qrUri: statusQrSource || "/assets/tadhamon-official-qr-client.png",
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
     momaizNo: client.momaizNo,
