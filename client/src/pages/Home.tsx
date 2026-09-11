@@ -41,7 +41,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
-import { renderTadhamonStatementPages, type TadhamonPreviewData } from "@/lib/tadhamonStatementPreview";
+import { renderTadhamonStatementPages } from "@/lib/tadhamonOriginalStatementTemplate";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildTadhamonStatementQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
@@ -357,6 +357,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
     backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon/STMTDM1-official-background.png" : referenceAssets.statementBackground,
+    bankName: selectedBank === "tadhamon" ? "Tadhamon Bank" : undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
@@ -686,9 +687,18 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [barcodeSources, selectedBank, statementQrSources, ycbStatementProfile, ycbStatementTransactions]);
   const tadhamonStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
-    const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance }));
-    const data: TadhamonPreviewData = { customerName: client.name, branchName: client.branch, accountNumber: client.accountNumber, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, issueDate: documentIssueDate, statementReference, opening: money(client.opening), credit: reportedTotalCredit, debit: reportedTotalDebit, closing: reportedClosing, qrUri: statementQrSources[0] || "", barcodeUri: barcodeSources[0] || "", rows };
-    return renderTadhamonStatementPages(data, statementQrSources, barcodeSources);
+    const profile: YcbStatementProfile = {
+      customerName: client.name, passport: client.passport, address: client.address,
+      placeOfBirth: client.placeOfBirth,
+      dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
+      branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType,
+      currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
+      statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
+      totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentIssueDate,
+    };
+    const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
+    const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
+    return renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights);
   }, [barcodeSources, client, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 

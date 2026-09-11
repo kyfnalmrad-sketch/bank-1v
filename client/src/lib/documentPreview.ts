@@ -16,6 +16,7 @@ export type PreviewTransaction = {
 
 export type AccountStatusPreviewInput = {
   backgroundUri: string;
+  bankName?: string;
   qrUri: string;
   qrLogoUri?: string;
   customerName: string;
@@ -90,6 +91,7 @@ const balanceAmount = (input: number | null | undefined) => {
 const descriptionClass = (input: string) => Array.from(input).length > 56 ? "description-compact" : "description-standard";
 
 export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
+  const bankName = data.bankName || "AlKuraimi Islamic Microfinance Bank";
   const optionalIdentity = [
     data.passport ? `<span><b>Passport Number:</b> ${value(data.passport)}</span>` : "",
     data.dateOfBirth ? `<span><b>Date of Birth:</b> ${value(data.dateOfBirth)}</span>` : "",
@@ -131,15 +133,15 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
     <div class="meta"><b>Document Date:</b> ${value(data.issueDate)} &nbsp; <b>Print Time:</b> ${value(data.printTime)}</div>
     <div class="hijri" dir="rtl" lang="ar">التاريخ الهجري: ${value(data.issueDateHijri)}</div>
     <main class="content">
-      <p class="attestation">This statement reflects the account information recorded by AlKuraimi Islamic Microfinance Bank as of the selected statement date.</p>
+      <p class="attestation">This statement reflects the account information recorded by ${escapeHtml(bankName)} as of the selected statement date.</p>
       <div class="identity"><span><b>Customer Name:</b> ${value(data.customerName)}</span><span><b>Momaiz No.:</b> ${value(data.momaizNo)}</span>${optionalIdentity}<span class="full"><b>Statement Reference:</b> ${value(data.referenceNo)}</span></div>
       <table><thead><tr><th>Account Type</th><th>Account Number</th><th>Branch Name</th><th>Account Currency</th></tr></thead><tbody><tr><td>${value(data.accountType)}</td><td>${value(data.accountNumber)}</td><td>${value(data.branchName)}</td><td>${value(data.currency)}</td></tr></tbody></table>
       <table class="balance"><thead><tr><th colspan="2">BALANCE SUMMARY</th></tr></thead><tbody><tr><th>Opening Balance</th><td>${amount(data.opening)}</td></tr><tr><th>Total Credits</th><td>${amount(data.credit)}</td></tr><tr><th>Total Debits</th><td>${amount(data.debit)}</td></tr><tr><th>Closing Balance</th><td>${amount(data.closing)}</td></tr></tbody></table>
-      <p class="attestation">Issued by AlKuraimi Islamic Microfinance Bank as of the statement date.</p>
-      <p class="customer-request-notice">This statement has been issued at the customer’s request. The customer is requested to review the information and notify AlKuraimi Islamic Microfinance Bank of any discrepancy within fifteen (15) calendar days of receipt. After this period, the Bank shall not be responsible for claims arising from unreported discrepancies, subject to applicable law and the account terms and conditions.</p>
+      <p class="attestation">Issued by ${escapeHtml(bankName)} as of the statement date.</p>
+      <p class="customer-request-notice">This statement has been issued at the customer’s request. The customer is requested to review the information and notify ${escapeHtml(bankName)} of any discrepancy within fifteen (15) calendar days of receipt. After this period, the Bank shall not be responsible for claims arising from unreported discrepancies, subject to applicable law and the account terms and conditions.</p>
       <div class="signatures"><div><div class="role">Customer Service</div><div class="name">${value(data.employeeName)}</div></div><div><div class="role">Branch Manager</div><div class="name">${value(data.managerName)}</div></div></div>
     </main>
-    <div class="disclaimer">AlKuraimi Islamic Microfinance Bank</div>
+    <div class="disclaimer">${escapeHtml(bankName)}</div>
   </section></body></html>`;
 }
 
