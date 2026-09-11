@@ -358,7 +358,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     highlightColor: row.highlightColor,
   })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
-    backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon/tadhamon-status-official-background.png" : referenceAssets.statementBackground,
+    backgroundUri: referenceAssets.statementBackground,
     bankName: selectedBank === "tadhamon" ? "Tadhamon Bank" : undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
@@ -734,6 +734,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setDownloadingDocument(null);
     }
   };
+  const openTadhamonStatement = () => {
+    setReviewPreview("accountStatement");
+    setActiveTab("review");
+  };
 
   const updateYcbClient = (key: keyof typeof ycbClient, value: string) => {
     setYcbClient((current) => ({ ...current, [key]: value }));
@@ -965,7 +969,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <div className="computed-field reference-field"><span>مرجع الكشف / Statement Reference</span><strong dir="ltr">{statementReference}</strong><small>مرجع ثابت مبني على أول تاريخ مستورد / Stable reference.</small></div>
           </div>
         </section>
-        <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button></div>
+        <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button>{selectedBank === "tadhamon" && <button type="button" className="preview-button" onClick={openTadhamonStatement}><FileText size={17} /> فتح كشف الحساب الأصلي / Open Original Account Statement</button>}</div>
       </>}
 
       {activeTab === "transactions" && <>
@@ -1006,18 +1010,18 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
           <div className="review-action-group">
             <span className="review-action-label">المعاينة / Preview</span>
-            <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> معاينة بيان البنك / Bank Status Preview</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> معاينة بيان البنك / Bank Status Preview</button>}
             <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">الطباعة / Print</span>
-            <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>
-            <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>}
+            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>}
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">حفظ PDF / Save PDF</span>
-            <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>
+            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>}
             <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "جارٍ الفتح… / Opening…" : "حفظ كشف الحساب PDF / Save Account Statement PDF"}</button>
           </div>
           <button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> تنزيل جلسة JSON / Download Session JSON</button>
