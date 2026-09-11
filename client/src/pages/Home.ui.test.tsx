@@ -117,4 +117,17 @@ describe("Home applied transaction register", () => {
     expect(screen.getByLabelText(/Reference number/)).toBeTruthy();
     expect(screen.queryByText(/Momaiz No\./)).toBeNull();
   });
+
+  it("isolates Tadhamon review actions to the official statement template", () => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
+    fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
+
+    expect(screen.getByRole("button", { name: /معاينة كشف التضامن الرسمي/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /معاينة بيان البنك/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /طباعة بيان البنك/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /طباعة موحدة/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /طباعة كشف التضامن الرسمي/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /حفظ كشف التضامن الرسمي PDF/ })).toBeTruthy();
+  });
 });
