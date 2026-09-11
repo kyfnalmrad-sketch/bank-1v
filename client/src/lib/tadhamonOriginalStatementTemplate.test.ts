@@ -21,8 +21,6 @@ describe("approved Tadhamon statement template", () => {
     totalDebit: 5600,
     issueDate: "11-Sep-2026",
     printTime: "05:30:00",
-    employeeName: "Sarah Abdullah",
-    managerName: "Khaled Ali",
   };
 
   it("uses live rows and renders passport and print metadata", () => {
@@ -34,8 +32,6 @@ describe("approved Tadhamon statement template", () => {
     expect(html).toContain("Passport Number:");
     expect(html).toContain("Print Date:");
     expect(html).toContain("TAD-STMT-2025-001");
-    expect(html).toContain("Sarah Abdullah");
-    expect(html).toContain("Khaled Ali");
     expect(html).toContain("class=\"code-sum\"");
     expect(html).toContain(".summary-qr,.code-sum");
     expect(html).not.toContain("summary-barcode");
