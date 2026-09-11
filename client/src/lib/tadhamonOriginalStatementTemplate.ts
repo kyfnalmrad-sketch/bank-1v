@@ -11,7 +11,7 @@ const money = (value: number | undefined) => Number(value || 0).toLocaleString("
 const currentAdenTime = () => new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
 
 const renderRow = (item: YcbStatementTransaction, highlight = "") => {
-  const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
+  const safeHighlight = Number(item.credit || 0) > 0 ? "#dff3e3" : Number(item.debit || 0) > 0 ? "#eef0f2" : "";
   const reference = escapeHtml(item.reference);
   const style = safeHighlight ? ` style="--custom-row-color:${safeHighlight};background-color:${safeHighlight}"` : "";
   const cellStyle = safeHighlight ? ` style="background-color:${safeHighlight}!important;background:${safeHighlight}!important;color:#1B365D!important"` : "";
