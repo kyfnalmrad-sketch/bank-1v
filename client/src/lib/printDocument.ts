@@ -151,7 +151,24 @@ export function assembleUnifiedDocumentHtml(accountStatementHtml: string, accoun
 }
 
 export function assembleUnifiedAllDocumentHtml(accountStatusHtml: string, accountStatementHtml: string, quickStatementHtml: string) {
-  return assembleUnifiedDocumentHtml(assembleUnifiedDocumentHtml(accountStatementHtml, accountStatusHtml), quickStatementHtml);
+  const parts = [
+    { html: accountStatusHtml, scope: "[data-print-part=account-status]", key: "account-status" },
+    { html: accountStatementHtml, scope: "[data-print-part=account-statement]", key: "account-statement" },
+    { html: quickStatementHtml, scope: "[data-print-part=quick-statement]", key: "quick-statement" },
+  ].filter((part) => part.html);
+  if (!parts.length) return "";
+  const styles = parts.map((part) => extractScopedStyles(part.html, part.scope)).join("\n");
+  const bodies = parts.map((part) => `<section class="print-part" data-print-part="${part.key}">${extractHtmlPart(part.html, "body")}</section>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${styles}
+    @page{size:A4 portrait;margin:0}
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    html,body{margin:0;padding:0;background:#fff}
+    .print-part{display:block;break-after:page;page-break-after:always}
+    .print-part+.print-part{break-before:page;page-break-before:always}
+    .print-part .page{break-inside:avoid!important;page-break-inside:avoid!important;break-after:page!important;page-break-after:always!important}
+    .print-part:last-child .page:last-of-type{break-after:auto!important;page-break-after:auto!important}
+    .print-part:last-child{break-after:auto;page-break-after:auto}
+  </style></head><body>${bodies}</body></html>`;
 }
 
 export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHtml: string, accountStatementHtml: string, quickStatementHtml = "") {

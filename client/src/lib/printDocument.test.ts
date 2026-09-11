@@ -83,6 +83,14 @@ describe("separate document printing", () => {
     expect(directPdfFilename("unified", "2026-08-15")).toBe("Unified-Account-Statement-Package-20260815.pdf");
   });
 
+  it("prints status, account statement, then quick statement in the all-in-one package", () => {
+    const selected = selectPrintableDocument("unifiedAll", "<html><body>STATUS</body></html>", "<html><body>ACCOUNT</body></html>", "<html><body>QUICK</body></html>");
+    expect(selected.title).toContain("Status, Account, Quick");
+    expect(selected.html.indexOf("STATUS")).toBeLessThan(selected.html.indexOf("ACCOUNT"));
+    expect(selected.html.indexOf("ACCOUNT")).toBeLessThan(selected.html.indexOf("QUICK"));
+    expect(directPdfFilename("unifiedAll", "2026-08-15")).toBe("Unified-Status-Account-Quick-Package-20260815.pdf");
+  });
+
   it("builds separate stable filenames for direct PDF downloads", () => {
     expect(directPdfFilename("accountStatus", "2026-08-15")).toBe("Account-Status-Statement-20260815.pdf");
     expect(directPdfFilename("accountStatement", "15/08/2026")).toBe("Account-Statement-15082026.pdf");
