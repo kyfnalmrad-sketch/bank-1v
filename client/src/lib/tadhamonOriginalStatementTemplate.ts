@@ -9,6 +9,7 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/'/g, "&#39;");
 
 const money = (value: number) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currentAdenTime = () => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "Asia/Aden" }).format(new Date());
 
 const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
@@ -47,6 +48,9 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .address-date-of-birth{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .address-date-of-birth .value{display:block;margin-top:.7mm;font-weight:400}
+ .passport-field,.print-meta{display:block;margin-top:1.2mm;padding-top:1.1mm;border-top:1px solid #b7c1c8}
+ .passport-field .field-label,.print-meta .field-label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
+ .passport-field .field-value,.print-meta .field-value{display:block;margin-top:.6mm}
  .page > .notes{margin-top:3mm!important}
  .row:nth-child(odd):not(.head):not(.total) .cell{background:#E2E6EA}
  .row.credit-row .cell{background:#E8F8F5;color:#1B365D}
@@ -61,10 +65,12 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const credit = money(profile.totalCredit);
   const debit = money(profile.totalDebit);
   const closing = money(profile.closingBalance);
+  const passportField = profile.passport.trim() ? `<div class="passport-field"><span class="field-label">Passport Number:</span><span class="field-value">${escapeHtml(profile.passport)}</span></div>` : "";
+  const printMeta = `<div class="print-meta"><span class="field-label">Print Date:</span><span class="field-value">${escapeHtml(profile.issueDate)}</span><span class="field-label">Print Time:</span><span class="field-value">${escapeHtml(profile.printTime || currentAdenTime())}</span></div>`;
   const page = originalTemplate
     .replace(/<div style="font-weight:800;font-style:italic;text-transform:uppercase">Customer Name<\/div><div style="margin-top:1mm">Arafat Ali Saleh Dilla<\/div>/, `<div class="identity-field"><span class="field-label">Customer Name:</span><span class="field-value">${escapeHtml(profile.customerName)}</span></div><div class="identity-field"><span class="field-label">Date of Birth:</span><span class="field-value">${escapeHtml(profile.dateOfBirth || "—")}</span></div><div class="identity-field"><span class="field-label">Place of Birth:</span><span class="field-value">${escapeHtml(profile.placeOfBirth || "—")}</span></div>`)
     .replace(/<div style="border-top:1px solid #d1d7dc;margin-top:2.2mm;padding-top:1.8mm;font-weight:800;font-style:italic;text-transform:uppercase">Address<\/div>/, "")
-    .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div></div></div><div style="padding:4mm 2mm;text-align:center`)
+    .replace(/<div class="address-line">[\s\S]*?<\/div><\/div><div style="padding:4mm 2mm;text-align:center/, `<div class="address-grid"><div class="address-field"><span class="field-label">Address:</span><span class="field-value">${escapeHtml(profile.address || "—")}</span></div>${passportField}${printMeta}</div></div><div style="padding:4mm 2mm;text-align:center`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
     .replace("101-840-21102-326491-000", escapeHtml(profile.accountNumber))
     .replace("05-Feb-2025", escapeHtml(profile.periodStart))

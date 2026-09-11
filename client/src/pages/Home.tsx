@@ -695,6 +695,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
       statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
       totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentIssueDate,
+      printTime: client.printTime,
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
