@@ -9,6 +9,10 @@ describe("Tadhamon statement template", () => {
     expect(html).toContain("Tadhamon Bank");
     expect(html).toContain("عميل التضامن");
     expect(html).toContain("TAD-STMT-001");
+    expect(html).toContain("qr-data");
+    expect(html).toContain("barcode-data");
+    expect(html).not.toContain("title-pdf417");
+    expect((html.match(/alt=\"PDF417 statement data barcode\"/g) || []).length).toBe(1);
     expect(html).not.toContain("KURAIMI");
     expect(html).not.toContain("Yemen Commercial Bank");
     expect(html).not.toContain("Ahmed Mohammed Al-Qahtani");
