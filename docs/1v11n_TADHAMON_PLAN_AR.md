@@ -80,6 +80,6 @@
 
 ## References
 
-[1]: ../upload/local-tadhamon-ycb-refined.html "القالب الرسمي المرفق للتحليل الأولي"
+[1]: reference/tadhamon/local-tadhamon-ycb-refined.html "القالب الرسمي المرفق للتحليل الأولي"
 [2]: https://github.com/naderbander13-bot/bank-karimi-web-staging/tree/1v11 "الفرع الأساسي 1v11"
 [3]: https://github.com/naderbander13-bot/bank-karimi-web-staging/tree/1v11n "فرع تنفيذ بنك التضامن 1v11n"
