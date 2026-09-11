@@ -79,6 +79,13 @@ describe("statement Excel import", () => {
     expect(transactions[0]).toMatchObject({ externalReference: "TAD-OP-1001", operationNumber: "TAD-OP-1001" });
   });
 
+  it("recognizes Operation No. as the Excel operation reference column", () => {
+    const matrix = [["Date", "Description", "Operation No.", "Debit", "Credit", "Balance"], ["2026-02-04", "Cash deposit", "TAD-000045", "", 100, 100]];
+    const discovered = discoverStatementHeader(matrix);
+    expect(discovered?.map.reference).toBe(2);
+    expect(buildImportedTransactions(matrix.slice(1), discovered!.map, true)[0].operationNumber).toBe("TAD-000045");
+  });
+
   it("stores imported Excel dates in ISO format for native date editing", () => {
     expect(formatImportedDate(46057)).toBe("2026-02-04");
     expect(formatImportedDate("04/08/2026")).toBe("2026-08-04");

@@ -62,7 +62,7 @@ const aliases: Record<StatementColumnKey, readonly string[]> = {
   debit: ["debit", "debit amount", "withdrawal", "مدين", "مبلغ مدين"],
   credit: ["credit", "credit amount", "deposit", "دائن", "مبلغ دائن"],
   balance: ["balance", "running balance", "الرصيد", "الرصيد الجاري"],
-  reference: ["reference", "external reference", "ref no", "reference no", "المرجع", "المرجع الخارجي", "رقم المرجع"],
+  reference: ["reference", "external reference", "ref no", "reference no", "operation no", "operation number", "transaction reference", "transaction no", "المرجع", "المرجع الخارجي", "رقم المرجع", "رقم العملية", "رقم الحركة", "مرجع العملية"],
   amount: ["amount", "transaction amount", "المبلغ"],
   direction: ["type", "transaction type", "movement type", "نوع العملية", "النوع"],
 };
