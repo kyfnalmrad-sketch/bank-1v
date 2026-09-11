@@ -878,7 +878,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
             <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
             <label>تاريخ بدء العميل / Customer since<input lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} placeholder="15/01/2020" /></label>
-            {selectedBank === "karimi" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
+            {(selectedBank === "karimi" || selectedBank === "tadhamon") && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
             <label>نوع الحساب / Account Type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
             <label>رقم الحساب / Account Number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
           </div>
@@ -900,6 +900,16 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             </div>
           </section>
         </>}
+        {selectedBank === "tadhamon" && <section className="panel tadhamon-entry-panel">
+          <h2>بيانات كشف التضامن / Tadhamon Statement Fields</h2>
+          <p className="hint">هذه الحقول تخص مساحة بنك التضامن فقط، وتُحفظ في Snapshot وHistory الخاصين بالتضامن.</p>
+          <div className="grid">
+            <label>العنوان / Address<input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Address as shown on the statement" /></label>
+            <label>مكان الميلاد / Place of birth<input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label>
+            <label>تاريخ الميلاد / Date of birth<input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>
+            <label>تاريخ الطباعة / Print date<input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>
+          </div>
+        </section>}
         {selectedBank === "karimi" && <section className="panel karimi-signature-panel">
           <h2>بيانات التوقيع / Signature Details</h2>
           <p className="hint">تظهر هذه البيانات في بيان الكريمي فقط، وبنفس لون قالب البيان.</p>
@@ -913,6 +923,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="hint">هذه الحقول تظهر في بيان الحالة فقط / These fields appear only on the Account Status Statement. Totals update before printing.</p>
           <div className="grid">
             <label>تاريخ الإصدار / Issue Date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
+            {selectedBank === "tadhamon" && <label>تاريخ الطباعة / Print Date<input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>}
             <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
             <label>وقت الطباعة / Print Time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
             <label>تاريخ المراسلة / Correspondence Date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
