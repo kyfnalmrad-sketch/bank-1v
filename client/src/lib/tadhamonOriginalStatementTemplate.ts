@@ -41,7 +41,10 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const notesStart = page.indexOf('<section class="notes">');
   if (tableStart >= 0 && notesStart > tableStart) {
     const head = '<div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>';
-    const table = `<section class="table">${head}${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${money(profile.totalCredit)}</div><div class="cell amount">${money(profile.totalDebit)}</div><div class="cell amount balance">${money(profile.closingBalance)}</div></div></section>`;
+    const pageCredit = transactions.reduce((sum, item) => sum + (item.credit || 0), 0);
+    const pageDebit = transactions.reduce((sum, item) => sum + (item.debit || 0), 0);
+    const pageClosing = transactions.at(-1)?.balance ?? profile.closingBalance;
+    const table = `<section class="table">${head}${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${money(pageCredit)}</div><div class="cell amount">${money(pageDebit)}</div><div class="cell amount balance">${money(pageClosing)}</div></div></section>`;
     page = `${page.slice(0, tableStart)}${table}${page.slice(notesStart)}`;
   }
   page = page.replace(/class="summary-qr"/, 'class="code-sum"');

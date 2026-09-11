@@ -178,13 +178,14 @@ export function selectPrintableDocument(kind: PrintDocumentKind, accountStatusHt
   return { html: accountStatementHtml, title: "Account Statement" };
 }
 
-export function directPdfFilename(kind: PrintDocumentKind, issueDate?: string) {
+export function directPdfFilename(kind: PrintDocumentKind, issueDate?: string, customerName?: string) {
   const normalizedDate = String(issueDate || "").replace(/[^0-9]/g, "");
   const dateToken = normalizedDate.length >= 8
     ? normalizedDate.slice(0, 8)
     : new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = kind === "accountStatus" ? "Account-Status-Statement" : kind === "unifiedAll" ? "Unified-Status-Account-Quick-Package" : kind === "unified" ? "Unified-Account-Statement-Package" : "Account-Statement";
-  return `${prefix}-${dateToken}.pdf`;
+  const person = String(customerName || "").trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
+  return `${person ? `${person} - ` : ""}${prefix}-${dateToken}.pdf`;
 }
 
 function waitForFrameLoad(frame: HTMLIFrameElement) {
@@ -246,12 +247,13 @@ async function inlineFrameAssets(frameDocument: Document) {
   await Promise.all(Array.from(frameDocument.querySelectorAll<HTMLImageElement>("img")).map(waitForImage));
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string) {
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
   if (!html || typeof window === "undefined") return false;
   const selected = selectPrintableDocument(kind, html, html);
   // The browser print engine preserves the reference CSS layout. Rendering the
   // whole A4 page through html2canvas can clip transformed table-cell content.
-  return openPrintWindow(selected.html, selected.title);
+  const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
+  return openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title);
 }
 
 export function openPrintWindow(html: string, title: string, host: PrintHost = window) {

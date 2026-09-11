@@ -70,6 +70,10 @@ const formatMorningTime = (value: string) => {
   }
   return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
 };
+const shortPersonName = (value: string) => {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0] || "—";
+};
 type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "barcodes" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
@@ -825,7 +829,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printDocument = (kind: PrintDocumentKind) => {
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
-    if (!openPrintWindow(selected.html, selected.title)) {
+    const person = client.name.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
+    if (!openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
     }
   };
@@ -835,7 +840,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
     setDownloadingDocument(kind);
     try {
-      const opened = await downloadDocumentPdf(kind, selected.html);
+      const opened = await downloadDocumentPdf(kind, selected.html, client.name);
       setImportNote(opened ? `${selected.title} print dialog opened. Choose Save as PDF to create the file.` : "The PDF print window could not be opened. Please allow pop-ups for this site and try again.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);

@@ -60,4 +60,21 @@ describe("approved Tadhamon statement template", () => {
     expect(html).not.toContain("Passport Number:");
     expect(html).toContain("Print Time:");
   });
+
+  it("uses the current page credit, debit, and closing balance in Total", () => {
+    const transactions = Array.from({ length: 16 }, (_, index) => ({
+      date: "01/01/2026",
+      reference: `REF-${index + 1}`,
+      description: `Movement ${index + 1}`,
+      credit: index === 0 ? 10 : 0,
+      debit: index === 15 ? 7 : 0,
+      balance: index === 15 ? 103 : 100,
+    }));
+    const html = renderTadhamonStatementPages({ ...profile, totalCredit: 999, totalDebit: 888 }, transactions, ["qr"], ["barcode"]).join("\n");
+    expect(html).toContain("10.00");
+    expect(html).toContain("7.00");
+    expect(html).toContain("103.00");
+    expect(html).toContain("999.00");
+    expect(html).toContain("888.00");
+  });
 });
