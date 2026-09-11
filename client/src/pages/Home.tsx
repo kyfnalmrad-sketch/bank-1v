@@ -256,6 +256,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appliedTransactions, setAppliedTransactions] = useState<Transaction[]>([]);
+  const [fastHighlightColors, setFastHighlightColors] = useState<Record<number, string>>({});
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [registerDirty, setRegisterDirty] = useState(false);
@@ -729,6 +730,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       : transaction));
   };
 
+  const updateFastHighlight = (rowNumber: number, color: string) => {
+    setFastHighlightColors((current) => ({ ...current, [rowNumber]: color || "#ffffff" }));
+  };
   const applyTransactionRegister = () => {
     setAppliedTransactions(transactions.map((transaction) => ({ ...transaction })));
     setRegisterDirty(false);
@@ -759,9 +763,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const tadhamonFastStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
     const profile = { customerName: client.name, passport: client.momaizNo || client.passport, address: client.address, placeOfBirth: client.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: client.customerSince, holderNameAr: client.name, statementTime: client.printTime, qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
-    const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
-    return renderTadhamonFastStatementPages(profile, rows, {});
-  }, [barcodeSources, client, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
+    const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: fastHighlightColors[row.rowNumber] || "#ffffff" }));
+    const fastHighlights = Object.fromEntries(rows.filter((row) => row.highlightColor && row.highlightColor !== "#ffffff").map((row) => [row.reference, row.highlightColor as string]));
+    return renderTadhamonFastStatementPages(profile, rows, fastHighlights);
+  }, [barcodeSources, client, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
@@ -927,7 +932,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div className="panel-heading"><div><h2>طبعة كشف حساب سريع / Quick Account Statement</h2><p className="hint">مسار مستقل وسريع يعتمد على نفس بيانات العميل والسجل المعتمد، ولا يغيّر القالب الرسمي أو تصميم بيان الحالة.</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="review-grid"><div className="validation-card"><span>العميل / Customer</span><strong>{client.name || "—"}</strong><small>{client.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>الرصيد الختامي / Closing</span><strong>{formatMoney(reportedClosing)}</strong><small>{client.currency}</small></div><div className="validation-card"><span>العمليات / Transactions</span><strong>{acceptedRows.length}</strong><small>From the applied register</small></div><div className="validation-card"><span>الفترة / Period</span><strong>{documentPeriodStart} — {documentPeriodEnd}</strong><small>Quick print only</small></div></div>
         <div className="actions"><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><FileText size={17} /> معاينة / Preview</button><button type="button" onClick={() => void downloadDocumentPdf("accountStatement", tadhamonFastStatementHtml)}><Printer size={17} /> طباعة / Print</button><button type="button" className="unified-print-button" onClick={() => printDocument("unifiedAll")}><Printer size={17} /> طباعة موحدة / Unified Print</button></div>
-        {transactions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Color</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>{transactions.map((row) => <tr key={`fast-${row.rowNumber}-${row.operationNumber}`}><td>{displayStatementDate(row.date)}</td><td dir="ltr">{row.operationNumber}</td><td><input aria-label={`Quick highlight ${row.operationNumber}`} type="color" value={row.highlightColor || "#ffed00"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td><td>{row.description}</td><td>{row.debit ? formatMoney(row.debit) : "—"}</td><td>{row.credit ? formatMoney(row.credit) : "—"}</td><td>{formatMoney(row.balance || 0)}</td></tr>)}</tbody></table></div>}
+        {transactions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Color</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>{transactions.map((row) => <tr key={`fast-${row.rowNumber}-${row.operationNumber}`}><td>{displayStatementDate(row.date)}</td><td dir="ltr">{row.operationNumber}</td><td><input aria-label={`Quick highlight ${row.operationNumber}`} type="color" value={fastHighlightColors[row.rowNumber] || "#ffffff"} onChange={(event) => updateFastHighlight(row.rowNumber, event.target.value)} /></td><td>{row.description}</td><td>{row.debit ? formatMoney(row.debit) : "—"}</td><td>{row.credit ? formatMoney(row.credit) : "—"}</td><td>{formatMoney(row.balance || 0)}</td></tr>)}</tbody></table></div>}
         <div className="document-frame-wrap"><iframe className="document-frame" title="Tadhamon quick account statement preview" srcDoc={tadhamonFastStatementHtml} /></div>
       </section>}
 
