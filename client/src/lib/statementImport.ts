@@ -344,7 +344,7 @@ function operationNumber(date: string, seed: string, used: Set<string>) {
   return reference;
 }
 
-export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap): ImportedTransaction[] {
+export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap, useExternalReference = false): ImportedTransaction[] {
   const usedOperationNumbers = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""))
@@ -359,6 +359,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const balanceCell = getCell(row, map.balance);
       const date = formatImportedDateTime(getCell(row, map.date), getCell(row, map.time));
       const balance = balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell);
+      const externalReference = String(getCell(row, map.reference) ?? "").trim();
       const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
       return {
         rowNumber: index + 1,
@@ -368,8 +369,8 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
         debit,
         credit,
         balance,
-        externalReference: String(getCell(row, map.reference) ?? "").trim(),
-        operationNumber: internalOperationNumber,
+        externalReference,
+        operationNumber: useExternalReference && externalReference ? externalReference : internalOperationNumber,
         rejected: !review.accepted,
         rejectionReason: review.reason,
         personName: review.personName,
