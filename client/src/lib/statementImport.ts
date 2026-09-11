@@ -391,6 +391,20 @@ export function statementReferenceFromTransactions(transactions: Pick<ImportedTr
   return `BAK-ACCT-${ymd}-${suffix}`;
 }
 
+export function bankStatementReference(bank: "karimi" | "ycb" | "tadhamon", accountOrMomaiz = "", customerName = "", seed = "") {
+  const bankCode = bank === "tadhamon" ? "TD" : bank === "ycb" ? "YC" : "KR";
+  const accountCode = String(accountOrMomaiz).replace(/\D/g, "").slice(0, 4).padEnd(4, "0");
+  const nameParts = String(customerName).trim().split(/\s+/).filter(Boolean);
+  const nameCode = `${nameParts[0]?.[0] || "X"}${nameParts.at(-1)?.[0] || nameParts[0]?.[1] || "X"}`.toUpperCase();
+  let hash = 2_166_136_261;
+  for (const character of `${bank}|${accountOrMomaiz}|${customerName}|${seed}`) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  const highNumber = String(Math.abs(hash) % 900_000 + 100_000);
+  return `${bankCode}-${accountCode}-${nameCode}-${highNumber}`;
+}
+
 export const statementFieldLabels: Record<StatementColumnKey, string> = {
   date: "Date",
   time: "Time",

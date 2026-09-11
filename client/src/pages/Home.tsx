@@ -54,6 +54,7 @@ import {
   extractStatementProfile,
   statementFieldLabels,
   statementReferenceFromTransactions,
+  bankStatementReference,
   reviewDescription,
   displayStatementDate,
   formatHijriDate,
@@ -90,6 +91,7 @@ type SnapshotPayload = {
   appliedTransactions: Transaction[];
   totalCreditOverride: string;
   totalDebitOverride: string;
+  statementReferenceOverride?: string;
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -272,6 +274,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastHighlightColors, setFastHighlightColors] = useState<Record<number, string>>({});
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
+  const [statementReferenceOverride, setStatementReferenceOverride] = useState("");
   const [registerDirty, setRegisterDirty] = useState(false);
   const [importNote, setImportNote] = useState("Choose an Excel file to analyse the statement columns before importing.");
   const [isReading, setIsReading] = useState(false);
@@ -323,9 +326,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
     rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
   ].filter(Boolean);
-  const internalStatementReference = useMemo(() => statementReferenceFromTransactions(appliedTransactions, client.accountNumber || client.momaizNo), [appliedTransactions, client.accountNumber, client.momaizNo]);
+  const generatedStatementReference = useMemo(() => bankStatementReference(
+    selectedBank || "karimi",
+    client.accountNumber || client.momaizNo,
+    client.name,
+    statementRows.at(-1)?.operationNumber || "",
+  ), [client.accountNumber, client.momaizNo, client.name, selectedBank, statementRows]);
+  const internalStatementReference = useMemo(() => generatedStatementReference || statementReferenceFromTransactions(appliedTransactions, client.accountNumber || client.momaizNo), [appliedTransactions, client.accountNumber, client.momaizNo, generatedStatementReference]);
   const excelStatementReference = useMemo(() => appliedTransactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [appliedTransactions]);
-  const statementReference = referenceSource === "excel" && excelStatementReference ? excelStatementReference : internalStatementReference;
+  const statementReference = statementReferenceOverride.trim() || internalStatementReference;
   const visibleMappedFields = useMemo(() => mappedFields.filter((field) => referenceSource === "excel" || field.key !== "reference"), [mappedFields, referenceSource]);
   const firstTransactionDate = acceptedRows.find((transaction) => transaction.date)?.date || "";
   const lastTransactionDate = [...acceptedRows].reverse().find((transaction) => transaction.date)?.date || "";
@@ -434,7 +443,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, statementReferenceOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -486,6 +495,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setAppliedTransactions(Array.isArray(payload.appliedTransactions) ? payload.appliedTransactions : []);
     setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
     setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
+    setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -552,6 +562,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setAppliedTransactions([]);
     setTotalCreditOverride("");
     setTotalDebitOverride("");
+    setStatementReferenceOverride("");
     setRegisterDirty(false);
     setEditingHistoryId(null);
     setSelectedHistoryId(null);
@@ -579,7 +590,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
       if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
-      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setActiveTab("account");
+      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setActiveTab("account");
       setSelectedHistoryId(null);
     }
   }, [getHistoryQuery.data, selectedHistoryId]);
@@ -1101,7 +1112,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <div className="computed-field"><span>السحب المعتمد / Reported Debit</span><strong>{formatMoney(reportedTotalDebit)}</strong><small>{totalDebitOverride.trim() ? "تعديل يدوي / Manual override" : "من الحركات المقبولة / From accepted transactions"}</small></div>
             <div className="computed-field"><span>الرصيد الختامي / Closing Balance</span><strong>{formatMoney(reportedClosing)}</strong></div>
             <div className="computed-field"><span>الحركات المقبولة / Accepted Transactions</span><strong>{acceptedRows.length}</strong></div>
-            <div className="computed-field reference-field"><span>مرجع الكشف / Statement Reference</span><strong dir="ltr">{statementReference}</strong><small>مرجع ثابت مبني على أول تاريخ مستورد / Stable reference.</small></div>
+            <label className="computed-field reference-field">مرجع الكشف / Statement Reference<input className="transaction-edit-input" dir="ltr" value={statementReferenceOverride || statementReference} onChange={(event) => setStatementReferenceOverride(event.target.value)} aria-label="Statement Reference" /><small>يُولد حسب البنك والحساب والعميل وآخر رقم عملية، ويمكن تغييره يدويًا.</small></label>
           </div>
         </section>
         <div className="actions"><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={17} /> تحديث البيانات / Refresh document data</button>{selectedBank === "tadhamon" && <button type="button" className="preview-button" onClick={openTadhamonStatement}><FileText size={17} /> فتح كشف الحساب الأصلي / Open Original Account Statement</button>}</div>
