@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import * as XLSX from "xlsx";
-import { buildImportedTransactions, discoverStatementHeader, displayStatementDate, extractStatementProfile, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
+import { bankStatementReference, buildImportedTransactions, discoverStatementHeader, displayStatementDate, extractStatementProfile, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
 
 describe("statement Excel import", () => {
   it("selects the actual Arabic heading row after preface rows without inventing columns", () => {
@@ -59,6 +59,13 @@ describe("statement Excel import", () => {
   it("derives a stable statement reference from the imported date instead of the external transaction reference", () => {
     const reference = statementReferenceFromTransactions([{ date: "2026-02-15" }], "1504452");
     expect(reference).toBe("BAK-ACCT-20260215-4452");
+  });
+
+  it("generates a bank-specific statement reference from account, name, and last operation", () => {
+    expect(bankStatementReference("tadhamon", "123456789", "Ahmed Saleh", "TAD-REF-9001")).toMatch(/^TD-1234-AS-\d{6}$/);
+    expect(bankStatementReference("ycb", "987654321", "Mona Ali", "YC-77")).toMatch(/^YC-9876-MA-\d{6}$/);
+    expect(bankStatementReference("karimi", "55", "Noura", "FT0001")).toMatch(/^KR-5500-NN-\d{6}$/);
+    expect(bankStatementReference("tadhamon", "123456789", "Ahmed Saleh", "TAD-REF-9002")).not.toBe(bankStatementReference("tadhamon", "123456789", "Ahmed Saleh", "TAD-REF-9001"));
   });
 
   it("generates date-based non-sequential FT operation numbers without using the Excel reference", () => {
