@@ -773,10 +773,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const updateFastHighlight = (rowNumber: number, color: string) => {
     setFastHighlightColors((current) => ({ ...current, [rowNumber]: color || "#ffffff" }));
   };
+  const removeTransaction = (rowNumber: number) => {
+    setTransactions((current) => current.filter((transaction) => transaction.rowNumber !== rowNumber));
+    setRegisterDirty(true);
+    setImportNote("تم حذف العملية من سجل الإدخال. اضغط تحديث/اعتماد لتطبيق الحذف على الكشف والكشف السريع.");
+  };
   const applyTransactionRegister = () => {
     setAppliedTransactions(transactions.map((transaction) => ({ ...transaction })));
     setRegisterDirty(false);
-    setImportNote(`Register changes applied. ${transactions.filter((item) => !item.rejected).length} accepted transaction(s) now drive the documents, QR code, and print output.`);
+    setImportNote(`تم تحديث الكشف والكشف السريع بنجاح. ${transactions.filter((item) => !item.rejected).length} عملية معتمدة تقود المعاينة والطباعة والرموز.`);
   };
 
   const ycbApprovedStatementHtml = useMemo(() => {
@@ -841,6 +846,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const refreshAllDocumentData = () => {
+    const committedTransactions = transactions.map((transaction) => ({ ...transaction }));
+    setAppliedTransactions(committedTransactions);
+    setRegisterDirty(false);
     if (selectedBank === "ycb") {
       setYcbClient((current) => ({
         ...current,
@@ -857,7 +865,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       }));
     }
     setReviewPreview(null);
-    setImportNote("تم تحديث بيانات المعاينة والطباعة من المدخلات الحالية / Document data refreshed.");
+    setImportNote(`تم تحديث البيانات بنجاح. ${committedTransactions.filter((item) => !item.rejected).length} عملية أصبحت معتمدة في الكشف والكشف السريع والرموز.`);
   };
 
   const selectBank = (bank: "karimi" | "ycb" | "tadhamon") => {
@@ -1102,8 +1110,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         </section>}
         {transactions.length > 0 && <section className="panel preview-panel">
           <div className="panel-heading"><div><h2>Editable Transaction Register</h2><p className="hint">Edit the values directly, then apply the register to update the financial totals, documents, QR code, and print output together. Rejected transactions remain visible for review and are re-evaluated when the description changes.</p></div><span className="summary-chip">{transactions.filter((item) => !item.rejected).length} accepted · {draftRejectedRows.length} rejected</span></div>
-          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <th>Highlight</th>}<th>Status</th></tr></thead><tbody>
-            {transactions.map((row) => <tr className={row.rejected ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} /></td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td>}<td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td>}<td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td></tr>)}
+          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <th>Highlight</th>}<th>Status</th><th>إجراء</th></tr></thead><tbody>
+            {transactions.map((row) => <tr className={row.rejected ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} /></td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td>}<td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td>}<td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td><td><button type="button" className="secondary-button" title="حذف العملية" onClick={() => removeTransaction(row.rowNumber)}><Trash2 size={14} /> حذف</button></td></tr>)}
           </tbody></table></div>
           <div className="actions"><button type="button" onClick={applyTransactionRegister} disabled={!registerDirty}><CheckCircle2 size={17} /> {registerDirty ? "Apply Register Changes" : "Register Applied"}</button></div>
         </section>}
