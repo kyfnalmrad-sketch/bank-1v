@@ -117,34 +117,4 @@ describe("Home applied transaction register", () => {
     expect(screen.getByLabelText(/Reference number/)).toBeTruthy();
     expect(screen.queryByText(/Momaiz No\./)).toBeNull();
   });
-
-  it("opens only the supplied Tadhamon account statement template from data entry", async () => {
-    const host = mockPrintWindow();
-    vi.stubGlobal("open", host.open);
-    render(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
-    expect(screen.getByRole("button", { name: /فتح كشف الحساب الأصلي/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /فتح كشف الحساب الأصلي/ }));
-
-    expect(screen.getByRole("button", { name: "View Account Statement" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /معاينة بيان البنك/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /طباعة بيان البنك/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /طباعة موحدة/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /طباعة كشف الحساب/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /حفظ كشف الحساب PDF/ })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: /طباعة كشف الحساب/ }));
-    await waitFor(() => expect(host.write).toHaveBeenCalledWith(expect.stringContaining("Statement of Account")));
-  });
-
-  it("uses the supplied Tadhamon template for the account statement preview", async () => {
-    render(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
-    fireEvent.click(screen.getByRole("button", { name: /فتح كشف الحساب الأصلي/ }));
-
-    const preview = await screen.findByTitle("Account Statement print preview");
-    const html = preview.getAttribute("srcdoc") || "";
-    expect(html).toContain("Statement of Account");
-    expect(html).toContain("Tadhamon Bank");
-  });
 });

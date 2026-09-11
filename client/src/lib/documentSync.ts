@@ -25,7 +25,7 @@ export function synchronizeDocumentData(transactions: ImportedTransaction[], ope
 }
 
 export type VerificationQrInput = {
-  bankName?: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" | "TADHAMON BANK";
+  bankName?: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK";
   reference: string;
   accountNumber: string;
   customerName?: string;
@@ -104,39 +104,7 @@ export function buildVerificationQrPayload(input: VerificationQrInput) {
   return lines.join("\n");
 }
 
-export type TadhamonStatementQrInput = {
-  customerName?: string;
-  dateOfBirth?: string;
-  address?: string;
-  placeOfBirth?: string;
-  accountNumber: string;
-  branchName?: string;
-  currency: string;
-  statementReference: string;
-  pageNumber: number;
-  pageCount: number;
-  periodStart?: string;
-  periodEnd?: string;
-};
-
-/** Tadhamon QR: compact identity and statement locator payload; transaction details stay out for fast scanning. */
-export function buildTadhamonStatementQrPayload(input: TadhamonStatementQrInput) {
-  return [
-    "TADHAMON BANK|DOC=STMT",
-    `P=${input.pageNumber}/${input.pageCount}`,
-    `N=${qrText(input.customerName)}`,
-    `DOB=${qrText(input.dateOfBirth)}`,
-    `A=${qrText(input.address)}`,
-    `POB=${qrText(input.placeOfBirth)}`,
-    `AC=${qrText(input.accountNumber)}`,
-    `B=${qrText(input.branchName)}`,
-    `C=${qrText(input.currency)}`,
-    `T=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
-    `REF=${qrText(input.statementReference)}`,
-  ].join("\n");
-}
-
-export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number, bankName: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" | "TADHAMON BANK" = "KURAIMI ISLAMIC BANK") {
+export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number, bankName: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" = "KURAIMI ISLAMIC BANK") {
   const normalizedReference = qrText(reference).replace(/\s+/g, "-");
   const core = `${bankName}|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
   return `${core}|CHK=${verificationChecksum(core)}`;
