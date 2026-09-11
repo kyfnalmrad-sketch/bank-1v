@@ -456,9 +456,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     }
   };
 
-  const saveStatementHistory = async () => {
+  const saveStatementHistory = async (payloadOverride?: SnapshotPayload) => {
     const title = `${client.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
-    const input = { title, reference: statementReference, customerName: client.name, accountNumber: client.accountNumber, payload: snapshotPayload };
+    const input = { title, reference: statementReference, customerName: client.name, accountNumber: client.accountNumber, payload: payloadOverride || snapshotPayload };
     try {
       if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input, workspaceKey });
       else await createHistoryMutation.mutateAsync({ ...input, workspaceKey });
@@ -466,8 +466,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     } catch { setImportNote("The statement could not be saved to the history database."); }
   };
   const postToRecords = async () => {
-    applyTransactionRegister();
-    await saveStatementHistory();
+    const committedTransactions = transactions.map((transaction) => ({ ...transaction }));
+    const committedPayload: SnapshotPayload = {
+      ...snapshotPayload,
+      transactions: committedTransactions,
+      appliedTransactions: committedTransactions,
+    };
+    setAppliedTransactions(committedTransactions);
+    setRegisterDirty(false);
+    await saveStatementHistory(committedPayload);
     setActiveTab("history");
     setImportNote("تم ترحيل الكشف إلى السجلات / Statement posted to records.");
   };
@@ -677,7 +684,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const applyTransactionRegister = () => {
-    setAppliedTransactions(transactions);
+    setAppliedTransactions(transactions.map((transaction) => ({ ...transaction })));
     setRegisterDirty(false);
     setImportNote(`Register changes applied. ${transactions.filter((item) => !item.rejected).length} accepted transaction(s) now drive the documents, QR code, and print output.`);
   };
@@ -707,8 +714,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const printDocument = (kind: PrintDocumentKind) => {
     const statementHtml = printableStatementHtml;
-    const selectedKind = selectedBank === "tadhamon" ? "accountStatement" : kind;
-    const selected = selectPrintableDocument(selectedKind, accountStatusHtml, statementHtml);
+    const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     if (!openPrintWindow(selected.html, selected.title)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
     }
@@ -716,11 +722,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
     const statementHtml = printableStatementHtml;
-    const selectedKind = selectedBank === "tadhamon" ? "accountStatement" : kind;
-    const selected = selectPrintableDocument(selectedKind, accountStatusHtml, statementHtml);
+    const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml);
     setDownloadingDocument(kind);
     try {
-      const opened = await downloadDocumentPdf(selectedKind, selected.html);
+      const opened = await downloadDocumentPdf(kind, selected.html);
       setImportNote(opened ? `${selected.title} print dialog opened. Choose Save as PDF to create the file.` : "The PDF print window could not be opened. Please allow pop-ups for this site and try again.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);
@@ -1017,7 +1022,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
           <button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> تنزيل جلسة JSON / Download Session JSON</button>
         </div>
-        {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">{selectedBank === "tadhamon" ? "The Tadhamon preview is isolated to the official statement template and current Tadhamon register." : "Review the original artwork, QR code, values, and page arrangement before printing or downloading."}</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={selectedBank === "tadhamon" ? printableStatementHtml : reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
+        {reviewPreview && <section className="print-preview-panel" aria-label="Document preview before print"><div className="panel-heading"><div><h2>{reviewPreview === "accountStatus" ? "Account Status Statement Preview" : "Account Statement Preview"}</h2><p className="hint">{selectedBank === "tadhamon" && reviewPreview === "accountStatement" ? "The Tadhamon preview is isolated to the official statement template and current Tadhamon register." : "Review the original artwork, QR code, values, and page arrangement before printing or downloading."}</p></div><button type="button" className="secondary-button" onClick={() => setReviewPreview(null)}>Close Preview</button></div><div className="document-frame-wrap"><iframe className="document-frame" title={reviewPreview === "accountStatus" ? "Account Status Statement print preview" : "Account Statement print preview"} srcDoc={reviewPreview === "accountStatus" ? accountStatusHtml : printableStatementHtml} /></div></section>}
       </section>}
 
       <footer className="app-footer"><img src={referenceAssets.footerStrip} alt="Original footer reference"/><span>Independent Web Staging edition — Prototype 0.5.1 reference remains unchanged.</span></footer>

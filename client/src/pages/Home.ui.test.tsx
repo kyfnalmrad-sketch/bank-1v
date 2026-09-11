@@ -134,8 +134,8 @@ describe("Home applied transaction register", () => {
     expect(screen.getByRole("button", { name: /حفظ كشف الحساب PDF/ })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /طباعة بيان البنك/ }));
-    await waitFor(() => expect(host.write).toHaveBeenCalledWith(expect.stringContaining("Statement of Account")));
-    expect(host.write).toHaveBeenLastCalledWith(expect.not.stringContaining("Account Status Statement"));
+    await waitFor(() => expect(host.write).toHaveBeenCalledWith(expect.stringContaining("BALANCE SUMMARY")));
+    expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("Account Status Statement"));
 
     fireEvent.click(screen.getByRole("button", { name: /طباعة موحدة/ }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(2));
@@ -143,6 +143,18 @@ describe("Home applied transaction register", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /حفظ بيان البنك PDF/ }));
     await waitFor(() => expect(host.open).toHaveBeenCalledTimes(3));
-    expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("<title>Account Statement</title>"));
+    expect(host.write).toHaveBeenLastCalledWith(expect.stringContaining("<title>Account Status Statement</title>"));
+  });
+
+  it("keeps Tadhamon status preview separate from the official account statement preview", async () => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
+    fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /معاينة بيان البنك/ }));
+    const preview = await screen.findByTitle("Account Status Statement print preview");
+    const html = preview.getAttribute("srcdoc") || "";
+    expect(html).toContain("BALANCE SUMMARY");
+    expect(html).not.toContain("Statement of Account");
   });
 });
