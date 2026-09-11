@@ -71,6 +71,10 @@ const formatMorningTime = (value: string) => {
   }
   return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
 };
+const todayIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
 const shortPersonName = (value: string) => {
   const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
   return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0] || "—";
@@ -135,7 +139,7 @@ const defaultClient = {
   currency: "USD",
   opening: "0.00",
   issueDate: "",
-  printDate: "",
+  printDate: todayIsoDate(),
   issueDateHijri: "",
   printTime: "",
   correspondenceDate: "",
@@ -348,6 +352,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const documentPrintDate = displayStatementDate(client.printDate || issueDate);
   const documentPeriodStart = displayStatementDate(periodStart);
   const documentPeriodEnd = displayStatementDate(periodEnd);
+  const printDateValue = client.printDate || todayIsoDate();
+  const printDateDay = new Date(`${printDateValue}T12:00:00`).getDay();
+  const isPrintHoliday = printDateDay === 4 || printDateDay === 5;
+  const printHolidayLabel = printDateDay === 4 ? "الخميس" : "الجمعة";
   const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE));
   const statementPageGroups = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => statementRows.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE)), [statementPageCount, statementRows]);
   const statementPageSummaries = useMemo(() => statementPageGroups.map((rows, pageIndex) => {
@@ -789,7 +797,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         const review = reviewDescription(input);
         return { ...transaction, description: review.description, rejected: !review.accepted, rejectionReason: review.reason, personName: review.personName, suggestedDescription: review.suggestedDescription };
       }
-      if (field === "date" || field === "externalReference") return { ...transaction, [field]: input };
+      if (field === "date") return { ...transaction, date: input, dateChangedFromExcel: Boolean(transaction.sourceDate && input !== transaction.sourceDate) };
+      if (field === "externalReference") return { ...transaction, externalReference: input };
       if (field === "balance") return { ...transaction, balance: input.trim() === "" ? null : money(input) };
       return { ...transaction, [field]: money(input) };
     }));
@@ -855,6 +864,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
+    if (isPrintHoliday) { setImportNote(`لا يمكن إصدار الكشف في يوم ${printHolidayLabel}. الخميس والجمعة عطلة. غيّر تاريخ الطباعة ثم حاول مرة أخرى.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
     const person = client.name.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
@@ -864,6 +874,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
+    if (isPrintHoliday) { setImportNote(`لا يمكن إصدار PDF في يوم ${printHolidayLabel}. الخميس والجمعة عطلة.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
     setDownloadingDocument(kind);
@@ -1108,7 +1119,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="hint">هذه الحقول تظهر في بيان الحالة فقط / These fields appear only on the Account Status Statement. Totals update before printing.</p>
           <div className="grid">
             <label>تاريخ الإصدار / Issue Date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
-            {selectedBank === "tadhamon" && <label>تاريخ الطباعة / Print Date <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /></label>}
+            <label>تاريخ الطباعة / Print Date <span className="field-note">اليوم الافتراضي / Today by default</span><input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /><small style={{ color: isPrintHoliday ? "#b91c1c" : "#166534", fontWeight: 700 }}>{isPrintHoliday ? `تنبيه: ${printHolidayLabel} عطلة — الإصدار مرفوض.` : "يوم دوام — الإصدار مسموح."}</small></label>
             <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
             <label>وقت الطباعة / Print Time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
             <label>تاريخ المراسلة / Correspondence Date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
@@ -1159,7 +1170,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         {transactions.length > 0 && <section className="panel preview-panel">
           <div className="panel-heading"><div><h2>Editable Transaction Register</h2><p className="hint">Edit the values directly, then apply the register to update the financial totals, documents, QR code, and print output together. Rejected transactions remain visible for review and are re-evaluated when the description changes.</p></div><span className="summary-chip">{transactions.filter((item) => !item.rejected).length} accepted · {draftRejectedRows.length} rejected</span></div>
           <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <th>Highlight</th>}<th>Status</th><th>إجراء</th></tr></thead><tbody>
-            {transactions.map((row) => <tr className={row.rejected ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} /></td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td>}<td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td>}<td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td><td><button type="button" className="secondary-button" title="حذف العملية" onClick={() => removeTransaction(row.rowNumber)}><Trash2 size={14} /> حذف</button></td></tr>)}
+            {transactions.map((row) => <tr className={row.rejected || row.dateChangedFromExcel ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} />{row.dateChangedFromExcel && <small style={{ color: "#b91c1c", display: "block", fontWeight: 700 }}>تغير تاريخ Excel — راجع رقم المرجع</small>}</td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td>}<td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td>{(selectedBank === "ycb" || selectedBank === "tadhamon") && <td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td>}<td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td><td><button type="button" className="secondary-button" title="حذف العملية" onClick={() => removeTransaction(row.rowNumber)}><Trash2 size={14} /> حذف</button></td></tr>)}
           </tbody></table></div>
           <div className="actions"><button type="button" onClick={applyTransactionRegister} disabled={!registerDirty}><CheckCircle2 size={17} /> {registerDirty ? "Apply Register Changes" : "Register Applied"}</button></div>
         </section>}
