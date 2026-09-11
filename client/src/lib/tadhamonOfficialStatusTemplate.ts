@@ -41,6 +41,6 @@ export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewIn
   html = replaceId(html, "outPlace", data.placeOfBirth || "Sana'a, Yemen");
   html = replaceId(html, "outPeriodStart", data.periodStart || data.correspondenceDate);
   html = replaceId(html, "outPeriodEnd", data.periodEnd || data.customerSince);
-  html = html.replace(/<div class="header-qr-right-label">[\s\S]*?<\/div>/, `<div class="header-qr-right-label">${text(shortName(data.customerName))}</div>`);
+  html = html.replace(/<div[^>]*id="qrName"[^>]*>[\s\S]*?<\/div>/, `<div id="qrName" class="header-qr-right-label">${text(shortName(data.customerName))}</div>`);
   return html;
 }
