@@ -155,6 +155,8 @@ describe("Home applied transaction register", () => {
     const preview = await screen.findByTitle("Account Status Statement print preview");
     const html = preview.getAttribute("srcdoc") || "";
     expect(html).toContain("BALANCE SUMMARY");
+    expect(html).toContain("/assets/tadhamon/tadhamon-status-official-background.png");
+    expect(html).not.toContain("/assets/tadhamon/STMTDM1-official-background.png");
     expect(html).not.toContain("Statement of Account");
   });
 });

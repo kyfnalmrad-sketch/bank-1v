@@ -358,7 +358,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     highlightColor: row.highlightColor,
   })), [statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
-    backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon/STMTDM1-official-background.png" : referenceAssets.statementBackground,
+    backgroundUri: selectedBank === "tadhamon" ? "/assets/tadhamon/tadhamon-status-official-background.png" : referenceAssets.statementBackground,
     bankName: selectedBank === "tadhamon" ? "Tadhamon Bank" : undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
