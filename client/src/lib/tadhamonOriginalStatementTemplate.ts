@@ -86,7 +86,9 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
   const withCodeAssets = (html: string) => {
     let next = html;
     if (qrUri) next = next.replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);
-    if (barcodeUri) next = next.replace(/(<img class="title-pdf417" src=")[^"]*(")/, `$1${escapeHtml(barcodeUri)}$2`);
+    // Keep the approved STMTDM1 PDF417 artwork embedded in the official template.
+    // The first implementation replaced it with a different generated barcode,
+    // which made Tadhamon preview/print differ from the approved reference.
     return next;
   };
 
