@@ -1,4 +1,4 @@
-export type StatementColumnKey = "date" | "description" | "branch" | "debit" | "credit" | "balance" | "reference" | "amount" | "direction";
+export type StatementColumnKey = "date" | "time" | "description" | "branch" | "debit" | "credit" | "balance" | "reference" | "amount" | "direction";
 
 export type StatementColumnMap = Partial<Record<StatementColumnKey, number>>;
 
@@ -56,6 +56,7 @@ const profileAliases: Record<keyof ImportedStatementProfile, readonly string[]> 
 
 const aliases: Record<StatementColumnKey, readonly string[]> = {
   date: ["date", "posting date", "transaction date", "value date", "تاريخ", "تاريخ الحركة"],
+  time: ["time", "transaction time", "posting time", "الوقت", "وقت الحركة"],
   description: ["description", "movement description", "narration", "details", "particular", "particulars", "وصف العملية", "الوصف", "بيان الحركة"],
   branch: ["branch", "branch name", "branch code", "الفرع", "اسم الفرع", "فرع"],
   debit: ["debit", "debit amount", "withdrawal", "مدين", "مبلغ مدين"],
@@ -124,6 +125,17 @@ export function formatImportedDate(value: unknown) {
   const display = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
   if (display) return `${display[3]}-${String(display[2]).padStart(2, "0")}-${String(display[1]).padStart(2, "0")}`;
   return text;
+}
+
+export function formatImportedDateTime(dateValue: unknown, timeValue?: unknown) {
+  const date = formatImportedDate(dateValue);
+  const time = String(timeValue ?? "").trim();
+  if (!time) return date;
+  if (/^\d+(\.\d+)?$/.test(time)) {
+    const totalMinutes = Math.round(Number(time) * 24 * 60);
+    return `${date} ${String(Math.floor(totalMinutes / 60) % 24).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+  }
+  return `${date} ${time}`;
 }
 
 export function displayStatementDate(value: unknown) {
@@ -345,7 +357,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const debit = map.debit === undefined ? derivedDebit : Math.abs(asNumber(getCell(row, map.debit)));
       const credit = map.credit === undefined ? derivedCredit : Math.abs(asNumber(getCell(row, map.credit)));
       const balanceCell = getCell(row, map.balance);
-      const date = formatImportedDate(getCell(row, map.date));
+      const date = formatImportedDateTime(getCell(row, map.date), getCell(row, map.time));
       const balance = balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell);
       const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
       return {
@@ -380,6 +392,7 @@ export function statementReferenceFromTransactions(transactions: Pick<ImportedTr
 
 export const statementFieldLabels: Record<StatementColumnKey, string> = {
   date: "Date",
+  time: "Time",
   description: "Description",
   branch: "Branch",
   debit: "Debit",

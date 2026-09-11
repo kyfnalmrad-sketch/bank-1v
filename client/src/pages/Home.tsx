@@ -62,7 +62,7 @@ import {
   type StatementColumnMap,
 } from "@/lib/statementImport";
 
-type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "history" | "analytics";
+type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "barcodes" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
 type SnapshotPayload = {
@@ -100,6 +100,7 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "transactions", label: "استيراد Excel / Excel Import" },
   { id: "review", label: "المعاينة والطباعة / Preview & Print" },
   { id: "fastStatement", label: "طبعة كشف حساب سريع / Quick Statement" },
+  { id: "barcodes", label: "فحص الرموز / QR & Barcode" },
   { id: "history", label: "السجلات / Records" },
   { id: "analytics", label: "المؤشرات / Analytics" },
 ];
@@ -277,6 +278,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const workspaceKey = useMemo(() => `${getWorkspaceKey()}-${selectedBank || "selector"}`, [selectedBank]);
   const [snapshotState, setSnapshotState] = useState<"loading" | "restored" | "saved" | "error">("loading");
   const snapshotRestored = useRef(false);
+  const skipSnapshotRestore = useRef(false);
+  const skipNextSnapshotSave = useRef(false);
   const snapshotQuery = trpc.staging.loadSnapshot.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false });
   const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
   const historyQuery = trpc.staging.listHistory?.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
@@ -422,6 +425,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
+    if (skipSnapshotRestore.current) {
+      skipSnapshotRestore.current = false;
+      return;
+    }
     if (snapshotQuery.isLoading || snapshotRestored.current) return;
     const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
     if (payload?.bankId && payload.bankId !== selectedBank) return;
@@ -471,6 +478,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
   useEffect(() => {
+    if (skipNextSnapshotSave.current) {
+      skipNextSnapshotSave.current = false;
+      return;
+    }
     if (!snapshotRestored.current || snapshotState === "loading") return;
     const timer = window.setTimeout(() => {
       saveSnapshotMutation.mutate({ workspaceKey, payload: snapshotPayload }, {
@@ -512,6 +523,35 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     await saveStatementHistory(committedPayload);
     setActiveTab("history");
     setImportNote("تم ترحيل الكشف إلى السجلات / Statement posted to records.");
+  };
+  const startNewData = () => {
+    skipSnapshotRestore.current = true;
+    skipNextSnapshotSave.current = true;
+    snapshotRestored.current = true;
+    setClient({ ...defaultClient });
+    setYcbClient({ ...defaultYcbClient });
+    setReferenceSource("internal");
+    setIncludeBranch(false);
+    setFileName("");
+    setRawRows([]);
+    setColumnMap({});
+    setMappedFields([]);
+    setTransactions([]);
+    setAppliedTransactions([]);
+    setTotalCreditOverride("");
+    setTotalDebitOverride("");
+    setRegisterDirty(false);
+    setEditingHistoryId(null);
+    setSelectedHistoryId(null);
+    setReviewPreview(null);
+    setFastHighlightColors({});
+    setActiveTab("account");
+    setSnapshotState("restored");
+    setImportNote("بيانات جديدة جاهزة للإدخال. البيانات المرحّلة سابقًا محفوظة في السجلات.");
+  };
+  const postAndStartNewData = async () => {
+    await postToRecords();
+    startNewData();
   };
 
   const openStatementHistory = async (id: number) => {
@@ -864,6 +904,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <button type="button" className={activeTab === "transactions" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("transactions")}><Receipt size={18} /><span>استيراد Excel<small>Excel Import</small></span></button>
         <button type="button" className={activeTab === "review" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => { setActiveTab("review"); setReviewPreview("accountStatement"); }}><ClipboardList size={18} /><span>معاينة البيان<small>Statement Preview</small></span></button>
         {selectedBank === "tadhamon" && <button type="button" className={activeTab === "fastStatement" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("fastStatement")}><FileText size={18} /><span>طبعة كشف حساب سريع<small>Quick Statement Print</small></span></button>}
+        <button type="button" className={activeTab === "barcodes" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("barcodes")}><Receipt size={18} /><span>فحص الرموز<small>QR & Barcode Check</small></span></button>
         <button type="button" className={activeTab === "history" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("history")}><Receipt size={18} /><span>السجلات<small>Records</small></span></button>
         <button type="button" className={activeTab === "analytics" ? "sidebar-link is-active" : "sidebar-link"} onClick={() => setActiveTab("analytics")}><BarChart3 size={18} /><span>المؤشرات<small>Analytics</small></span></button>
         <div className="sidebar-spacer" />
@@ -880,7 +921,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <p className="bank-name">{selectedBank === "ycb" ? "البنك التجاري اليمني · منصة إصدار ومراجعة الكشوف" : selectedBank === "tadhamon" ? "بنك التضامن · منصة إصدار ومراجعة الكشوف" : "بنك الكريمي · منصة إصدار ومراجعة الكشوف"}</p>
           </div>
         </div>
-        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : selectedBank === "tadhamon" ? "بنك التضامن · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
+        <div className="header-actions"><div className="reference-badge"><ShieldCheck size={17} /> {selectedBank === "ycb" ? "بنك اليمن التجاري · جلسة مستقلة" : selectedBank === "tadhamon" ? "بنك التضامن · جلسة مستقلة" : "بنك الكريمي · جلسة محمية"}</div><div className="header-quick-actions"><button type="button" className="secondary-button" onClick={() => void saveCurrentSnapshot()} disabled={snapshotState === "loading"}><Database size={15} /> حفظ</button><button type="button" className="secondary-button" onClick={() => void postToRecords()}><FolderOpen size={15} /> ترحيل</button><button type="button" className="secondary-button" onClick={startNewData}><FileText size={15} /> بيانات جديدة</button><button type="button" className="secondary-button" onClick={startNewData}><Trash2 size={15} /> مسح الجلسة</button><button type="button" className="secondary-button" onClick={() => void postAndStartNewData()}><FolderOpen size={15} /> ترحيل ومسح</button><button type="button" className="secondary-button" onClick={refreshAllDocumentData}><RefreshCcw size={15} /> تحديث</button></div></div>
       </header>
 
       <nav className="sr-only" aria-label="System sections">
@@ -936,6 +977,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div className="document-frame-wrap"><iframe className="document-frame" title="Tadhamon quick account statement preview" srcDoc={tadhamonFastStatementHtml} /></div>
       </section>}
 
+      {activeTab === "barcodes" && <section className="panel print-preview-panel" dir="rtl">
+        <div className="panel-heading"><div><h2>فحص QR وBarcode / Code Check</h2><p className="hint">فحص سريع يوضح رمز التحقق المستخدم في بيان الحالة وكل صفحة من صفحات الكشف.</p></div><Receipt size={26} className="heading-icon" /></div>
+        <div className="review-grid"><div className="validation-card"><span>بيان الحالة</span><strong>{statusQrSource ? "جاهز للقراءة" : "غير متوفر"}</strong><small>QR status document</small></div><div className="validation-card"><span>صفحات الكشف</span><strong>{statementQrSources.length} QR</strong><small>{barcodeSources.length} Barcode</small></div><div className="validation-card"><span>حالة الرموز</span><strong>{statementQrSources.length || barcodeSources.length ? "محدّثة" : "تحتاج تحديث"}</strong><small>Generated from current applied data</small></div></div>
+        <div className="table-wrap"><table><thead><tr><th>الصفحة</th><th>QR</th><th>Barcode</th><th>الحالة</th></tr></thead><tbody>{Array.from({ length: Math.max(statementQrSources.length, barcodeSources.length, 1) }, (_, index) => <tr key={`code-check-${index}`}><td dir="ltr">{index + 1}</td><td>{statementQrSources[index] ? <img src={statementQrSources[index]} alt={`QR page ${index + 1}`} style={{ width: 48, height: 48, objectFit: "contain" }} /> : "—"}</td><td>{barcodeSources[index] ? <img src={barcodeSources[index]} alt={`Barcode page ${index + 1}`} style={{ width: 150, height: 42, objectFit: "contain" }} /> : "—"}</td><td>{statementQrSources[index] || barcodeSources[index] ? "جاهز" : "غير متوفر"}</td></tr>)}</tbody></table></div>
+      </section>}
       {activeTab === "account" && <>
         <section className="panel intake-hero" aria-labelledby="intake-title">
           <div className="intake-hero-copy">
