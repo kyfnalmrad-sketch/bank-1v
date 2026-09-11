@@ -5,6 +5,8 @@ export type StatementColumnMap = Partial<Record<StatementColumnKey, number>>;
 export type ImportedTransaction = {
   rowNumber: number;
   date: string;
+  sourceDate?: string;
+  dateChangedFromExcel?: boolean;
   description: string;
   branch: string;
   debit: number;
@@ -364,6 +366,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       return {
         rowNumber: index + 1,
         date,
+        sourceDate: date,
         description: review.description,
         branch: String(getCell(row, map.branch) ?? "").trim(),
         debit,
