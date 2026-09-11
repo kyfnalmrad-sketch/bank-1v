@@ -92,6 +92,8 @@ type SnapshotPayload = {
   totalCreditOverride: string;
   totalDebitOverride: string;
   statementReferenceOverride?: string;
+  fastHighlightColors?: Record<number, string>;
+  fastMinimumDeposit?: string;
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -272,6 +274,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appliedTransactions, setAppliedTransactions] = useState<Transaction[]>([]);
   const [fastHighlightColors, setFastHighlightColors] = useState<Record<number, string>>({});
+  const [fastMinimumDeposit, setFastMinimumDeposit] = useState("");
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [statementReferenceOverride, setStatementReferenceOverride] = useState("");
@@ -444,7 +447,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [client, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, statementReferenceOverride, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -497,6 +500,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
     setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
     setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
+    setFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
+    setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -575,6 +580,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setTotalCreditOverride("");
     setTotalDebitOverride("");
     setStatementReferenceOverride("");
+    setFastHighlightColors({});
+    setFastMinimumDeposit("");
     setRegisterDirty(false);
     setEditingHistoryId(null);
     setSelectedHistoryId(null);
@@ -601,7 +608,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
       if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
-      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setActiveTab("account");
+      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
       setSelectedHistoryId(null);
     }
   }, [getHistoryQuery.data, selectedHistoryId]);
@@ -823,6 +830,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const updateFastHighlight = (rowNumber: number, color: string) => {
     setFastHighlightColors((current) => ({ ...current, [rowNumber]: color || "#ffffff" }));
   };
+  const highlightDepositsWhite = (minimum?: number) => {
+    const next = { ...fastHighlightColors };
+    transactions.forEach((transaction) => {
+      if (transaction.credit > 0 && (minimum === undefined || transaction.credit >= minimum)) next[transaction.rowNumber] = "#ffffff";
+    });
+    setFastHighlightColors(next);
+    setImportNote(minimum === undefined ? "تم تلوين جميع عمليات الإيداع بالأبيض." : `تم تلوين الإيداعات من ${formatMoney(minimum)} فأعلى بالأبيض.`);
+  };
   const removeTransaction = (rowNumber: number) => {
     setTransactions((current) => current.filter((transaction) => transaction.rowNumber !== rowNumber));
     setRegisterDirty(true);
@@ -916,6 +931,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       }));
     }
     setReviewPreview(null);
+    const refreshedPayload = { ...snapshotPayload, transactions: committedTransactions, appliedTransactions: committedTransactions };
+    saveSnapshotMutation.mutate({ workspaceKey, payload: refreshedPayload }, {
+      onSuccess: (result) => setSnapshotState(result.saved ? "saved" : "error"),
+      onError: () => setSnapshotState("error"),
+    });
     setImportNote(`تم تحديث البيانات بنجاح. ${committedTransactions.filter((item) => !item.rejected).length} عملية أصبحت معتمدة في الكشف والكشف السريع والرموز.`);
   };
 
@@ -932,6 +952,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setMappedFields([]);
     setTotalCreditOverride("");
     setTotalDebitOverride("");
+    setFastHighlightColors({});
+    setFastMinimumDeposit("");
     setRegisterDirty(false);
     setFileName("");
     setClient(bank === "ycb" ? { ...defaultClient, name: ycbClient.name, passport: ycbClient.passport, branch: ycbClient.branch, customerSince: ycbClient.customerSince, dateOfBirth: ycbClient.dateOfBirth, accountNumber: ycbClient.accountNumber, accountType: ycbClient.accountType, currency: ycbClient.currency, opening: ycbClient.opening, issueDate: ycbClient.issueDate } : { ...defaultClient });
@@ -1031,7 +1053,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "fastStatement" && selectedBank === "tadhamon" && <section className="panel print-preview-panel" dir="rtl">
         <div className="panel-heading"><div><h2>طبعة كشف حساب سريع / Quick Account Statement</h2><p className="hint">مسار مستقل وسريع يعتمد على نفس بيانات العميل والسجل المعتمد، ولا يغيّر القالب الرسمي أو تصميم بيان الحالة.</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="review-grid"><div className="validation-card"><span>العميل / Customer</span><strong>{client.name || "—"}</strong><small>{client.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>الرصيد الختامي / Closing</span><strong>{formatMoney(reportedClosing)}</strong><small>{client.currency}</small></div><div className="validation-card"><span>العمليات / Transactions</span><strong>{acceptedRows.length}</strong><small>From the applied register</small></div><div className="validation-card"><span>الفترة / Period</span><strong>{documentPeriodStart} — {documentPeriodEnd}</strong><small>Quick print only</small></div></div>
-        <div className="actions"><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><FileText size={17} /> معاينة / Preview</button><button type="button" onClick={() => void downloadDocumentPdf("accountStatement", tadhamonFastStatementHtml)}><Printer size={17} /> طباعة / Print</button><button type="button" className="unified-print-button" onClick={() => printDocument("unifiedAll")}><Printer size={17} /> طباعة موحدة / Unified Print</button></div>
+        <div className="actions"><button type="button" className="secondary-button" onClick={() => highlightDepositsWhite()}><RefreshCcw size={17} /> تلوين الإيداعات بالأبيض / White Deposits</button><label className="computed-field"><span>حد مبلغ الإيداع / Minimum Deposit</span><input className="transaction-edit-input" type="number" min="0" step="0.01" dir="ltr" value={fastMinimumDeposit} onChange={(event) => setFastMinimumDeposit(event.target.value)} placeholder="100.00" /></label><button type="button" className="secondary-button" onClick={() => { const minimum = money(fastMinimumDeposit); if (minimum > 0) highlightDepositsWhite(minimum); }} disabled={!fastMinimumDeposit.trim() || money(fastMinimumDeposit) <= 0}><RefreshCcw size={17} /> تحديث حسب المبلغ / Apply Minimum</button><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><FileText size={17} /> معاينة / Preview</button><button type="button" onClick={() => void downloadDocumentPdf("accountStatement", tadhamonFastStatementHtml)}><Printer size={17} /> طباعة / Print</button><button type="button" className="unified-print-button" onClick={() => printDocument("unifiedAll")}><Printer size={17} /> طباعة موحدة / Unified Print</button></div>
         {transactions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Color</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>{transactions.map((row) => <tr key={`fast-${row.rowNumber}-${row.operationNumber}`}><td>{displayStatementDate(row.date)}</td><td dir="ltr">{row.operationNumber}</td><td><input aria-label={`Quick highlight ${row.operationNumber}`} type="color" value={fastHighlightColors[row.rowNumber] || "#ffed00"} onChange={(event) => updateFastHighlight(row.rowNumber, event.target.value)} /><button type="button" className="secondary-button" title="إرجاع اللون الأصفر" onClick={() => updateFastHighlight(row.rowNumber, "#ffed00")}>أصفر</button></td><td>{row.description}</td><td>{row.debit ? formatMoney(row.debit) : "—"}</td><td>{row.credit ? formatMoney(row.credit) : "—"}</td><td>{formatMoney(row.balance || 0)}</td></tr>)}</tbody></table></div>}
         <div className="document-frame-wrap"><iframe className="document-frame" title="Tadhamon quick account statement preview" srcDoc={tadhamonFastStatementHtml} /></div>
       </section>}
