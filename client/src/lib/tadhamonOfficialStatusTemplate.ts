@@ -36,6 +36,10 @@ export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewIn
   html = replaceId(html, "outAccount", data.accountNumber);
   html = replaceId(html, "outBalance", `${money(data.closing)} ${data.currency}`);
   html = replaceId(html, "outDateBody", data.issueDate);
+  html = replaceId(html, "outDob", data.dateOfBirth);
+  html = replaceId(html, "outPlace", data.placeOfBirth || "Sana'a, Yemen");
+  html = replaceId(html, "outPeriodStart", data.periodStart || data.correspondenceDate);
+  html = replaceId(html, "outPeriodEnd", data.periodEnd || data.customerSince);
   html = html.replace(/<div class="header-qr-right-label">[\s\S]*?<\/div>/, `<div class="header-qr-right-label">${text(data.customerName)}</div>`);
   return html;
 }

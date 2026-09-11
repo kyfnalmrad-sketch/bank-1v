@@ -8,7 +8,7 @@
 html,body{margin:0;background:#e9eef4}
 body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .page{position:relative;width:210mm;height:297mm;margin:0 auto;background:#fff url('official-paper/page-1.png') center/100% 100% no-repeat;overflow:hidden}
-.page::before{content:"بنك التضامن\\A Tadhamon Bank - R.Y";white-space:pre;position:absolute;z-index:0;top:132mm;left:18mm;right:18mm;text-align:center;font-family:Arial,Tahoma,sans-serif;font-size:27pt;line-height:1.35;font-weight:700;letter-spacing:1px;color:#1685a0;opacity:.105;transform:rotate(-28deg);pointer-events:none}
+.page::before{content:"";white-space:pre;position:absolute;z-index:0;top:132mm;left:18mm;right:18mm;text-align:center;font-family:Arial,Tahoma,sans-serif;font-size:27pt;line-height:1.35;font-weight:700;letter-spacing:1px;color:#1685a0;opacity:.105;transform:rotate(-28deg);pointer-events:none}
 .header-qr{position:absolute;top:2mm;left:0;width:25mm;height:25mm;object-fit:contain}
 .header-qr-label{position:absolute;top:28mm;left:0;width:25mm;text-align:center;font:8px Arial,sans-serif;color:#172a63}
 .header-qr-right{position:absolute;z-index:2;top:4mm;right:16mm;width:25mm;height:25mm;object-fit:contain;background:transparent;padding:0;border:0}
@@ -25,9 +25,9 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .body p{margin:0 0 10mm}
 .body .strong{font-size:18pt;font-weight:700}
 .disclaimer{font-size:10.5pt!important;line-height:1.42!important;margin:0 auto!important;color:#a30000;text-align:center}
-.closing{font-size:16pt;font-weight:700;text-align:center;margin-top:clamp(8mm,2.5vw,11mm);color:#151b29}
+.closing{font-size:16pt;font-weight:700;text-align:center;margin-top:clamp(8mm,2.5vw,11mm);color:#000!important}
 .signatures{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(16mm,6vw,24mm);margin:clamp(8mm,2.5vw,12mm) 0 0;position:relative;z-index:2}
-.signature{text-align:center;font-size:12pt;line-height:1.45;color:#151b29;min-height:27mm;min-width:0}
+.signature{text-align:center;font-size:12pt;line-height:1.45;color:#000!important;min-height:27mm;min-width:0}
 .signature .role{display:block;font-weight:700;font-size:18pt}
 .signature .name{display:block;font-weight:400;font-size:18pt;white-space:nowrap;letter-spacing:-.1px}
 .signature .stamp-space{display:block;height:10mm}
@@ -65,8 +65,7 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
   <main class="content">
     <h1 class="title">TO WHOM IT MAY CONCERN</h1>
     <section class="body">
-      <p>Best regards are presented to you from Tadhamon Bank - R.Y, and we wish you continued success.</p>
-      <p>We, at Tadhamon Bank - R.Y, hereby confirm that our client, <span id="outCustomer" class="strong">SAMPLE CUSTOMER</span>, holds a <span class="strong">Current Account</span> with us under account number <span id="outAccount" class="strong">0000000000</span> with a total bank balance of <span id="outBalance" class="strong">0.00 YER</span> as of <span id="outDateBody">11 September 2026</span>.</p>
+      <p>Tadhamon Bank presents its compliments and wishes you continued success. We hereby confirm that our client, <span id="outCustomer" class="strong">SAMPLE CUSTOMER</span>, holds a <span class="strong">Current Account</span> with us under account number <span id="outAccount" class="strong">0000000000</span>, with a total balance of <span id="outBalance" class="strong">0.00 YER</span> as of <span id="outDateBody">11 September 2026</span>. The account holder was born on <span id="outDob" class="strong">12 April 1988</span> in <span id="outPlace" class="strong">Sana'a, Yemen</span>, and this statement covers the account history for the period from <span id="outPeriodStart" class="strong">01 January 2026</span> to <span id="outPeriodEnd" class="strong">31 August 2026</span>.</p>
     </section>
     <div class="closing">Yours faithfully,</div>
     <section class="signatures">

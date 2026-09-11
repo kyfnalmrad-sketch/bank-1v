@@ -23,6 +23,7 @@ export type AccountStatusPreviewInput = {
   momaizNo: string;
   passport: string;
   dateOfBirth: string;
+  placeOfBirth?: string;
   customerSince: string;
   accountType: string;
   accountNumber: string;
@@ -32,6 +33,8 @@ export type AccountStatusPreviewInput = {
   issueDateHijri: string;
   printTime: string;
   correspondenceDate: string;
+  periodStart?: string;
+  periodEnd?: string;
   employeeName?: string;
   managerName?: string;
   opening: number;
