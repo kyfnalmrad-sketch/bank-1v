@@ -5,6 +5,7 @@
 export const referenceAssets = {
   logo: "/manus-storage/kuraimi-logo-reference_17f98fb5.png",
   statementBackground: "/assets/reference-statement-background.png",
+  tadhamonStatusBackground: "/assets/tadhamon-status-background.png",
   centralLogo: "/manus-storage/kuraimi-central-logo-reference_d0d5afe2.jpeg",
   headerStrip: "/assets/reference-header-strip.png",
   footerStrip: "/assets/reference-footer-strip.png",

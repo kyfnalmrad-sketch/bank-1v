@@ -42,6 +42,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { BankSelector, renderYcbCertificateHtml, YcbCertificateWorkspace } from "@/components/YcbCertificateWorkspace";
 import { renderYcbStatementPages } from "@/components/YcbStatementWorkspace";
 import { renderTadhamonStatementPages } from "@/lib/tadhamonOriginalStatementTemplate";
+import { renderTadhamonOfficialStatusPreview } from "@/lib/tadhamonOfficialStatusTemplate";
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildTadhamonStatementQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
@@ -224,6 +225,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     void preloadPrintAssets([
       referenceAssets.statementBackground,
+      referenceAssets.tadhamonStatusBackground,
       referenceAssets.headerStrip,
       referenceAssets.footerStrip,
       referenceAssets.centralLogo,
@@ -357,9 +359,35 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     balance: row.balance,
     highlightColor: row.highlightColor,
   })), [statementRows]);
-  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : renderAccountStatusPreview({
+  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
+    backgroundUri: referenceAssets.tadhamonStatusBackground,
+    bankName: "Tadhamon Bank",
+    qrUri: statusQrSource || referenceAssets.qrBrandLogo,
+    qrLogoUri: referenceAssets.qrBrandLogo,
+    customerName: client.name,
+    momaizNo: client.momaizNo,
+    passport: client.passport,
+    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
+    customerSince: formatEnglishGregorianDate(client.customerSince),
+    accountType: client.accountType,
+    accountNumber: client.accountNumber,
+    branchName: client.branch,
+    currency: client.currency,
+    opening: money(client.opening),
+    credit: reportedTotalCredit,
+    debit: reportedTotalDebit,
+    closing: reportedClosing,
+    issueDate: formatEnglishGregorianDate(issueDate),
+    issueDateHijri: formatHijriDate(issueDate),
+    printTime: client.printTime,
+    correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
+    employeeName: client.employeeName,
+    managerName: client.managerName,
+    enclosurePages: statementPageCount,
+    referenceNo: statementReference,
+  }) : renderAccountStatusPreview({
     backgroundUri: referenceAssets.statementBackground,
-    bankName: selectedBank === "tadhamon" ? "Tadhamon Bank" : undefined,
+    bankName: undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: client.name,
@@ -1010,18 +1038,18 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
           <div className="review-action-group">
             <span className="review-action-label">المعاينة / Preview</span>
-            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> معاينة بيان البنك / Bank Status Preview</button>}
+            <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> {selectedBank === "tadhamon" ? "معاينة بيان الحالة — بنك التضامن / Tadhamon Status Preview" : "معاينة بيان البنك / Bank Status Preview"}</button>
             <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">الطباعة / Print</span>
-            {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> طباعة بيان البنك / Print Bank Status</button>}
+            <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatus")}><Printer size={17} /> {selectedBank === "tadhamon" ? "طباعة بيان الحالة — بنك التضامن / Print Tadhamon Status" : "طباعة بيان البنك / Print Bank Status"}</button>
             {selectedBank !== "tadhamon" && <button type="button" className="unified-print-button" onClick={() => printDocument("unified")}><Printer size={17} /> طباعة موحدة: البيان ثم الكشف / Unified: Status then Statement</button>}
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
             <span className="review-action-label">حفظ PDF / Save PDF</span>
-            {selectedBank !== "tadhamon" && <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>}
+            <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : selectedBank === "tadhamon" ? "حفظ بيان الحالة — بنك التضامن PDF / Save Tadhamon Status PDF" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>
             <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "جارٍ الفتح… / Opening…" : "حفظ كشف الحساب PDF / Save Account Statement PDF"}</button>
           </div>
           <button type="button" className="secondary-button" onClick={downloadSessionJson}><RefreshCcw size={17} /> تنزيل جلسة JSON / Download Session JSON</button>
