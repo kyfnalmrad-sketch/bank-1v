@@ -23,7 +23,11 @@ export function renderYcbStatementPages(profile: YcbStatementProfile, transactio
   const pageSize = 18;
   const pageCount = Math.max(1, Math.ceil(transactions.length / pageSize));
   const pages = Array.from({ length: pageCount }, (_, index) => transactions.slice(index * pageSize, (index + 1) * pageSize));
-  return pages.map((rows, index) => renderOriginalYcbStatementPage({ ...profile, pageNumber: index + 1, pageCount }, rows, index + 1, pageCount, qrSources[index], barcodeSources[index], rowHighlights)).join("<div style='page-break-after:always'></div>");
+  return pages.map((rows, index) => renderOriginalYcbStatementPage({ ...profile, pageNumber: index + 1, pageCount }, rows, index + 1, pageCount, qrSources[index], barcodeSources[index], rowHighlights, {
+    totalCredit: rows.reduce((sum, row) => sum + (row.credit || 0), 0),
+    totalDebit: rows.reduce((sum, row) => sum + (row.debit || 0), 0),
+    closingBalance: rows.at(-1)?.balance ?? profile.closingBalance,
+  })).join("<div style='page-break-after:always'></div>");
 }
 export default function YcbStatementWorkspace({ profile, transactions, onBack, onTransactionHighlightChange }: Props) {
   const [preview, setPreview] = useState(true);

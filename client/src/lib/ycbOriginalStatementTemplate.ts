@@ -39,11 +39,14 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  @media print{.page{margin:0!important}.page > .top{height:68mm!important}.page > .summary{margin-top:3mm!important}.page > .table{margin-top:3mm!important}.page > .notes{margin-top:3mm!important}}
 </style>`;
 
-export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], pageNumber: number, pageCount: number, qrUri = "", barcodeUri = "", rowHighlights: Record<string, string> = {}) {
+export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], pageNumber: number, pageCount: number, qrUri = "", barcodeUri = "", rowHighlights: Record<string, string> = {}, pageTotals?: Pick<YcbStatementProfile, "totalCredit" | "totalDebit" | "closingBalance">) {
   const opening = money(profile.openingBalance);
   const credit = money(profile.totalCredit);
   const debit = money(profile.totalDebit);
   const closing = money(profile.closingBalance);
+  const pageCredit = money(pageTotals?.totalCredit ?? transactions.reduce((sum, item) => sum + (item.credit || 0), 0));
+  const pageDebit = money(pageTotals?.totalDebit ?? transactions.reduce((sum, item) => sum + (item.debit || 0), 0));
+  const pageClosing = money(pageTotals?.closingBalance ?? transactions.at(-1)?.balance ?? profile.closingBalance);
   const page = originalTemplate
     .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
     .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div><div class="address-passport"><span class="label">Passport Number:</span><span class="value">${escapeHtml(profile.passport || "—")}</span></div></span>`)
@@ -68,7 +71,7 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const tableStart = page.indexOf('<section class="table">');
   const notesStart = page.indexOf('<section class="notes">');
   const summary = `<section class="summary"><div class="sum"><div class="label">Opening Balance</div><strong>${opening}</strong></div><div class="sum"><div class="label">Total Credit</div><strong>${credit}</strong></div><div class="sum"><div class="label">Total Debit</div><strong>${debit}</strong></div><div class="sum"><div class="label">Closing Balance</div><strong>${closing}</strong></div></section>`;
-  const table = `<section class="table"><div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${credit}</div><div class="cell amount">${debit}</div><div class="cell amount balance">${closing}</div></div></section>`;
+  const table = `<section class="table"><div class="row head"><div class="cell centered">Date</div><div class="cell centered">Reference</div><div class="cell centered">Transaction Description</div><div class="cell centered">Credit</div><div class="cell centered">Debit</div><div class="cell centered">Balance</div></div>${transactions.map((item) => renderRow(item, rowHighlights[item.reference])).join("")}<div class="row total"><div class="cell"></div><div class="cell"></div><div class="cell amount">Total:</div><div class="cell amount">${pageCredit}</div><div class="cell amount">${pageDebit}</div><div class="cell amount balance">${pageClosing}</div></div></section>`;
   if (summaryStart >= 0 && tableStart > summaryStart && notesStart > tableStart) {
     return withCodeAssets(`${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`)
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
