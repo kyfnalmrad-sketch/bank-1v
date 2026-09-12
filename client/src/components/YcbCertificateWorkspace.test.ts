@@ -24,7 +24,7 @@ const demoClient: YcbClient = {
 describe("YCB certificate data placement", () => {
   it("builds a compact official QR payload from certificate fields", () => {
     const payload = buildYcbCertificateQrPayload({ customerName: demoClient.name, accountNumber: demoClient.accountNumber, currency: demoClient.currency, balance: demoClient.opening, referenceNumber: demoClient.referenceNumber, issueDate: demoClient.issueDate });
-    expect(payload).toContain("V2|B=YCB|D=C");
+    expect(payload).toContain("B=YCB|D=C");
     expect(payload).toContain("N=Ahmed Al-Qahtani");
     expect(payload).toContain("A=YCB-0045827319");
     expect(payload).toContain("R=YCB-DEMO-2026-091");

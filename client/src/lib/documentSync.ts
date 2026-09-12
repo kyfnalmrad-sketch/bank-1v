@@ -127,11 +127,12 @@ function verificationChecksum(value: string) {
 export function buildVerificationQrPayload(input: VerificationQrInput) {
   const typeLabel = input.documentType === "status" ? "S" : "T";
   return [
-    `V2|B=${bankCode(input.bankName)}|D=${typeLabel}`,
+    `B=${bankCode(input.bankName)}|D=${typeLabel}`,
     `P=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
     `N=${compactPersonName(input.customerName)}`,
     `A=${compactCodeText(input.accountNumber, 16)}`,
     `R=${compactCodeText(input.reference, 20)}`,
+    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
     `L=${qrMoney(input.closing)}`,
   ].join("|");
 }
@@ -147,7 +148,7 @@ export type YcbCertificateQrInput = {
 /** Official, compact YCB certificate QR payload; contains only fields printed on the certificate. */
 export function buildYcbCertificateQrPayload(input: YcbCertificateQrInput) {
   const core = [
-    "V2|B=YCB|D=C",
+    "B=YCB|D=C",
     `N=${compactPersonName(input.customerName)}`,
     `A=${compactCodeText(input.accountNumber, 16)}`,
     `R=${compactCodeText(input.referenceNumber, 20)}`,
@@ -176,11 +177,12 @@ export function buildTadhamonStatementQrPayload(
   input: TadhamonStatementQrInput
 ) {
   return [
-    "V2|B=TAD|D=T",
+    "B=TAD|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
     `N=${compactPersonName(input.customerName)}`,
     `A=${compactCodeText(input.accountNumber, 16)}`,
     `R=${compactCodeText(input.statementReference, 20)}`,
+    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
   ].join("|");
 }
 export function buildVerificationBarcodePayload(
@@ -199,7 +201,7 @@ export function buildVerificationBarcodePayload(
     : "";
   const closingPart =
     pageClosing === undefined ? "" : `|L=${qrMoney(pageClosing)}`;
-  const core = `V2|B=${bankCode(bankName)}|D=STMT|R=${compactCodeText(reference, 32)}|P=${pageNumber}/${pageCount}${pagePart}${closingPart}`;
+  const core = `B=${bankCode(bankName)}|D=STMT|R=${compactCodeText(reference, 32)}|P=${pageNumber}/${pageCount}${pagePart}${closingPart}`;
   return `${core}|C=${verificationChecksum(core)}`;
 }
 export type YcbStatementCodeInput = {
@@ -229,18 +231,18 @@ export type YcbStatementCodeInput = {
 /** YCB QR: identity, customer details, balances, and the page's operations summary. */
 export function buildYcbStatementQrPayload(input: YcbStatementCodeInput) {
   return [
-    "V2|B=YCB|D=T",
+    "B=YCB|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
     `N=${compactPersonName(input.customerName)}`,
     `A=${compactCodeText(input.accountNumber, 16)}`,
     `R=${compactCodeText(input.statementReference, 20)}`,
+    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
     `L=${qrMoney(input.closingBalance)}`,
   ].join("|");
 }
 /** YCB linear/PDF417 barcode: compact references and page reconciliation data. */
 export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
   const core = [
-    "V2",
     "B=YCB",
     "D=T",
     `R=${compactCodeText(input.statementReference, 24)}`,
