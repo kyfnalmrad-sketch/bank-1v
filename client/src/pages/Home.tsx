@@ -70,7 +70,7 @@ const formatMorningTime = (value: string) => {
     const hour = Number(match[1]);
     return `${String(hour % 12 || 12).padStart(2, "0")}:${match[2]} AM`;
   }
-  return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
+  return "";
 };
 const todayIsoDate = () => {
   const now = new Date();
@@ -141,7 +141,7 @@ const defaultClient = {
   currency: "USD",
   opening: "0.00",
   issueDate: "",
-  printDate: todayIsoDate(),
+  printDate: "",
   issueDateHijri: "",
   printTime: "",
   correspondenceDate: "",
@@ -365,11 +365,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const periodStart = documentClient.periodStart || firstTransactionDate || "PENDING";
   const periodEnd = documentClient.periodEnd || lastTransactionDate || issueDate;
   const documentIssueDate = displayStatementDate(issueDate);
-  const documentPrintDate = displayStatementDate(documentClient.printDate || issueDate);
+  const documentPrintDate = documentClient.printDate ? displayStatementDate(documentClient.printDate) : "";
   const documentPeriodStart = displayStatementDate(periodStart);
   const documentPeriodEnd = displayStatementDate(periodEnd);
-  const printDateValue = documentClient.printDate || todayIsoDate();
-  const printDateDay = new Date(`${printDateValue}T12:00:00`).getDay();
+  const printDateValue = documentClient.printDate;
+  const printDateDay = printDateValue ? new Date(`${printDateValue}T12:00:00`).getDay() : -1;
   const isPrintHoliday = printDateDay === 4 || printDateDay === 5;
   const printHolidayLabel = printDateDay === 4 ? "الخميس" : "الجمعة";
   const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE));
