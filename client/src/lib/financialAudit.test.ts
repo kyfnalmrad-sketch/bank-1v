@@ -30,10 +30,36 @@ describe("financial audit engine", () => {
   });
 
   it("detects the reported 13,700 credit, 7,200 debit, and 7,140 closing mismatch", () => {
-    const result = auditFinancialStatement({ openingBalance: 0, rows: [{ rowNumber: 1, date: "2026-08-29", operationNumber: "DEP-1", description: "Deposits", debit: 0, credit: 13700, balance: 6650 }, { rowNumber: 2, date: "2026-08-31", operationNumber: "ATM-1", description: "ATM withdrawal", debit: 7200, credit: 0, balance: 6500 }], printedCredit: 13700, printedDebit: 7200, printedClosing: 7140 });
+    const result = auditFinancialStatement({ openingBalance: 0, openingBalanceProvided: true, rows: [{ rowNumber: 1, date: "2026-08-29", operationNumber: "DEP-1", description: "Deposits", debit: 0, credit: 13700, balance: 6650 }, { rowNumber: 2, date: "2026-08-31", operationNumber: "ATM-1", description: "ATM withdrawal", debit: 7200, credit: 0, balance: 6500 }], printedCredit: 13700, printedDebit: 7200, printedClosing: 7140 });
     expect(result.calculatedClosing).toBe(6500);
     expect(result.issues.find((issue) => issue.type === "closing-balance")?.difference).toBe(640);
     expect(result.isMatch).toBe(false);
+  });
+
+  it("anchors an Excel import without an opening balance to its first printed balance", () => {
+    const result = auditFinancialStatement({ openingBalance: 0, openingBalanceProvided: false, rows: [
+      { rowNumber: 2, date: "2026-08-01", operationNumber: "A1", description: "Deposit", debit: 0, credit: 100, balance: 1100 },
+      { rowNumber: 3, date: "2026-08-02", operationNumber: "A2", description: "Withdrawal", debit: 40, credit: 0, balance: 1060 },
+    ], printedClosing: 1060 });
+    expect(result.isMatch).toBe(true);
+    expect(result.openingBalance).toBe(1000);
+    expect(result.issues).toHaveLength(0);
+  });
+
+  it("does not cascade one bad Excel balance into every following row", () => {
+    const result = auditFinancialStatement({ openingBalance: 1000, openingBalanceProvided: true, rows: [
+      { rowNumber: 1, date: "2026-08-01", operationNumber: "A1", description: "Deposit", debit: 0, credit: 100, balance: 1200 },
+      { rowNumber: 2, date: "2026-08-02", operationNumber: "A2", description: "Withdrawal", debit: 40, credit: 0, balance: 1160 },
+    ] });
+    expect(result.issues.filter((issue) => issue.type === "running-balance")).toHaveLength(1);
+  });
+
+  it("does not audit a running balance that Excel did not provide", () => {
+    const result = auditFinancialStatement({ openingBalance: 0, openingBalanceProvided: false, rows: [
+      { rowNumber: 1, date: "2026-08-01", operationNumber: "A1", description: "Deposit", debit: 0, credit: 100, balance: 100, balanceProvided: false },
+      { rowNumber: 2, date: "2026-08-02", operationNumber: "A2", description: "Withdrawal", debit: 40, credit: 0, balance: 60, balanceProvided: false },
+    ] });
+    expect(result.issues.filter((issue) => issue.type === "running-balance")).toHaveLength(0);
   });
 
   it("flags a row with both debit and credit and possible duplicates", () => {
