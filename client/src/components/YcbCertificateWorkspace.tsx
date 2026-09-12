@@ -43,12 +43,13 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     "[ACCOUNT_NUMBER]": client.accountNumber,
     "[PASSPORT_LINE]": client.passport ? `, holder of Passport No. ${client.passport}` : "",
     "[BIRTH_DATE_LINE]": client.dateOfBirth ? `, born on ${formatOptionalDate(client.dateOfBirth)}` : "",
-    "[PERIOD_LINE]": client.periodStart && client.periodEnd ? ` This statement covers the account history for the period from ${formatOptionalDate(client.periodStart)} to ${formatOptionalDate(client.periodEnd)}` : "",
+    "[BIRTH_SENTENCE]": client.dateOfBirth ? ` The account holder was born on <span class="strong">${escapeHtml(formatOptionalDate(client.dateOfBirth))}</span>.` : "",
+    "[PERIOD_SENTENCE]": client.periodStart && client.periodEnd ? ` This statement covers the account history for the period from <span class="strong">${escapeHtml(formatOptionalDate(client.periodStart))}</span> to <span class="strong">${escapeHtml(formatOptionalDate(client.periodEnd))}</span>.` : "",
     "[CUSTOMER_SINCE_LINE]": client.customerSince.trim() ? `Customer since: ${formatOptionalDate(client.customerSince)}` : "",
     "[BALANCE_IN_WORDS]": `${formatFinancialAmount(client.opening)} ${currencyWords(client.currency)}`,
     "[BALANCE_NUMERIC]": formatFinancialAmount(client.opening),
     "[CURRENCY]": client.currency,
-    "[AS_OF_DATE]": client.issueDate,
+    "[AS_OF_DATE]": client.issueDate.trim() ? formatOptionalDate(client.issueDate) : "PENDING",
     "[AS_OF_DATE_HIJRI]": hijriDate,
     "[AUTHORIZED_OFFICER_NAME]": client.customerServiceName.trim() || "—",
     "[BRANCH_MANAGER_NAME]": client.branchManagerName.trim() || "—",
@@ -58,7 +59,10 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     .replaceAll("ycb-certificate-qr.png", "/assets/ycb-certificate-qr.png")
     .replace("<div><b>Reference:</b> 4119</div>", client.referenceNumber.trim() ? `<div><b>Reference:</b> ${escapeHtml(client.referenceNumber)}</div>` : "")
     .replace("<div><b>DATE:</b> 07 AUG 2025</div>", `<div><b>DATE:</b> ${escapeHtml(client.issueDate || "PENDING")}</div>`);
-  for (const [placeholder, value] of Object.entries(values)) html = html.replaceAll(placeholder, escapeHtml(value));
+  for (const [placeholder, value] of Object.entries(values)) {
+    const renderedValue = placeholder === "[BIRTH_SENTENCE]" || placeholder === "[PERIOD_SENTENCE]" ? value : escapeHtml(value);
+    html = html.replaceAll(placeholder, renderedValue);
+  }
   return html;
 }
 

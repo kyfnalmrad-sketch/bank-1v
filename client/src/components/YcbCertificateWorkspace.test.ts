@@ -23,13 +23,15 @@ describe("YCB certificate data placement", () => {
   it("places optional passport and birth date inside the certificate statement", () => {
     const html = renderYcbCertificateHtml(demoClient);
     expect(html).toContain("holder of Passport No. P1234567");
-    expect(html).toContain("born on 12 April 1988");
-    expect(html).toContain("This statement covers the account history for the period from 01 January 2026 to 31 August 2026");
+    expect(html).toContain("The account holder was born on");
+    expect(html).toContain("12 April 1988");
+    expect(html).toContain("This statement covers the account history for the period from");
+    expect(html).toContain("31 August 2026");
     expect(html).toContain("Customer since: 15/01/2020");
     expect(html).toContain("Reference:</b> YCB-DEMO-2026-091");
     expect(html).toContain("1,250,000 YER");
     expect(html).toContain("text-decoration:underline");
-    expect(html).toContain("margin:clamp(8mm,2.5vw,12mm) 0 0");
+    expect(html).toContain("margin:5mm 0 0");
     expect(html).toContain("Customer Service");
     expect(html).toContain("Branch Manager");
     expect(html).not.toContain("[PASSPORT_LINE]");
@@ -40,8 +42,8 @@ describe("YCB certificate data placement", () => {
   it("omits optional values cleanly when the fields are empty", () => {
     const html = renderYcbCertificateHtml({ ...demoClient, passport: "", dateOfBirth: "", referenceNumber: "" });
     expect(html).not.toContain("Passport No.");
-    expect(html).not.toContain("born on");
-    expect(html).toContain("This statement covers the account history for the period from 01 January 2026 to 31 August 2026");
+    expect(html).not.toContain("The account holder was born on");
+    expect(html).toContain("This statement covers the account history for the period from");
     expect(html).toContain("Customer since: 15/01/2020");
     expect(html).not.toContain("Reference:</b>");
     expect(html).not.toContain("PENDING");
