@@ -12,6 +12,7 @@ export type ImportedTransaction = {
   debit: number;
   credit: number;
   balance: number | null;
+  balanceProvided?: boolean;
   externalReference: string;
   operationNumber: string;
   rejected: boolean;
@@ -359,8 +360,9 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const debit = map.debit === undefined ? derivedDebit : Math.abs(asNumber(getCell(row, map.debit)));
       const credit = map.credit === undefined ? derivedCredit : Math.abs(asNumber(getCell(row, map.credit)));
       const balanceCell = getCell(row, map.balance);
+      const balanceProvided = balanceCell !== undefined && String(balanceCell).trim() !== "";
       const date = formatImportedDateTime(getCell(row, map.date), getCell(row, map.time));
-      const balance = balanceCell === undefined || String(balanceCell).trim() === "" ? null : asNumber(balanceCell);
+      const balance = balanceProvided ? asNumber(balanceCell) : null;
       const externalReference = String(getCell(row, map.reference) ?? "").trim();
       const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
       return {
@@ -372,6 +374,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
         debit,
         credit,
         balance,
+        balanceProvided,
         externalReference,
         operationNumber: useExternalReference && externalReference ? externalReference : internalOperationNumber,
         rejected: !review.accepted,
