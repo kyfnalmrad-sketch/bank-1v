@@ -47,6 +47,7 @@ import { renderTadhamonOfficialStatusPreview } from "@/lib/tadhamonOfficialStatu
 import type { YcbStatementProfile, YcbStatementTransaction } from "@/lib/ycbStatementPreview";
 import { MAX_TRANSACTIONS_PER_PAGE, renderAccountStatusPreview, renderStatementPreview } from "@/lib/documentPreview";
 import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildTadhamonStatementQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "@/lib/documentSync";
+import { auditFinancialStatement } from "@/lib/financialAudit";
 import { assemblePrintableStatementHtml, downloadDocumentPdf, openPrintWindow, preloadPrintAssets, selectPrintableDocument, type PrintDocumentKind } from "@/lib/printDocument";
 import {
   buildImportedTransactions,
@@ -318,6 +319,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const reportedTotalDebit = totalDebitOverride.trim() === "" ? totalDebit : money(totalDebitOverride);
   const hasTotalsOverride = totalCreditOverride.trim() !== "" || totalDebitOverride.trim() !== "";
   const reportedClosing = hasTotalsOverride ? money(client.opening) + reportedTotalCredit - reportedTotalDebit : closing;
+  const financialAudit = useMemo(() => auditFinancialStatement({
+    openingBalance: money(client.opening),
+    rows: statementRows.map((row) => ({ rowNumber: row.rowNumber, date: row.date, operationNumber: row.operationNumber, description: row.description, debit: row.debit, credit: row.credit, balance: row.balance })),
+    printedCredit: totalCreditOverride.trim() === "" ? undefined : reportedTotalCredit,
+    printedDebit: totalDebitOverride.trim() === "" ? undefined : reportedTotalDebit,
+    printedClosing: hasTotalsOverride ? reportedClosing : undefined,
+    periodStart: client.periodStart || undefined,
+    periodEnd: client.periodEnd || undefined,
+  }), [client.opening, client.periodEnd, client.periodStart, hasTotalsOverride, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementRows, totalCreditOverride, totalDebitOverride]);
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
   const uniquePeopleCount = useMemo(() => new Set(acceptedRows.map((row) => row.personName || row.description.trim()).filter(Boolean)).size, [acceptedRows]);
   const duplicatePeopleCount = Math.max(0, acceptedRows.length - uniquePeopleCount);
@@ -332,6 +342,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     !client.name || (selectedBank === "ycb" ? !client.accountNumber : !client.momaizNo) ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
     rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
+    financialAudit.issues.length > 0 ? `تدقيق مالي: يوجد فرق أو عملية تحتاج مراجعة (${financialAudit.issues.length}) / Financial audit requires review` : "",
   ].filter(Boolean);
   const generatedStatementReference = useMemo(() => bankStatementReference(
     selectedBank || "karimi",
@@ -1180,6 +1191,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
+        {financialAudit.issues.length > 0 && <aside className="tab-warning" role="alert"><AlertTriangle size={18} /><div><strong>تنبيه تدقيق مالي / Financial Audit Warning</strong><span>يوجد فرق حسابي غير مفسر أو عملية تحتاج مراجعة. لا يعتمد التقرير قبل الرجوع إلى السجل المالي الأصلي أو اعتماد قيد تصحيح موثق. {financialAudit.issues[0]?.message}</span></div></aside>}
           <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" || selectedBank === "tadhamon" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : selectedBank === "tadhamon" ? "Customer name and account number are required for Tadhamon." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="review-actions" aria-label="Document actions / إجراءات المستندات">
           <div className="review-action-group">
