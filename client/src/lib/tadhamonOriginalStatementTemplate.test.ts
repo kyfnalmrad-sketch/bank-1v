@@ -37,6 +37,14 @@ describe("approved Tadhamon statement template", () => {
     expect(html).not.toContain("summary-barcode");
   });
 
+  it("keeps print metadata controlled by the supplied profile", () => {
+    const html = renderOriginalTadhamonStatementPage({ ...profile, issueDate: "01-Jan-2031", printTime: "23:59:58" }, [], 1, 1);
+    expect(html).toContain("01-Jan-2031");
+    expect(html).toContain("23:59:58");
+    expect(html).not.toContain("DOMContentLoaded");
+    expect(html).not.toContain("toLocaleTimeString");
+  });
+
   it("limits the Tadhamon statement to 15 transactions on one page", () => {
     const transactions = Array.from({ length: 18 }, (_, index) => ({
       date: "05-Feb-25",

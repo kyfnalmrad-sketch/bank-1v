@@ -32,17 +32,7 @@
 .print-meta .meta-line{display:block;margin-top:.55mm}
 .print-meta .meta-label{font-weight:800;font-style:italic;text-transform:uppercase}
 </style>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  const now = new Date();
-  const date = document.getElementById('print-date');
-  const time = document.getElementById('print-time');
-  if (!date || !time) return;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  date.textContent = String(now.getDate()).padStart(2,'0') + '-' + months[now.getMonth()] + '-' + now.getFullYear();
-  time.textContent = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone:'Asia/Aden'});
-});
-</script>
+
 </head>
 <body>
 <div class="screenbar">YCB Statement Design — Stage 1 / Full Official YBK112 Page</div>
