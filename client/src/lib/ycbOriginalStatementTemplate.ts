@@ -9,6 +9,7 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/'/g, "&#39;");
 
 const money = (value: number) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const shortName = (value: unknown) => { const parts = String(value || "").trim().split(/\s+/).filter(Boolean); return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0] || "—"; };
 
 const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   const safeHighlight = /^#[0-9a-fA-F]{6}$/.test(highlight) ? highlight : "";
@@ -64,7 +65,9 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const withCodeAssets = (html: string) => {
     let next = html;
     if (qrUri) next = next.replace(/(<img class="address-qr" src=")[^"]*(")/, `$1${escapeHtml(qrUri)}$2`);
-    if (barcodeUri) next = next.replace(/(<img class="title-pdf417" src=")[^"]*(")/, `$1${escapeHtml(barcodeUri)}$2`);
+    if (barcodeUri) {
+      next = next.replace(/<img class="title-pdf417" src="[^"]*"([^>]*)>/, `<span class="title-pdf417-wrap"><img class="title-pdf417" src="${escapeHtml(barcodeUri)}"$1><span class="title-pdf417-name">${escapeHtml(shortName(profile.customerName))}</span></span>`);
+    }
     return next;
   };
 

@@ -176,9 +176,10 @@ describe("applied transaction register synchronization", () => {
     expect(qr).toContain("N=Ahmed Al-Qahtani");
     expect(qr).not.toContain("F=");
     expect(qr).toContain("L=19915.00");
-    expect(barcode).toContain("B=YCB|D=T|R=YCB-2026-001|P=1/2");
+    expect(barcode).toContain(
+      "B=YCB|D=T|N=Ahmed Al-Qahtani|A=YCB-1001|R=YCB-2026-001|P=1/2"
+    );
     expect(barcode).toContain("L=19915.00");
-    expect(barcode).not.toContain("N=Ahmed Al-Qahtani");
     expect(qr).not.toBe(barcode);
     expect(
       buildYcbStatementBarcodePayload({ ...input, pageNumber: 2 })

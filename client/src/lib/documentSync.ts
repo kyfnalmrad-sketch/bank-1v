@@ -245,8 +245,11 @@ export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
   const core = [
     "B=YCB",
     "D=T",
+    `N=${compactPersonName(input.customerName)}`,
+    `A=${compactCodeText(input.accountNumber, 16)}`,
     `R=${compactCodeText(input.statementReference, 24)}`,
     `P=${input.pageNumber}/${input.pageCount}`,
+    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
     `L=${qrMoney(input.closingBalance)}`,
   ].join("|");
   return `${core}|C=${verificationChecksum(core)}`;
