@@ -42,4 +42,9 @@ describe("financial audit engine", () => {
     expect(result.issues.some((issue) => issue.type === "transaction")).toBe(true);
     expect(result.issues.some((issue) => issue.type === "duplicate")).toBe(true);
   });
+
+  it("warns when the print date is later than the statement period", () => {
+    const result = auditFinancialStatement({ openingBalance: 0, rows: [], periodEnd: "2026-08-31", printDate: "2026-09-12" });
+    expect(result.issues.some((issue) => issue.type === "date-or-currency")).toBe(true);
+  });
 });
