@@ -976,6 +976,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setReviewPreview("accountStatement");
     setActiveTab("review");
   };
+  const refreshMainStatementPreview = () => {
+    refreshAllDocumentData();
+    setActiveTab("review");
+    setReviewPreview("accountStatement");
+  };
 
   const updateYcbClient = (key: keyof typeof ycbClient, value: string) => {
     setYcbClient((current) => ({ ...current, [key]: value }));
@@ -1285,6 +1290,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           </div>
           <div className="review-action-group">
             <span className="review-action-label">المعاينة / Preview</span>
+            <button type="button" className="secondary-button" onClick={refreshMainStatementPreview}><RefreshCcw size={16} /> تحديث معاينة الكشف الرئيسي / Refresh Main Statement</button>
             <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatus")}><FileText size={17} /> {selectedBank === "tadhamon" ? "معاينة بيان الحالة — بنك التضامن / Tadhamon Status Preview" : "معاينة بيان البنك / Bank Status Preview"}</button>
             <button type="button" className="preview-button" onClick={() => setReviewPreview("accountStatement")}><FileText size={17} /> View Account Statement</button>
           </div>
