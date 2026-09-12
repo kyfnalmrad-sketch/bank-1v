@@ -316,6 +316,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
   const historyQuery = trpc.staging.listHistory?.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
+  const [historyRestoreState, setHistoryRestoreState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1, workspaceKey }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null };
   const createHistoryMutation = trpc.staging.createHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
   const updateHistoryMutation = trpc.staging.updateHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
@@ -647,23 +648,42 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const openStatementHistory = async (id: number) => {
+    setHistoryRestoreState("loading");
     setSelectedHistoryId(id);
     setActiveTab("account");
   };
-
   useEffect(() => {
-    const history = getHistoryQuery.data as { id?: number; payload?: Partial<SnapshotPayload> } | null;
-    const payload = history?.payload;
-    const legacyClient = (payload as (Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }) | undefined)?.documentClient;
-    if (selectedHistoryId !== null && history?.id === selectedHistoryId && (payload?.client || legacyClient)) {
-      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...(payload?.client || legacyClient) });
-      if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
-      setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
-      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setClosingBalanceOverride(payload.closingBalanceOverride || ""); setPublishedClosingBalanceOverride(payload.closingBalanceOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
-      setSelectedHistoryId(null);
+    if (selectedHistoryId === null || getHistoryQuery.isLoading) return;
+    const history = getHistoryQuery.data as { id?: number; title?: string; customer_name?: string | null; account_number?: string | null; payload?: unknown } | null;
+    if (!history || history.id !== selectedHistoryId) {
+      if (getHistoryQuery.isError) { setHistoryRestoreState("error"); setImportNote("تعذر تحميل السجل المحدد. تحقق من اتصال قاعدة البيانات."); }
+      return;
     }
-  }, [getHistoryQuery.data, selectedHistoryId]);
-
+    let rawPayload: any = history.payload;
+    if (typeof rawPayload === "string") { try { rawPayload = JSON.parse(rawPayload); } catch { rawPayload = null; } }
+    const payload = (rawPayload?.payload && typeof rawPayload.payload === "object" ? rawPayload.payload : rawPayload) as (Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }) | null;
+    const restoredClient = payload?.client || payload?.documentClient;
+    if (!restoredClient) { setHistoryRestoreState("error"); setImportNote(`السجل "${history.title || selectedHistoryId}" موجود، لكن بياناته القديمة غير قابلة للاستعادة.`); return; }
+    setEditingHistoryId(selectedHistoryId);
+    setClient({ ...defaultClient, ...restoredClient });
+    setPublishedClient({ ...defaultClient, ...restoredClient });
+    if (payload?.ycbClient) { setYcbClient({ ...defaultYcbClient, ...payload.ycbClient }); setPublishedYcbClient({ ...defaultYcbClient, ...payload.ycbClient }); }
+    setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
+    setIncludeBranch(payload.includeBranch === true);
+    setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both");
+    setPublishedDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both");
+    setFileName(typeof payload.fileName === "string" ? payload.fileName : ""); setColumnMap(payload.columnMap && typeof payload.columnMap === "object" ? payload.columnMap : {}); setMappedFields(Array.isArray(payload.mappedFields) ? payload.mappedFields : []);
+    setTransactions(Array.isArray(payload.transactions) ? payload.transactions : []); setAppliedTransactions(Array.isArray(payload.appliedTransactions) ? payload.appliedTransactions : []);
+    setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : ""); setPublishedTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
+    setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : ""); setPublishedTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
+    setClosingBalanceOverride(typeof payload.closingBalanceOverride === "string" ? payload.closingBalanceOverride : ""); setPublishedClosingBalanceOverride(typeof payload.closingBalanceOverride === "string" ? payload.closingBalanceOverride : "");
+    setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : ""); setPublishedStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
+    setFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {}); setPublishedFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
+    setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
+    setHistoryRestoreState("success");
+    setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
+    setSelectedHistoryId(null);
+  }, [getHistoryQuery.data, getHistoryQuery.isError, getHistoryQuery.isLoading, selectedHistoryId]);
   const deleteStatementHistory = async (id: number) => {
     if (!window.confirm("Delete this saved statement?")) return;
     await deleteHistoryMutation.mutateAsync({ id, workspaceKey }); await historyQuery.refetch();
@@ -1276,7 +1296,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         </section>}
       </>}
 
-      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><div className="actions"><button type="button" className="secondary-button" onClick={() => void clearCurrentBankHistory()} disabled={clearHistoryMutation.isPending || historyQuery.isLoading}><Trash2 size={16} /> مسح سجلات البنك الحالي / Clear Bank Records</button><Database size={26} className="heading-icon" /></div></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> {getHistoryQuery.isLoading && selectedHistoryId === item.id ? "Loading…" : "Edit"}</button><button type="button" className="secondary-button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> استعادة / Restore</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
+      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><div className="actions"><button type="button" className="secondary-button" onClick={() => void clearCurrentBankHistory()} disabled={clearHistoryMutation.isPending || historyQuery.isLoading}><Trash2 size={16} /> مسح سجلات البنك الحالي / Clear Bank Records</button><Database size={26} className="heading-icon" /></div></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={historyRestoreState === "loading" && selectedHistoryId === item.id}><FolderOpen size={16} /> {historyRestoreState === "loading" && selectedHistoryId === item.id ? "جارٍ الاستعادة…" : "تعديل / Edit"}</button><button type="button" className="secondary-button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> استعادة / Restore</button><button type="button" className="preview-button" onClick={() => { void openStatementHistory(item.id); setReviewPreview("accountStatement"); }}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
