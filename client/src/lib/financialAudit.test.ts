@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { auditFinancialStatement } from "./financialAudit";
 
 describe("financial audit engine", () => {
+  it.each(["tadhamon", "ycb", "karimi"])("reconciles the %s bank path with valid values", (bank) => {
+    const result = auditFinancialStatement({ openingBalance: 1000, rows: [{ rowNumber: 1, date: "2026-08-01", operationNumber: `${bank}-1`, description: "Deposit", debit: 0, credit: 250, balance: 1250 }, { rowNumber: 2, date: "2026-08-02", operationNumber: `${bank}-2`, description: "Withdrawal", debit: 50, credit: 0, balance: 1200 }], printedCredit: 250, printedDebit: 50, printedClosing: 1200 });
+    expect(result.isMatch).toBe(true);
+  });
+
+  it.each(["tadhamon", "ycb", "karimi"])("rejects the %s bank path with an incorrect final value", (bank) => {
+    const result = auditFinancialStatement({ openingBalance: 1000, rows: [{ rowNumber: 1, date: "2026-08-01", operationNumber: `${bank}-1`, description: "Deposit", debit: 0, credit: 250, balance: 1250 }], printedClosing: 1300 });
+    expect(result.isMatch).toBe(false);
+    expect(result.issues.find((issue) => issue.type === "closing-balance")?.severity).toBe("critical");
+  });
+
   it("reconciles running balances and totals", () => {
     const result = auditFinancialStatement({ openingBalance: 0, rows: [
       { rowNumber: 1, date: "2026-08-01", operationNumber: "A1", description: "Deposit", debit: 0, credit: 100, balance: 100 },

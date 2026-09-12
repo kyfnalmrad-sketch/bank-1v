@@ -875,6 +875,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
+    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع الإصدار حتى تصحيح الرصيد أو الرجوع إلى السجل المالي الأصلي."); return; }
     if (isPrintHoliday) { setImportNote(`لا يمكن إصدار الكشف في يوم ${printHolidayLabel}. الخميس والجمعة عطلة. غيّر تاريخ الطباعة ثم حاول مرة أخرى.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
@@ -885,6 +886,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
+    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع إنشاء PDF حتى تصحيح الرصيد أو اعتماد قيد تصحيح موثق."); return; }
     if (isPrintHoliday) { setImportNote(`لا يمكن إصدار PDF في يوم ${printHolidayLabel}. الخميس والجمعة عطلة.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
