@@ -470,7 +470,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", documentClient, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, documentClient, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -481,11 +481,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
     if (payload?.bankId && payload.bankId !== selectedBank) return;
     snapshotRestored.current = true;
-    if (payload?.schemaVersion !== 1 || !payload.client) {
+    if (payload?.schemaVersion !== 1 || !(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient)) {
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
       return;
     }
-    const restoredClient = { ...defaultClient, ...payload.client };
+    const restoredClient = { ...defaultClient, ...(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient) };
     setClient(restoredClient);
     if (selectedBank === "ycb") {
       // Older YCB snapshots stored shared customer fields only in `client`.
@@ -618,9 +618,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     const history = getHistoryQuery.data as { id?: number; payload?: Partial<SnapshotPayload> } | null;
     const payload = history?.payload;
-    if (selectedHistoryId !== null && history?.id === selectedHistoryId && payload?.client) {
-      if (!payload?.client) return;
-      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
+    const legacyClient = (payload as (Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }) | undefined)?.documentClient;
+    if (selectedHistoryId !== null && history?.id === selectedHistoryId && (payload?.client || legacyClient)) {
+      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...(payload?.client || legacyClient) });
       if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
       setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setClosingBalanceOverride(payload.closingBalanceOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
