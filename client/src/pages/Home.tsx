@@ -96,6 +96,7 @@ type SnapshotPayload = {
   appliedTransactions: Transaction[];
   totalCreditOverride: string;
   totalDebitOverride: string;
+  closingBalanceOverride?: string;
   statementReferenceOverride?: string;
   fastHighlightColors?: Record<number, string>;
   fastMinimumDeposit?: string;
