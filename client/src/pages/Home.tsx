@@ -323,8 +323,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(publishedClient.opening)), [appliedTransactions, publishedClient.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
-  const reportedTotalCredit = publishedTotalCreditOverride.trim() === "" ? totalCredit : money(totalCreditOverride);
-  const reportedTotalDebit = publishedTotalDebitOverride.trim() === "" ? totalDebit : money(totalDebitOverride);
+  const reportedTotalCredit = publishedTotalCreditOverride.trim() === "" ? totalCredit : money(publishedTotalCreditOverride);
+  const reportedTotalDebit = publishedTotalDebitOverride.trim() === "" ? totalDebit : money(publishedTotalDebitOverride);
   const hasTotalsOverride = publishedTotalCreditOverride.trim() !== "" || publishedTotalDebitOverride.trim() !== "";
   const reportedClosing = hasTotalsOverride ? money(publishedClient.opening) + reportedTotalCredit - reportedTotalDebit : closing;
   const financialAudit = useMemo(() => auditFinancialStatement({
@@ -924,6 +924,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
+    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع الإصدار حتى تصحيح الرصيد أو الرجوع إلى السجل المالي الأصلي."); return; }
     if (isPrintHoliday) {
       setImportNote(`لا يمكن إصدار الكشف في يوم ${printHolidayLabel}. الخميس والجمعة عطلة. غيّر تاريخ الطباعة إلى يوم دوام ثم اضغط تحديث.`);
       return;
@@ -937,6 +938,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
+    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع إنشاء PDF حتى تصحيح الرصيد أو اعتماد قيد تصحيح موثق."); return; }
     if (isPrintHoliday) {
       setImportNote(`لا يمكن إصدار PDF في يوم ${printHolidayLabel}. الخميس والجمعة عطلة.`);
       return;
