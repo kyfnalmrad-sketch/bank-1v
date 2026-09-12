@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderTadhamonOfficialStatusPreview } from "./tadhamonOfficialStatusTemplate";
 
 describe("Tadhamon official status package", () => {
-  it("keeps customer since in the Hijri position and Hijri date in the cyan field", () => {
+  it("keeps customer since in the Hijri position and Hijri date in the dark-gold field", () => {
     const html = renderTadhamonOfficialStatusPreview({
       backgroundUri: "/assets/tadhamon-official-paper.png",
       qrUri: "data:image/png;base64,QR",
@@ -31,7 +31,7 @@ describe("Tadhamon official status package", () => {
     });
     expect(html).toContain('<b>Customer since:</b>');
     expect(html).toContain('التاريخ الهجري:');
-    expect(html).toContain('color:#8fd3e8');
+    expect(html).toContain('color:#8B6508');
     expect(html).toContain('12 April 1988');
     expect(html).toContain("Sana&#039;a, Yemen");
     expect(html).toContain('01 January 2026');

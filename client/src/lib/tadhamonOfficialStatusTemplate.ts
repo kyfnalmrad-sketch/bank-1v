@@ -20,6 +20,7 @@ export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewIn
     .replace(/<script src="qrcode-bundle\.js"><\/script>[\s\S]*?<script>[\s\S]*?<\/script>/, "")
     .replace("official-paper/page-1.png", esc(data.backgroundUri))
     .replace('src="qr-client.png"', `src="${esc(data.qrUri)}"`)
+    .replace("Tadhamon Bank presents", `${text(data.bankName || "Tadhamon Bank")} presents`)
     .replace("SAMPLE CUSTOMER", text(data.customerName))
     .replace("0000000000", text(data.accountNumber))
     .replace("0.00 YER", `${money(data.closing)} ${text(data.currency)}`)
