@@ -52,6 +52,7 @@ export function auditFinancialStatement(input: {
   pageSize?: number;
   periodStart?: string;
   periodEnd?: string;
+  printDate?: string;
 }): FinancialAuditResult {
   const rows = input.rows;
   const issues: FinancialAuditIssue[] = [];
@@ -97,6 +98,9 @@ export function auditFinancialStatement(input: {
   });
 
   const calculatedClosing = amount(input.openingBalance) + calculatedCredit - calculatedDebit;
+  if (input.printDate && input.periodEnd && input.printDate > input.periodEnd) {
+    issues.push({ type: "date-or-currency", severity: "medium", message: "تاريخ الإصدار لاحق لنهاية الكشف؛ لا يمكن إثبات رصيد تاريخ الإصدار من هذا الكشف وحده." });
+  }
   if (input.printedCredit !== undefined && different(calculatedCredit, input.printedCredit)) issues.push({ type: "credit-total", severity: "high", difference: input.printedCredit - calculatedCredit, message: `فرق إجمالي الإيداعات: المحسوب ${calculatedCredit.toFixed(2)} والمطبوع ${input.printedCredit.toFixed(2)}.` });
   if (input.printedDebit !== undefined && different(calculatedDebit, input.printedDebit)) issues.push({ type: "debit-total", severity: "high", difference: input.printedDebit - calculatedDebit, message: `فرق إجمالي السحوبات: المحسوب ${calculatedDebit.toFixed(2)} والمطبوع ${input.printedDebit.toFixed(2)}.` });
   if (input.printedClosing !== undefined && different(calculatedClosing, input.printedClosing)) issues.push({ type: "closing-balance", severity: "critical", difference: input.printedClosing - calculatedClosing, message: `فرق الرصيد النهائي: المحسوب ${calculatedClosing.toFixed(2)} والمطبوع ${input.printedClosing.toFixed(2)}.` });
