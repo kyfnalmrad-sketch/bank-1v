@@ -129,6 +129,7 @@ const tabs: { id: TabId; label: string }[] = [
 
 const defaultClient = {
   name: "",
+  nameAr: "",
   momaizNo: "",
   passport: "",
   branch: "",
@@ -931,7 +932,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [barcodeSources, documentClient, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const tadhamonFastStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
-    const profile = { customerName: documentClient.name, passport: documentClient.momaizNo || documentClient.passport, address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType, currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: documentClient.customerSince, holderNameAr: documentClient.name, statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
+    const profile = { customerName: documentClient.name, passport: documentClient.momaizNo || documentClient.passport, address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType, currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: documentClient.customerSince, holderNameAr: documentClient.nameAr, statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
     const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: fastHighlightColors[row.rowNumber] || "#ffed00" }));
     const fastHighlights = Object.fromEntries(rows.filter((row) => row.highlightColor && row.highlightColor.toLowerCase() !== "#ffed00").map((row) => [row.reference, row.highlightColor as string]));
     return renderTadhamonFastStatementPages(profile, rows, fastHighlights);
@@ -1158,6 +1159,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>المعلومات الشخصية / Customer Information</h2>
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
+            {selectedBank === "tadhamon" && <label>الاسم بالعربية / Arabic name<input dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="الاسم كما يظهر في الكشف السريع" /></label>}
             {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of Birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label></>}
             {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
