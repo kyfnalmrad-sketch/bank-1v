@@ -998,7 +998,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         issueDate: client.issueDate,
       }));
     }
-    setReviewPreview(null);
     const refreshedPayload = { ...snapshotPayload, transactions: committedTransactions, appliedTransactions: committedTransactions };
     saveSnapshotMutation.mutate({ workspaceKey, payload: refreshedPayload }, {
       onSuccess: (result) => setSnapshotState(result.saved ? "saved" : "error"),

@@ -37,4 +37,35 @@ describe("Tadhamon official status package", () => {
     expect(html).toContain('01 January 2026');
     expect(html).toContain('31 August 2026');
   });
+
+  it("renders Total Balance from closing balance, not opening balance", () => {
+    const html = renderTadhamonOfficialStatusPreview({
+      backgroundUri: "/assets/tadhamon-official-paper.png",
+      qrUri: "data:image/png;base64,QR",
+      customerName: "Balance Customer",
+      momaizNo: "",
+      passport: "",
+      dateOfBirth: "12 April 1988",
+      placeOfBirth: "Sana'a, Yemen",
+      customerSince: "01 January 2024",
+      accountType: "Current Account",
+      accountNumber: "123",
+      branchName: "Main Branch",
+      currency: "YER",
+      issueDate: "11 September 2026",
+      issueDateHijri: "29 Rabi al-Awwal 1448 AH",
+      printTime: "09:23",
+      correspondenceDate: "01 January 2026",
+      periodStart: "01 January 2026",
+      periodEnd: "31 August 2026",
+      opening: 100,
+      credit: 50,
+      debit: 10,
+      closing: 140,
+      enclosurePages: 1,
+      referenceNo: "BALANCE-1",
+    });
+    expect(html).toContain("140.00 YER");
+    expect(html).not.toContain("100.00 YER");
+  });
 });

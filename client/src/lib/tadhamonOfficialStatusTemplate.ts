@@ -15,15 +15,16 @@ const replaceId = (html: string, id: string, value: unknown) => html.replace(new
 
 /** The official Tadhamon package is kept as the source of truth for the status certificate. */
 export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewInput) {
+  const totalBalance = `${money(data.closing)} ${text(data.currency)}`;
   let html = officialTemplate
     .replace(/<form class="controls"[\s\S]*?<\/form>/, "")
     .replace(/<script src="qrcode-bundle\.js"><\/script>[\s\S]*?<script>[\s\S]*?<\/script>/, "")
     .replace("official-paper/page-1.png", esc(data.backgroundUri))
     .replace('src="qr-client.png"', `src="${esc(data.qrUri)}"`)
-    .replace("Tadhamon Bank presents", `${text(data.bankName || "Tadhamon Bank")} presents`)
+  .replace("Tadhamon Bank presents", `${text(data.bankName || "Tadhamon Bank")} presents`)
     .replace("SAMPLE CUSTOMER", text(data.customerName))
     .replace("0000000000", text(data.accountNumber))
-    .replace("0.00 YER", `${money(data.closing)} ${text(data.currency)}`)
+    .replace("0.00 YER", totalBalance)
     .replace(/<span class="strong">Current Account<\/span>/, `<span class="strong">${text(data.accountType)}<\/span>`)
     .replace(/<span class="name">—<\/span>/g, (() => {
       let count = 0;
@@ -36,7 +37,7 @@ export function renderTadhamonOfficialStatusPreview(data: AccountStatusPreviewIn
   html = replaceId(html, "outSince", data.customerSince);
   html = replaceId(html, "outCustomer", data.customerName);
   html = replaceId(html, "outAccount", data.accountNumber);
-  html = replaceId(html, "outBalance", `${money(data.closing)} ${data.currency}`);
+  html = replaceId(html, "outBalance", totalBalance);
   html = replaceId(html, "outDateBody", data.issueDate);
   html = replaceId(html, "outDob", data.dateOfBirth);
   html = replaceId(html, "outPlace", data.placeOfBirth || "Sana'a, Yemen");
