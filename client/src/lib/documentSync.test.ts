@@ -71,10 +71,9 @@ describe("applied transaction register synchronization", () => {
       issueDate: "05/08/2026",
       issueDateHijri: "٢٢ محرم ١٤٤٨ هـ",
     });
-    expect(payload).toContain("V=2|B=KIB|D=T");
+    expect(payload).toContain("V2|B=KIB|D=T");
     expect(payload).toContain("P=1/1");
-    expect(payload).toContain("X=2;1;1");
-    expect(payload).toContain("O=50.00;125.00");
+    expect(payload).toContain("O=50.00|L=125.00");
     expect(payload).toContain("F=FT260804ABC-FT260805DEF");
     expect(payload).toContain("R=BAK-ACCT-20260804-0001");
     expect(payload).toContain("N=Client");
@@ -102,7 +101,7 @@ describe("applied transaction register synchronization", () => {
     });
     expect(statusPayload).toContain("B=KIB");
     expect(statusPayload).not.toContain("TRAINING");
-    expect(statusPayload).toContain("V=2|B=KIB|D=S");
+    expect(statusPayload).toContain("V2|B=KIB|D=S");
     expect(statusPayload).toContain("H=22-Muharram-1448-AH");
     const barcode = buildVerificationBarcodePayload(
       "BAK-ACCT-20260804-0001",
@@ -131,7 +130,7 @@ describe("applied transaction register synchronization", () => {
       1,
       "YEMEN COMMERCIAL BANK"
     );
-    expect(qr.startsWith("V=2|B=YCB|D=T\n")).toBe(true);
+    expect(qr.startsWith("V2|B=YCB|D=T|")).toBe(true);
     expect(qr).not.toContain("KURAIMI ISLAMIC BANK");
     expect(barcode.startsWith("V2|B=YCB|D=STMT|R=YCB-2026-001|P=1/1|C=")).toBe(
       true
@@ -167,9 +166,9 @@ describe("applied transaction register synchronization", () => {
     const barcode = buildYcbStatementBarcodePayload(input);
     expect(qr).toContain("N=Ahmed Al-Qahtani");
     expect(qr).toContain("F=0379297-0379302");
-    expect(qr).toContain("O=15283.00;19915.00");
-    expect(barcode).toContain("V2|B=YCB|D=STMT|R=YCB-2026-001|P=1/2");
-    expect(barcode).toContain("F=0379297-0379302|X=6");
+    expect(qr).toContain("O=15283.00|L=19915.00");
+    expect(barcode).toContain("V2|B=YCB|D=S|R=YCB-2026-001|P=1/2");
+    expect(barcode).toContain("F=0379297-0379302|L=19915.00");
     expect(barcode).not.toContain("N=Ahmed Al-Qahtani");
     expect(qr).not.toBe(barcode);
     expect(
