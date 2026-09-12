@@ -26,9 +26,10 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
 .address-qr-wrap .address-qr{position:absolute;inset:0;width:20mm;height:20mm;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
 .address-qr-logo{position:absolute;left:50%;top:50%;width:5.8mm;height:3.8mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
 .title-pdf417{width:52mm!important;height:10mm!important;object-fit:fill!important}
- .address-date-of-birth{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
+ .address-date-of-birth,.address-passport{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
- .address-date-of-birth .value{display:block;margin-top:.7mm;font-weight:400}
+ .address-date-of-birth .value,.address-passport .value{display:block;margin-top:.7mm;font-weight:400}
+ .address-passport .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .page > .notes{margin-top:3mm!important}
  .row:nth-child(odd):not(.head):not(.total) .cell{background:#E2E6EA}
  .row.credit-row .cell{background:#E8F8F5;color:#1B365D}
@@ -45,7 +46,9 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const closing = money(profile.closingBalance);
   const page = originalTemplate
     .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
-    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div></span>`)
+    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div><div class="address-passport"><span class="label">Passport Number:</span><span class="value">${escapeHtml(profile.passport || "—")}</span></div></span>`)
+    .replace("Personal Current Account", escapeHtml(profile.accountType || "Personal Current Account"))
+    .replace("<div style=\"font-size:7.5pt;color:#425766;margin-top:1.4mm\">Yemen Commercial Bank</div>", `<div style="font-size:7.5pt;color:#425766;margin-top:1.4mm">Yemen Commercial Bank</div><div style="font-size:6.8pt;color:#425766;margin-top:1mm">Issue Date: ${escapeHtml(profile.issueDate || "—")}</div>`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
     .replace("101-840-21102-326491-000", escapeHtml(profile.accountNumber))
     .replace("05-Feb-2025", escapeHtml(profile.periodStart))

@@ -5,12 +5,12 @@ describe("approved YCB statement template", () => {
   it("replaces the sample statement rows and preserves code assets while loading", () => {
     const html = renderOriginalYcbStatementPage({
       customerName: "Live Customer",
-      passport: "",
+      passport: "P1234567",
       address: "Live Address",
-      dateOfBirth: "",
+      dateOfBirth: "12-Apr-1988",
       branchName: "LIVE BRANCH",
       accountNumber: "LIVE-001",
-      accountType: "Current Account",
+      accountType: "Savings Account",
       currency: "USD",
       periodStart: "01/09/2026",
       periodEnd: "10/09/2026",
@@ -23,6 +23,9 @@ describe("approved YCB statement template", () => {
     }, [{ date: "10/09/2026", reference: "LIVE-ROW-1", description: "Live transaction", credit: 50, debit: 0, balance: 125 }], 1, 1);
     expect(html).toContain("LIVE-ROW-1");
     expect(html).toContain("Live Customer");
+    expect(html).toContain("P1234567");
+    expect(html).toContain("Savings Account");
+    expect(html).toContain("Issue Date: 10/09/2026");
     expect(html).not.toContain("0379283");
     expect(html).toContain('class="address-qr"');
     expect(html).toContain('class="title-pdf417"');
