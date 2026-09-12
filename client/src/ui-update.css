@@ -26,3 +26,6 @@
 
 /* Persistent workspace controls. */
 .header-actions{display:grid;gap:10px;justify-items:end}.header-quick-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.header-quick-actions .secondary-button,.bank-switch-button{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;font-size:.76rem}.bank-switch-button{border:1px solid #b9a8ee;border-radius:8px;background:#f7f4ff;color:#5630bf;cursor:pointer;font-weight:700}.bank-switch-button:hover{background:#eee9ff}@media(max-width:700px){.header-actions{justify-items:stretch}.header-quick-actions{justify-content:flex-start}.header-quick-actions>*{flex:1 1 auto}}
+
+/* Financial audit is informative only: show every issue and its practical fix. */
+.tab-warning > div { min-width: 0; flex: 1; }.tab-warning > div > small { display: block; margin-top: 5px; color: #765d2b; line-height: 1.5; }.audit-issue-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }.audit-issue-list li { display: grid; gap: 3px; padding: 9px 11px; border: 1px solid #efdcae; border-radius: 8px; background: rgba(255,255,255,.68); color: #5f4a24; line-height: 1.45; }.audit-issue-list li > strong { color: #684713; }.audit-issue-list li > span { font-size: .82rem; }.audit-issue-list li > small { margin-top: 1px; color: #765d2b; font-size: .75rem; }

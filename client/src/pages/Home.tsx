@@ -351,6 +351,23 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       : [{ key: "name" as const, label: "اسم العميل / Customer name" }, { key: "accountNumber" as const, label: "رقم الحساب / Account number" }];
     return required.filter(({ key }) => !documentClient[key].trim()).map(({ label }) => label);
   }, [documentClient, selectedBank]);
+  const financialAuditGuidance = (issue: (typeof financialAudit.issues)[number]) => {
+    const row = issue.rowNumber ? `الصف ${issue.rowNumber} / Row ${issue.rowNumber}` : "الإجمالي / Total";
+    const solution = issue.type === "running-balance"
+      ? "الحل: راجع الرصيد الافتتاحي ومبلغ العملية والرصيد في Excel. / Fix: check the opening balance, transaction amount, and Excel balance."
+      : issue.type === "closing-balance"
+        ? "الحل: راجع الرصيد النهائي المطبوع أو العمليات، ثم أعد الاستيراد عند الحاجة. / Fix: check the printed closing balance or transactions, then re-import if needed."
+        : issue.type === "credit-total" || issue.type === "debit-total"
+          ? "الحل: طابق الإجمالي المطبوع مع الصفوف المقبولة. / Fix: reconcile the printed total with accepted rows."
+          : issue.type === "duplicate"
+            ? "الحل: راجع التكرار واحذف الصف المكرر من Excel قبل الاستيراد. / Fix: review and remove the duplicate row in Excel."
+            : issue.type === "transaction"
+              ? "الحل: اجعل العملية إيداعًا أو سحبًا واحدًا فقط. / Fix: keep the transaction as either a credit or a debit."
+              : issue.type === "date-or-currency"
+                ? "الحل: صحح التاريخ أو العملة لتطابق فترة الكشف. / Fix: align the date or currency with the statement period."
+                : "الحل: راجع بيانات الصفحة والرصيد المرحل. / Fix: review the page totals and carried balance.";
+    return { row, solution };
+  };
   const tabWarnings = [
     missingCustomerFields.length > 0 ? `بيانات العميل ناقصة: ${missingCustomerFields.join("، ")} / Missing: ${missingCustomerFields.join(", ")}` : "",
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
@@ -1068,7 +1085,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       {tabWarnings.length > 0 && <aside className="tab-warning" role="status">
         <AlertTriangle size={18} />
-        <div><strong>تنبيهات التبويبات المهمة / Important tab warnings</strong><span>{tabWarnings.join(" · ")}</span></div>
+        <div><strong>تنبيهات التبويبات المهمة / Important tab warnings</strong><span>{tabWarnings.join(" · ")}</span><small>تنبيه للمراجعة فقط — لا يمنع الحفظ أو الترحيل أو الطباعة. / Review only — saving, posting, and printing remain available.</small></div>
       </aside>}
 
       {activeTab === "dashboard" && <section className="panel dashboard-panel" dir="rtl">
@@ -1236,7 +1253,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
-        {financialAudit.issues.length > 0 && <aside className="tab-warning" role="alert"><AlertTriangle size={18} /><div><strong>مراجعة التدقيق المالي / Financial Audit Review ({financialAudit.issues.length})</strong><span>{financialAudit.issues[0]?.message}</span><small>الإصلاح: راجع الصف المذكور في Excel، ثم صحح الرصيد الافتتاحي أو مبلغ العملية أو الإجمالي المطبوع حسب السبب. إذا كان الكشف صحيحًا لكن Excel لا يحتوي رصيدًا افتتاحيًا، اتركه فارغًا وسيتم استنتاجه من أول رصيد مطبوع. الحفظ والتصدير والترحيل مسموحة رغم ظهور التنبيه.</small></div></aside>}
+        {financialAudit.issues.length > 0 && <aside className="tab-warning" role="alert"><AlertTriangle size={18} /><div><strong>مراجعة التدقيق المالي / Financial Audit Review ({financialAudit.issues.length})</strong><small>هذه ملاحظات مراجعة وليست أخطاء حاجبة. الحفظ والطباعة متاحان مهما كان العدد. / Review notes only; they never block saving or printing.</small><ul className="audit-issue-list">{financialAudit.issues.map((issue, index) => { const guidance = financialAuditGuidance(issue); return <li key={`${issue.type}-${issue.rowNumber || "total"}-${index}`}><strong>{index + 1}. {guidance.row}</strong><span>{issue.message}</span><small>{guidance.solution}</small></li>; })}</ul></div></aside>}
           <div className="review-grid"><div className="validation-card"><span>Customer status / حالة العميل</span><strong>{missingCustomerFields.length === 0 ? "Ready for review / جاهز للمراجعة" : "Customer details required / بيانات ناقصة"}</strong><small>{missingCustomerFields.length > 0 ? `الناقص: ${missingCustomerFields.join("، ")} / Missing: ${missingCustomerFields.join(", ")}` : "الحقول الأساسية مكتملة. الحقول الأخرى اختيارية حسب نوع المستند."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="review-actions" aria-label="Document actions / إجراءات المستندات">
           <div className="review-action-group">

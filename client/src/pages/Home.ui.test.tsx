@@ -22,11 +22,11 @@ vi.mock("jsbarcode", () => ({ default: vi.fn((svg: SVGElement) => svg.setAttribu
 
 import Home from "./Home";
 
-function makeLedgerFile() {
+function makeLedgerFile(balance = 100) {
   const workbook = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet([
     ["Date", "Description", "Reference", "Debit", "Credit", "Balance"],
-    ["04/08/2026", "Cash deposit", "EXT-1", "", 100, 100],
+    ["04/08/2026", "Cash deposit", "EXT-1", "", 100, balance],
   ]);
   XLSX.utils.book_append_sheet(workbook, sheet, "Ledger");
   const binary = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
@@ -98,6 +98,30 @@ describe("Home applied transaction register", () => {
     expect(statementHtml).toContain("<title>Account Statement</title>");
     expect(statementHtml).toContain("header-art");
     expect(statementHtml).toContain("05/08/2026");
+  });
+
+  it("keeps print and Save PDF available when the financial audit reports a warning", async () => {
+    const host = mockPrintWindow();
+    vi.stubGlobal("open", host.open);
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك الكريمي/ }));
+    fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [makeLedgerFile(120)] } });
+    await screen.findByText("Editable Transaction Register");
+    const balanceInput = screen.getAllByDisplayValue("120")[0];
+    fireEvent.change(balanceInput, { target: { value: "121" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply Register Changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "المعاينة والطباعة / Preview & Print" }));
+
+    expect(await screen.findByText(/Financial Audit Review \(1\)/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "طباعة بيان البنك / Print Bank Status" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "حفظ بيان البنك PDF / Save Bank Status PDF" }).hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "طباعة بيان البنك / Print Bank Status" }));
+    await waitFor(() => expect(host.open).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ بيان البنك PDF / Save Bank Status PDF" }));
+    await waitFor(() => expect(host.open).toHaveBeenCalledTimes(2));
   });
 
   it("allows reported credit and debit totals to be overridden before printing the status statement", async () => {
