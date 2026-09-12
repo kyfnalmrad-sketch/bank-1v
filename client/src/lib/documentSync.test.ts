@@ -112,6 +112,16 @@ describe("applied transaction register synchronization", () => {
     ).toBe(true);
     expect(barcode).not.toContain("TRAINING");
     expect(barcode.slice(-8)).toMatch(/^[0-9A-F]{8}$/);
+    const pageBarcode = buildVerificationBarcodePayload(
+      "BAK-ACCT-20260804-0001",
+      2,
+      3,
+      "KURAIMI ISLAMIC BANK",
+      "FT260805DEF",
+      125
+    );
+    expect(pageBarcode).toContain("P=2/3|Q=FT260805DEF|L=125.00");
+    expect(pageBarcode).not.toBe(barcode);
   });
 
   it("uses Yemen Commercial Bank identity for YCB QR and barcode payloads", () => {

@@ -169,9 +169,16 @@ export function buildVerificationBarcodePayload(
   bankName:
     | "KURAIMI ISLAMIC BANK"
     | "YEMEN COMMERCIAL BANK"
-    | "TADHAMON BANK" = "KURAIMI ISLAMIC BANK"
+    | "TADHAMON BANK" = "KURAIMI ISLAMIC BANK",
+  pageReference?: string,
+  pageClosing?: number
 ) {
-  const core = `V2|B=${bankCode(bankName)}|D=STMT|R=${compactCodeText(reference, 32)}|P=${pageNumber}/${pageCount}`;
+  const pagePart = pageReference
+    ? `|Q=${compactCodeText(pageReference, 16)}`
+    : "";
+  const closingPart =
+    pageClosing === undefined ? "" : `|L=${qrMoney(pageClosing)}`;
+  const core = `V2|B=${bankCode(bankName)}|D=STMT|R=${compactCodeText(reference, 32)}|P=${pageNumber}/${pageCount}${pagePart}${closingPart}`;
   return `${core}|C=${verificationChecksum(core)}`;
 }
 export type YcbStatementCodeInput = {
