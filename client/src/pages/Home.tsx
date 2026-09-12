@@ -650,8 +650,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     if (selectedHistoryId === null || getHistoryQuery.isLoading) return;
     const history = getHistoryQuery.data as { id?: number; title?: string; customer_name?: string | null; account_number?: string | null; payload?: unknown } | null;
-    if (!history || history.id !== selectedHistoryId) {
-      if (getHistoryQuery.isError) { setHistoryRestoreState("error"); setImportNote("تعذر تحميل السجل المحدد. تحقق من اتصال قاعدة البيانات."); }
+    const returnedHistoryId = Number(history?.id);
+    if (!history || !Number.isInteger(returnedHistoryId) || returnedHistoryId !== selectedHistoryId) {
+      if (getHistoryQuery.isError || history) { setHistoryRestoreState("error"); setImportNote("تعذر تحميل السجل المحدد. تحقق من اتصال قاعدة البيانات أو حدّث قائمة السجلات."); }
       return;
     }
     let rawPayload: any = history.payload;
@@ -663,7 +664,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setImportNote(`السجل "${history.title || selectedHistoryId}" موجود، لكن بياناته القديمة غير قابلة للاستعادة.`);
       return;
     }
-    setEditingHistoryId(selectedHistoryId);
+    setEditingHistoryId(returnedHistoryId);
     setClient({ ...defaultClient, ...restoredClient });
     if (payload?.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
