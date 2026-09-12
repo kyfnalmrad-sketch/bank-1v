@@ -18,9 +18,10 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .header-customer-since:empty{display:none}
 .content{position:absolute;top:72mm;left:16mm;right:16mm}
 .title{text-align:center;font-size:18pt;font-weight:700;letter-spacing:.2px;text-transform:uppercase;text-decoration:underline;text-decoration-thickness:1.2pt;text-underline-offset:2.2pt;margin:9mm 0 12mm;padding:0}
-.body{width:182mm;margin:0 auto;font-size:18pt;font-weight:400;line-height:1.5;text-align:left;color:#151b29;word-break:normal;overflow-wrap:normal;hyphens:none}
+.body{width:182mm;margin:0 auto;font-size:17pt;font-weight:400;line-height:1.52;text-align:left;color:#151b29;word-break:normal;overflow-wrap:normal;hyphens:none}
 .body p{margin:0 0 7mm}
-.body .strong{font-size:18pt;font-weight:700}.body p .strong{white-space:nowrap;display:inline-block}
+.body .strong{font-size:17pt;font-weight:700}.body p .strong{white-space:nowrap;display:inline-block}
+.body p .period-date{font-size:17pt;font-weight:400;white-space:nowrap;display:inline-block}
 .disclaimer{font-size:10.5pt!important;line-height:1.42!important;margin:0 auto!important;color:#a30000;text-align:center}
 .closing{font-size:16pt;font-weight:700;text-align:center;margin-top:5mm;color:#151b29}
 .signatures{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(16mm,6vw,24mm);margin:5mm 0 0;position:relative;z-index:2}
