@@ -635,9 +635,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     startNewData();
   };
 
-  const openStatementHistory = async (id: number) => {
+  const openStatementHistory = async (id: number | string) => {
+    const historyId = Number(id);
+    if (!Number.isInteger(historyId) || historyId <= 0) {
+      setHistoryRestoreState("error");
+      setImportNote("تعذر فتح السجل: رقم السجل غير صالح. حدّث قائمة السجلات وحاول مرة أخرى. / Cannot open record: invalid record ID. Refresh and try again.");
+      return;
+    }
     setHistoryRestoreState("loading");
-    setSelectedHistoryId(id);
+    setSelectedHistoryId(historyId);
     setImportNote("جارٍ تحميل السجل كاملًا للتعديل… / Loading the complete record for editing…");
   };
   useEffect(() => {
