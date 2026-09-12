@@ -284,6 +284,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastMinimumDeposit, setFastMinimumDeposit] = useState("");
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
+  const [closingBalanceOverride, setClosingBalanceOverride] = useState("");
+  const [publishedClosingBalanceOverride, setPublishedClosingBalanceOverride] = useState("");
   const [publishedTotalCreditOverride, setPublishedTotalCreditOverride] = useState("");
   const [publishedTotalDebitOverride, setPublishedTotalDebitOverride] = useState("");
   const [publishedStatementReferenceOverride, setPublishedStatementReferenceOverride] = useState("");
@@ -326,13 +328,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const reportedTotalCredit = publishedTotalCreditOverride.trim() === "" ? totalCredit : money(publishedTotalCreditOverride);
   const reportedTotalDebit = publishedTotalDebitOverride.trim() === "" ? totalDebit : money(publishedTotalDebitOverride);
   const hasTotalsOverride = publishedTotalCreditOverride.trim() !== "" || publishedTotalDebitOverride.trim() !== "";
-  const reportedClosing = hasTotalsOverride ? money(publishedClient.opening) + reportedTotalCredit - reportedTotalDebit : closing;
+  const calculatedClosing = hasTotalsOverride ? money(publishedClient.opening) + reportedTotalCredit - reportedTotalDebit : closing;
+  const reportedClosing = publishedClosingBalanceOverride.trim() === "" ? calculatedClosing : money(publishedClosingBalanceOverride);
   const financialAudit = useMemo(() => auditFinancialStatement({
     openingBalance: money(publishedClient.opening),
     rows: statementRows.map((row) => ({ rowNumber: row.rowNumber, date: row.date, operationNumber: row.operationNumber, description: row.description, debit: row.debit, credit: row.credit, balance: row.balance })),
     printedCredit: publishedTotalCreditOverride.trim() === "" ? undefined : reportedTotalCredit,
     printedDebit: publishedTotalDebitOverride.trim() === "" ? undefined : reportedTotalDebit,
-    printedClosing: hasTotalsOverride ? reportedClosing : undefined,
+    printedClosing: publishedClosingBalanceOverride.trim() === "" ? undefined : reportedClosing,
     periodStart: publishedClient.periodStart || undefined,
     periodEnd: publishedClient.periodEnd || undefined,
   }), [hasTotalsOverride, publishedClient.opening, publishedClient.periodEnd, publishedClient.periodStart, publishedTotalCreditOverride, publishedTotalDebitOverride, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementRows]);
@@ -473,7 +476,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [publishedClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, publishedYcbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -523,6 +526,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
     setPublishedTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
     setPublishedTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
+    setPublishedClosingBalanceOverride(typeof payload.closingBalanceOverride === "string" ? payload.closingBalanceOverride : "");
     setPublishedStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
     setPublishedDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both");
     setPublishedFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
@@ -535,6 +539,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setAppliedTransactions(Array.isArray(payload.appliedTransactions) ? payload.appliedTransactions : []);
     setTotalCreditOverride(typeof payload.totalCreditOverride === "string" ? payload.totalCreditOverride : "");
     setTotalDebitOverride(typeof payload.totalDebitOverride === "string" ? payload.totalDebitOverride : "");
+    setClosingBalanceOverride(typeof payload.closingBalanceOverride === "string" ? payload.closingBalanceOverride : "");
     setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
     setFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
@@ -617,11 +622,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setAppliedTransactions([]);
     setTotalCreditOverride("");
     setTotalDebitOverride("");
+    setClosingBalanceOverride("");
     setStatementReferenceOverride("");
     setFastHighlightColors({});
     setFastMinimumDeposit("");
     setPublishedTotalCreditOverride("");
     setPublishedTotalDebitOverride("");
+    setPublishedClosingBalanceOverride("");
     setPublishedStatementReferenceOverride("");
     setPublishedDateOfBirthPlacement("both");
     setPublishedFastHighlightColors({});
@@ -651,7 +658,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
       if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
-      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
+      setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setClosingBalanceOverride(payload.closingBalanceOverride || ""); setPublishedClosingBalanceOverride(payload.closingBalanceOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
       setSelectedHistoryId(null);
     }
   }, [getHistoryQuery.data, selectedHistoryId]);
@@ -822,6 +829,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       if (importedProfile.openingBalance) updateClient("opening", importedProfile.openingBalance);
       if (importedProfile.totalCredit) setTotalCreditOverride(importedProfile.totalCredit);
       if (importedProfile.totalDebit) setTotalDebitOverride(importedProfile.totalDebit);
+      if (importedProfile.closingBalance) setClosingBalanceOverride(importedProfile.closingBalance);
       const nextRows = matrix.slice(discovery.headerRowIndex + 1);
       setColumnMap(discovery.map);
       setMappedFields(discovery.mappedFields);
@@ -979,6 +987,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setPublishedYcbClient({ ...ycbClient });
     setPublishedTotalCreditOverride(totalCreditOverride);
     setPublishedTotalDebitOverride(totalDebitOverride);
+    setPublishedClosingBalanceOverride(closingBalanceOverride);
     setPublishedStatementReferenceOverride(statementReferenceOverride);
     setPublishedDateOfBirthPlacement(dateOfBirthPlacement);
     setPublishedFastHighlightColors({ ...fastHighlightColors });
@@ -1225,7 +1234,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>الرصيد الافتتاحي / Opening Balance<input inputMode="decimal" dir="ltr" value={client.opening} onChange={(event) => updateClient("opening", event.target.value)} /></label>
             <label>إجمالي الإيداع / Total Credit <span className="field-note">قابل للتعديل / Editable</span><input aria-label="Total credit (editable)" inputMode="decimal" dir="ltr" value={totalCreditOverride} placeholder={formatMoney(totalCredit)} onChange={(event) => setTotalCreditOverride(event.target.value)} /></label>
-            <label>إجمالي السحب / Total Debit <span className="field-note">قابل للتعديل / Editable</span><input aria-label="Total debit (editable)" inputMode="decimal" dir="ltr" value={totalDebitOverride} placeholder={formatMoney(totalDebit)} onChange={(event) => setTotalDebitOverride(event.target.value)} /></label>
+            <label>إجمالي السحب / Total Debit <span className="field-note">قابل للتعديل / Editable</span><input aria-label="Total debit (editable)" inputMode="decimal" dir="ltr" value={totalDebitOverride} placeholder={formatMoney(totalDebit)} onChange={(event) => setTotalDebitOverride(event.target.value)} /></label><label>الرصيد الختامي / Closing Balance <span className="field-note">من Excel أو محسوب تلقائيًا / Excel or automatic</span><input aria-label="Closing balance (editable)" inputMode="decimal" dir="ltr" value={closingBalanceOverride} placeholder={formatMoney(calculatedClosing)} onChange={(event) => setClosingBalanceOverride(event.target.value)} /></label>
             <div className="computed-field"><span>الإيداع المعتمد / Reported Credit</span><strong>{formatMoney(reportedTotalCredit)}</strong><small>{totalCreditOverride.trim() ? "تعديل يدوي / Manual override" : "من الحركات المقبولة / From accepted transactions"}</small></div>
             <div className="computed-field"><span>السحب المعتمد / Reported Debit</span><strong>{formatMoney(reportedTotalDebit)}</strong><small>{totalDebitOverride.trim() ? "تعديل يدوي / Manual override" : "من الحركات المقبولة / From accepted transactions"}</small></div>
             <div className="computed-field"><span>الرصيد الختامي / Closing Balance</span><strong>{formatMoney(reportedClosing)}</strong></div>
