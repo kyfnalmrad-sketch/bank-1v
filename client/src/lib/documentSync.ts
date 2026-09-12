@@ -227,7 +227,7 @@ export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
   const core = [
     "V2",
     "B=YCB",
-    "D=S",
+    "D=T",
     `R=${compactCodeText(input.statementReference, 24)}`,
     `P=${input.pageNumber}/${input.pageCount}`,
     `F=${compactCodeText(input.firstReference, 12)}-${compactCodeText(input.lastReference, 12)}`,
