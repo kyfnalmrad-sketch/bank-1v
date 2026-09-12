@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowRight, FileText, LockKeyhole, Printer, Save, UnlockKeyhole } from "lucide-react";
+import QRCode from "qrcode";
 import { openPrintWindow } from "@/lib/printDocument";
+import { buildYcbCertificateQrPayload } from "@/lib/documentSync";
 import { ycbOfficialCertificateTemplate } from "@/lib/ycbOfficialCertificateTemplate";
 
 export type YcbClient = {
@@ -34,7 +36,7 @@ function currencyWords(currency: string) {
   return ({ YER: "Yemeni Rials", USD: "US Dollars", SAR: "Saudi Riyals" } as Record<string, string>)[currency] || currency;
 }
 
-export function renderYcbCertificateHtml(client: YcbClient) {
+export function renderYcbCertificateHtml(client: YcbClient, qrUri = "/assets/ycb-certificate-qr.png") {
   const issueDate = new Date(client.issueDate);
   const hijriDate = Number.isNaN(issueDate.getTime()) ? "PENDING" : new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-arab", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(issueDate);
   const values: Record<string, string> = {
@@ -56,7 +58,7 @@ export function renderYcbCertificateHtml(client: YcbClient) {
   };
   let html = ycbOfficialCertificateTemplate
     .replaceAll("ycb-official-letterhead.png", "/assets/ycb-official-letterhead.png")
-    .replaceAll("ycb-certificate-qr.png", "/assets/ycb-certificate-qr.png")
+    .replaceAll("ycb-certificate-qr.png", qrUri)
     .replace("<div><b>Reference:</b> 4119</div>", client.referenceNumber.trim() ? `<div><b>Reference:</b> ${escapeHtml(client.referenceNumber)}</div>` : "")
     .replace("<div><b>DATE:</b> 07 AUG 2025</div>", `<div><b>DATE:</b> ${escapeHtml(client.issueDate || "PENDING")}</div>`);
   for (const [placeholder, value] of Object.entries(values)) {
@@ -79,7 +81,15 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
   const [preview, setPreview] = useState(false);
   const [lockedFields, setLockedFields] = useState<Record<LockedField, boolean>>({ customerServiceName: false, branchManagerName: false });
   const [defaultMessage, setDefaultMessage] = useState("");
-  const html = useMemo(() => renderYcbCertificateHtml(client), [client]);
+  const [certificateQr, setCertificateQr] = useState("/assets/ycb-certificate-qr.png");
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(buildYcbCertificateQrPayload({ customerName: client.name, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, balance: client.opening, referenceNumber: client.referenceNumber, issueDate: client.issueDate }), { width: 260, margin: 2, errorCorrectionLevel: "M", color: { dark: "#172a63", light: "#ffffff" } })
+      .then((source) => { if (!cancelled) setCertificateQr(source); })
+      .catch(() => { if (!cancelled) setCertificateQr("/assets/ycb-certificate-qr.png"); });
+    return () => { cancelled = true; };
+  }, [client.accountNumber, client.accountType, client.currency, client.issueDate, client.name, client.opening, client.referenceNumber]);
+  const html = useMemo(() => renderYcbCertificateHtml(client, certificateQr), [certificateQr, client]);
 
   useEffect(() => {
     const defaults = readDefaults();

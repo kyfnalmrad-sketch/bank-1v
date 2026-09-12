@@ -135,6 +135,27 @@ export function buildVerificationQrPayload(input: VerificationQrInput) {
     `L=${qrMoney(input.closing)}`,
   ].join("|");
 }
+export type YcbCertificateQrInput = {
+  customerName?: string;
+  accountNumber?: string;
+  accountType?: string;
+  currency?: string;
+  balance?: number | string;
+  referenceNumber?: string;
+  issueDate?: string;
+};
+/** Official, compact YCB certificate QR payload; contains only fields printed on the certificate. */
+export function buildYcbCertificateQrPayload(input: YcbCertificateQrInput) {
+  const core = [
+    "V2|B=YCB|D=C",
+    `N=${compactPersonName(input.customerName)}`,
+    `A=${compactCodeText(input.accountNumber, 16)}`,
+    `R=${compactCodeText(input.referenceNumber, 20)}`,
+    `I=${compactCodeText(input.issueDate, 10)}`,
+    `L=${compactCodeText(String(input.balance ?? "0"), 16)}${compactCodeText(input.currency, 4)}`,
+  ].join("|");
+  return `${core}|C=${verificationChecksum(core)}`;
+}
 export type TadhamonStatementQrInput = {
   customerName?: string;
   dateOfBirth?: string;
