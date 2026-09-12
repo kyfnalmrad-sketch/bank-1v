@@ -440,7 +440,19 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     balance: row.balance,
     highlightColor: row.highlightColor,
   })), [statementRows]);
-  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
+  const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml({
+    ...ycbClient,
+    name: documentClient.name,
+    passport: documentClient.passport,
+    branch: documentClient.branch,
+    customerSince: documentClient.customerSince,
+    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? documentClient.dateOfBirth : "",
+    accountNumber: documentClient.accountNumber,
+    accountType: documentClient.accountType,
+    currency: documentClient.currency,
+    opening: String(reportedClosing),
+    issueDate: documentPrintDate,
+  }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
     qrUri: statusQrSource || "/assets/tadhamon-official-qr-documentClient.png",

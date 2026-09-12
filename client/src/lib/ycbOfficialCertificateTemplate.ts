@@ -20,7 +20,7 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .title{text-align:center;font-size:18pt;font-weight:700;letter-spacing:.2px;text-transform:uppercase;text-decoration:underline;text-decoration-thickness:1.2pt;text-underline-offset:2.2pt;margin:9mm 0 12mm;padding:0}
 .body{width:182mm;margin:0 auto;font-size:18pt;font-weight:400;line-height:1.5;text-align:justify;color:#151b29;word-break:normal;overflow-wrap:normal;hyphens:none}
 .body p{margin:0 0 10mm}
-.body .strong{font-size:18pt;font-weight:700}
+.body .strong{font-size:18pt;font-weight:700}.body p .strong{white-space:nowrap;display:inline-block}
 .disclaimer{font-size:10.5pt!important;line-height:1.42!important;margin:0 auto!important;color:#a30000;text-align:center}
 .closing{font-size:16pt;font-weight:700;text-align:center;margin-top:clamp(8mm,2.5vw,11mm);color:#151b29}
 .signatures{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:clamp(16mm,6vw,24mm);margin:clamp(8mm,2.5vw,12mm) 0 0;position:relative;z-index:2}
