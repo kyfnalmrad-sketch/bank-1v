@@ -2,7 +2,7 @@
  * Design reference: mirror the Prototype 0.5.1 workflow and palette.
  * This web shell uses only original reference assets; it does not alter PDF templates.
  */
-import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { ChangeEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
 import bwipjs from "bwip-js/browser";
@@ -315,23 +315,24 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const deleteHistoryMutation = trpc.staging.deleteHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ deleted: false }) };
   const [editingHistoryId, setEditingHistoryId] = useState<number | null>(null);
 
-  const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(client.opening)), [appliedTransactions, client.opening]);
+  const documentClient = useDeferredValue(client);
+  const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(documentClient.opening)), [appliedTransactions, documentClient.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
   const reportedTotalCredit = totalCreditOverride.trim() === "" ? totalCredit : money(totalCreditOverride);
   const reportedTotalDebit = totalDebitOverride.trim() === "" ? totalDebit : money(totalDebitOverride);
   const hasTotalsOverride = totalCreditOverride.trim() !== "" || totalDebitOverride.trim() !== "";
-  const calculatedClosing = hasTotalsOverride ? money(client.opening) + reportedTotalCredit - reportedTotalDebit : closing;
+  const calculatedClosing = hasTotalsOverride ? money(documentClient.opening) + reportedTotalCredit - reportedTotalDebit : closing;
   const reportedClosing = closingBalanceOverride.trim() === "" ? calculatedClosing : money(closingBalanceOverride);
   const financialAudit = useMemo(() => auditFinancialStatement({
-    openingBalance: money(client.opening),
+    openingBalance: money(documentClient.opening),
     rows: statementRows.map((row) => ({ rowNumber: row.rowNumber, date: row.date, operationNumber: row.operationNumber, description: row.description, debit: row.debit, credit: row.credit, balance: row.balance })),
     printedCredit: totalCreditOverride.trim() === "" ? undefined : reportedTotalCredit,
     printedDebit: totalDebitOverride.trim() === "" ? undefined : reportedTotalDebit,
     printedClosing: closingBalanceOverride.trim() === "" ? undefined : reportedClosing,
-    periodStart: client.periodStart || undefined,
-    periodEnd: client.periodEnd || undefined,
-    printDate: client.printDate || undefined,
-  }), [client.opening, client.periodEnd, client.periodStart, hasTotalsOverride, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementRows, totalCreditOverride, totalDebitOverride]);
+    periodStart: documentClient.periodStart || undefined,
+    periodEnd: documentClient.periodEnd || undefined,
+    printDate: documentClient.printDate || undefined,
+  }), [documentClient.opening, documentClient.periodEnd, documentClient.periodStart, hasTotalsOverride, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementRows, totalCreditOverride, totalDebitOverride]);
   const draftRejectedRows = useMemo(() => transactions.filter((item) => item.rejected), [transactions]);
   const uniquePeopleCount = useMemo(() => new Set(acceptedRows.map((row) => row.personName || row.description.trim()).filter(Boolean)).size, [acceptedRows]);
   const duplicatePeopleCount = Math.max(0, acceptedRows.length - uniquePeopleCount);
@@ -343,31 +344,31 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     return Array.from(counts.entries()).slice(-14);
   }, [acceptedRows]);
   const tabWarnings = [
-    !client.name || (selectedBank === "ycb" ? !client.accountNumber : !client.momaizNo) ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
+    !documentClient.name || (selectedBank === "ycb" ? !documentClient.accountNumber : !documentClient.momaizNo) ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
     rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
     financialAudit.issues.length > 0 ? `تدقيق مالي: يوجد فرق أو عملية تحتاج مراجعة (${financialAudit.issues.length}) / Financial audit requires review` : "",
   ].filter(Boolean);
   const generatedStatementReference = useMemo(() => bankStatementReference(
     selectedBank || "karimi",
-    client.accountNumber || client.momaizNo,
-    client.name,
+    documentClient.accountNumber || documentClient.momaizNo,
+    documentClient.name,
     statementRows.at(-1)?.operationNumber || "",
-  ), [client.accountNumber, client.momaizNo, client.name, selectedBank, statementRows]);
-  const internalStatementReference = useMemo(() => generatedStatementReference || statementReferenceFromTransactions(appliedTransactions, client.accountNumber || client.momaizNo), [appliedTransactions, client.accountNumber, client.momaizNo, generatedStatementReference]);
+  ), [documentClient.accountNumber, documentClient.momaizNo, documentClient.name, selectedBank, statementRows]);
+  const internalStatementReference = useMemo(() => generatedStatementReference || statementReferenceFromTransactions(appliedTransactions, documentClient.accountNumber || documentClient.momaizNo), [appliedTransactions, documentClient.accountNumber, documentClient.momaizNo, generatedStatementReference]);
   const excelStatementReference = useMemo(() => appliedTransactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [appliedTransactions]);
   const statementReference = statementReferenceOverride.trim() || internalStatementReference;
   const visibleMappedFields = useMemo(() => mappedFields.filter((field) => referenceSource === "excel" || field.key !== "reference"), [mappedFields, referenceSource]);
   const firstTransactionDate = acceptedRows.find((transaction) => transaction.date)?.date || "";
   const lastTransactionDate = [...acceptedRows].reverse().find((transaction) => transaction.date)?.date || "";
-  const issueDate = client.issueDate || lastTransactionDate || firstTransactionDate || "PENDING";
-  const periodStart = client.periodStart || firstTransactionDate || "PENDING";
-  const periodEnd = client.periodEnd || lastTransactionDate || issueDate;
+  const issueDate = documentClient.issueDate || lastTransactionDate || firstTransactionDate || "PENDING";
+  const periodStart = documentClient.periodStart || firstTransactionDate || "PENDING";
+  const periodEnd = documentClient.periodEnd || lastTransactionDate || issueDate;
   const documentIssueDate = displayStatementDate(issueDate);
-  const documentPrintDate = displayStatementDate(client.printDate || issueDate);
+  const documentPrintDate = displayStatementDate(documentClient.printDate || issueDate);
   const documentPeriodStart = displayStatementDate(periodStart);
   const documentPeriodEnd = displayStatementDate(periodEnd);
-  const printDateValue = client.printDate || todayIsoDate();
+  const printDateValue = documentClient.printDate || todayIsoDate();
   const printDateDay = new Date(`${printDateValue}T12:00:00`).getDay();
   const isPrintHoliday = printDateDay === 4 || printDateDay === 5;
   const printHolidayLabel = printDateDay === 4 ? "الخميس" : "الجمعة";
@@ -380,30 +381,30 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       creditCount: rows.filter((row) => row.credit > 0).length,
       totalDebit: rows.reduce((sum, row) => sum + row.debit, 0),
       totalCredit: rows.reduce((sum, row) => sum + row.credit, 0),
-      openingBalance: previousRow?.balance ?? money(client.opening),
-      closingBalance: rows.at(-1)?.balance ?? previousRow?.balance ?? money(client.opening),
+      openingBalance: previousRow?.balance ?? money(documentClient.opening),
+      closingBalance: rows.at(-1)?.balance ?? previousRow?.balance ?? money(documentClient.opening),
       firstReference: rows.at(0)?.operationNumber || "",
       lastReference: rows.at(-1)?.operationNumber || "",
     };
-  }), [client.opening, statementPageGroups]);
+  }), [documentClient.opening, statementPageGroups]);
   const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
-    customerName: client.name,
-    passport: client.passport,
+    customerName: documentClient.name,
+    passport: documentClient.passport,
     address: ycbClient.address,
     dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? ycbClient.dateOfBirth : "",
-    branchName: client.branch,
-    accountNumber: client.accountNumber,
-    accountType: client.accountType,
-    currency: client.currency,
+    branchName: documentClient.branch,
+    accountNumber: documentClient.accountNumber,
+    accountType: documentClient.accountType,
+    currency: documentClient.currency,
     periodStart: documentPeriodStart,
     periodEnd: documentPeriodEnd,
     statementReference,
-    openingBalance: money(client.opening),
+    openingBalance: money(documentClient.opening),
     closingBalance: reportedClosing,
     totalCredit: reportedTotalCredit,
     totalDebit: reportedTotalDebit,
     issueDate: documentPrintDate,
-  }), [client.accountNumber, client.accountType, client.branch, client.currency, client.name, client.opening, client.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
+  }), [documentClient.accountNumber, documentClient.accountType, documentClient.branch, documentClient.currency, documentClient.name, documentClient.opening, documentClient.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
     reference: row.operationNumber,
@@ -416,30 +417,30 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml(dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? ycbClient : { ...ycbClient, dateOfBirth: "" }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
-    qrUri: statusQrSource || "/assets/tadhamon-official-qr-client.png",
+    qrUri: statusQrSource || "/assets/tadhamon-official-qr-documentClient.png",
     qrLogoUri: referenceAssets.qrBrandLogo,
-    customerName: client.name,
-    momaizNo: client.momaizNo,
-    passport: client.passport,
-    dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth),
-    placeOfBirth: client.placeOfBirth,
-    customerSince: formatEnglishGregorianDate(client.customerSince),
-    accountType: client.accountType,
-    accountNumber: client.accountNumber,
-    branchName: client.branch,
-    currency: client.currency,
-    opening: money(client.opening),
+    customerName: documentClient.name,
+    momaizNo: documentClient.momaizNo,
+    passport: documentClient.passport,
+    dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth),
+    placeOfBirth: documentClient.placeOfBirth,
+    customerSince: formatEnglishGregorianDate(documentClient.customerSince),
+    accountType: documentClient.accountType,
+    accountNumber: documentClient.accountNumber,
+    branchName: documentClient.branch,
+    currency: documentClient.currency,
+    opening: money(documentClient.opening),
     credit: reportedTotalCredit,
     debit: reportedTotalDebit,
     closing: reportedClosing,
-    issueDate: formatEnglishGregorianDate(client.printDate || issueDate),
+    issueDate: formatEnglishGregorianDate(documentClient.printDate || issueDate),
     issueDateHijri: formatHijriDate(issueDate),
-    printTime: formatMorningTime(client.printTime),
-    correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
+    printTime: formatMorningTime(documentClient.printTime),
+    correspondenceDate: formatEnglishGregorianDate(documentClient.correspondenceDate),
     periodStart: documentPeriodStart,
     periodEnd: documentPeriodEnd,
-    employeeName: client.employeeName,
-    managerName: client.managerName,
+    employeeName: documentClient.employeeName,
+    managerName: documentClient.managerName,
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }) : renderAccountStatusPreview({
@@ -447,29 +448,29 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     bankName: undefined,
     qrUri: statusQrSource || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
-    customerName: client.name,
-    momaizNo: client.momaizNo,
-    passport: client.passport,
-    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
-    customerSince: formatEnglishGregorianDate(client.customerSince),
-    accountType: client.accountType,
-    accountNumber: client.accountNumber,
-    branchName: client.branch,
-    currency: client.currency,
-    opening: money(client.opening),
+    customerName: documentClient.name,
+    momaizNo: documentClient.momaizNo,
+    passport: documentClient.passport,
+    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(documentClient.dateOfBirth) : "",
+    customerSince: formatEnglishGregorianDate(documentClient.customerSince),
+    accountType: documentClient.accountType,
+    accountNumber: documentClient.accountNumber,
+    branchName: documentClient.branch,
+    currency: documentClient.currency,
+    opening: money(documentClient.opening),
     credit: reportedTotalCredit,
     debit: reportedTotalDebit,
     closing: reportedClosing,
-    issueDate: formatEnglishGregorianDate(client.printDate || issueDate),
+    issueDate: formatEnglishGregorianDate(documentClient.printDate || issueDate),
     issueDateHijri: formatHijriDate(issueDate),
-    printTime: formatMorningTime(client.printTime),
-    correspondenceDate: formatEnglishGregorianDate(client.correspondenceDate),
-    employeeName: client.employeeName,
-    managerName: client.managerName,
+    printTime: formatMorningTime(documentClient.printTime),
+    correspondenceDate: formatEnglishGregorianDate(documentClient.correspondenceDate),
+    employeeName: documentClient.employeeName,
+    managerName: documentClient.managerName,
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
-  }), [client, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", documentClient, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, documentClient, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -554,8 +555,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const saveStatementHistory = async (payloadOverride?: SnapshotPayload) => {
-    const title = `${client.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
-    const input = { title, reference: statementReference, customerName: client.name, accountNumber: client.accountNumber, payload: payloadOverride || snapshotPayload };
+    const title = `${documentClient.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
+    const input = { title, reference: statementReference, customerName: documentClient.name, accountNumber: documentClient.accountNumber, payload: payloadOverride || snapshotPayload };
     try {
       if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input, workspaceKey });
       else await createHistoryMutation.mutateAsync({ ...input, workspaceKey });
@@ -644,13 +645,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     headerUri: referenceAssets.headerStrip,
     qrUri: statementQrSources[pageIndex] || referenceAssets.qrLogo,
     qrLogoUri: referenceAssets.qrBrandLogo,
-    customerName: client.name,
-    dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
+    customerName: documentClient.name,
+    dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(documentClient.dateOfBirth) : "",
     includeBranch,
-    accountNumber: client.accountNumber,
-    momaizNo: client.momaizNo,
-    branchName: client.branch,
-    currency: client.currency,
+    accountNumber: documentClient.accountNumber,
+    momaizNo: documentClient.momaizNo,
+    branchName: documentClient.branch,
+    currency: documentClient.currency,
     issueDate: documentPrintDate,
     periodStart: documentPeriodStart,
     periodEnd: documentPeriodEnd,
@@ -662,17 +663,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
     pageSummary: statementPageSummaries[pageIndex],
       transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  })), [barcodeSources, client, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
+  })), [barcodeSources, documentClient, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
     let cancelled = false;
     const firstSummary = statementPageSummaries[0];
-    const statusPayload = buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", documentType: "status", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(client.opening), currency: client.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(client.printDate || issueDate), issueDateHijri: formatHijriDate(issueDate) });
+    const statusPayload = buildVerificationQrPayload({ bankName: selectedBank === "ycb" ? "YEMEN COMMERCIAL BANK" : selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", documentType: "status", reference: statementReference, accountNumber: documentClient.accountNumber, customerName: documentClient.name, pageNumber: 1, pageCount: 1, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: firstSummary?.firstReference, lastReference: statementPageSummaries.at(-1)?.lastReference, transactionCount: acceptedRows.length, debitCount: acceptedRows.filter((row) => row.debit > 0).length, creditCount: acceptedRows.filter((row) => row.credit > 0).length, totalDebit: reportedTotalDebit, totalCredit: reportedTotalCredit, openingBalance: money(documentClient.opening), currency: documentClient.currency, closing: reportedClosing, issueDate: formatEnglishGregorianDate(documentClient.printDate || issueDate), issueDateHijri: formatHijriDate(issueDate) });
     QRCode.toDataURL(statusPayload, { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })
       .then((source) => { if (!cancelled) setStatusQrSource(source); })
       .catch(() => { if (!cancelled) setStatusQrSource(""); });
     return () => { cancelled = true; };
-  }, [acceptedRows, client.accountNumber, client.currency, client.name, client.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementPageSummaries, statementReference]);
+  }, [acceptedRows, documentClient.accountNumber, documentClient.currency, documentClient.name, documentClient.opening, documentIssueDate, documentPeriodEnd, documentPeriodStart, issueDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementPageSummaries, statementReference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -680,12 +681,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const ycbSources = Promise.all(ycbStatementTransactions.length ? statementPageGroups.map((rows, pageIndex) => QRCode.toDataURL(buildYcbStatementQrPayload(buildInput(ycbStatementTransactions.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE), pageIndex + 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })) : [QRCode.toDataURL(buildYcbStatementQrPayload(buildInput([], 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } })]);
     const legacySources = Promise.all(statementPageSummaries.map((summary, pageIndex) => QRCode.toDataURL(
       selectedBank === "tadhamon"
-        ? buildTadhamonStatementQrPayload({ customerName: client.name, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), address: client.address, placeOfBirth: client.placeOfBirth, accountNumber: client.accountNumber, branchName: client.branch, currency: client.currency, statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd })
-        : buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: client.accountNumber, customerName: client.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(client.opening), currency: client.currency, closing: summary.closingBalance, issueDate: documentPrintDate }),
+        ? buildTadhamonStatementQrPayload({ customerName: documentClient.name, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, accountNumber: documentClient.accountNumber, branchName: documentClient.branch, currency: documentClient.currency, statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd })
+        : buildVerificationQrPayload({ bankName: "KURAIMI ISLAMIC BANK", documentType: "statement", reference: statementReference, accountNumber: documentClient.accountNumber, customerName: documentClient.name, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, firstReference: summary.firstReference, lastReference: summary.lastReference, transactionCount: statementPageGroups[pageIndex].length, debitCount: summary.debitCount, creditCount: summary.creditCount, totalDebit: summary.totalDebit, totalCredit: summary.totalCredit, openingBalance: money(documentClient.opening), currency: documentClient.currency, closing: summary.closingBalance, issueDate: documentPrintDate }),
       { width: 420, margin: 2, errorCorrectionLevel: "H", color: { dark: "#6b5297", light: "#ffffff" } })));
     (selectedBank === "ycb" ? ycbSources : legacySources).then((sources) => { if (!cancelled) setStatementQrSources(sources); }).catch(() => { if (!cancelled) setStatementQrSources([]); });
     return () => { cancelled = true; };
-  }, [client.accountNumber, client.currency, client.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementReference, ycbStatementProfile, ycbStatementTransactions]);
+  }, [documentClient.accountNumber, documentClient.currency, documentClient.name, documentIssueDate, documentPeriodEnd, documentPeriodStart, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementReference, ycbStatementProfile, ycbStatementTransactions]);
 
   useEffect(() => {
     const values = selectedBank === "ycb"
@@ -859,26 +860,26 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const tadhamonStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
     const profile: YcbStatementProfile = {
-      customerName: client.name, passport: client.passport, address: client.address,
-      placeOfBirth: client.placeOfBirth,
-      dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(client.dateOfBirth) : "",
-      branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType,
-      currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
-      statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing,
+      customerName: documentClient.name, passport: documentClient.passport, address: documentClient.address,
+      placeOfBirth: documentClient.placeOfBirth,
+      dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(documentClient.dateOfBirth) : "",
+      branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType,
+      currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd,
+      statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing,
       totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate,
-      printTime: formatMorningTime(client.printTime),
+      printTime: formatMorningTime(documentClient.printTime),
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
     const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
     return assemblePrintableStatementHtml(renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights));
-  }, [barcodeSources, client, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
+  }, [barcodeSources, documentClient, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const tadhamonFastStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
-    const profile = { customerName: client.name, passport: client.momaizNo || client.passport, address: client.address, placeOfBirth: client.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(client.dateOfBirth), branchName: client.branch, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(client.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: client.customerSince, holderNameAr: client.name, statementTime: formatMorningTime(client.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
+    const profile = { customerName: documentClient.name, passport: documentClient.momaizNo || documentClient.passport, address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType, currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: documentClient.customerSince, holderNameAr: documentClient.name, statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
     const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: fastHighlightColors[row.rowNumber] || "#ffed00" }));
     const fastHighlights = Object.fromEntries(rows.filter((row) => row.highlightColor && row.highlightColor.toLowerCase() !== "#ffed00").map((row) => [row.reference, row.highlightColor as string]));
     return renderTadhamonFastStatementPages(profile, rows, fastHighlights);
-  }, [barcodeSources, client, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors]);
+  }, [barcodeSources, documentClient, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
