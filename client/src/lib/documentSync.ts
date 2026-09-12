@@ -126,24 +126,14 @@ function verificationChecksum(value: string) {
 
 export function buildVerificationQrPayload(input: VerificationQrInput) {
   const typeLabel = input.documentType === "status" ? "S" : "T";
-  const fields = [
+  return [
     `V2|B=${bankCode(input.bankName)}|D=${typeLabel}`,
     `P=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
     `N=${compactPersonName(input.customerName)}`,
-    `A=${compactCodeText(input.accountNumber, 20)}`,
-    `R=${compactCodeText(input.reference, 24)}`,
-    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
-    `O=${qrMoney(input.openingBalance)}|L=${qrMoney(input.closing)}`,
-  ];
-  if (input.firstReference || input.lastReference)
-    fields.push(
-      `F=${compactCodeText(input.firstReference, 14)}-${compactCodeText(input.lastReference, 14)}`
-    );
-  if (input.documentType === "status") {
-    const hijriDate = formatHijriForQr(input.issueDateHijri);
-    if (hijriDate) fields.push(`H=${compactCodeText(hijriDate, 20)}`);
-  }
-  return fields.join("|");
+    `A=${compactCodeText(input.accountNumber, 16)}`,
+    `R=${compactCodeText(input.reference, 20)}`,
+    `L=${qrMoney(input.closing)}`,
+  ].join("|");
 }
 export type TadhamonStatementQrInput = {
   customerName?: string;
@@ -168,9 +158,8 @@ export function buildTadhamonStatementQrPayload(
     "V2|B=TAD|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
     `N=${compactPersonName(input.customerName)}`,
-    `A=${compactCodeText(input.accountNumber, 20)}`,
-    `R=${compactCodeText(input.statementReference, 24)}`,
-    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
+    `A=${compactCodeText(input.accountNumber, 16)}`,
+    `R=${compactCodeText(input.statementReference, 20)}`,
   ].join("|");
 }
 export function buildVerificationBarcodePayload(
@@ -215,11 +204,9 @@ export function buildYcbStatementQrPayload(input: YcbStatementCodeInput) {
     "V2|B=YCB|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
     `N=${compactPersonName(input.customerName)}`,
-    `A=${compactCodeText(input.accountNumber, 20)}`,
-    `R=${compactCodeText(input.statementReference, 24)}`,
-    `T=${compactCodeText(input.periodStart, 10)}-${compactCodeText(input.periodEnd, 10)}`,
-    `F=${compactCodeText(input.firstReference, 14)}-${compactCodeText(input.lastReference, 14)}`,
-    `O=${qrMoney(input.openingBalance)}|L=${qrMoney(input.closingBalance)}`,
+    `A=${compactCodeText(input.accountNumber, 16)}`,
+    `R=${compactCodeText(input.statementReference, 20)}`,
+    `L=${qrMoney(input.closingBalance)}`,
   ].join("|");
 }
 /** YCB linear/PDF417 barcode: compact references and page reconciliation data. */

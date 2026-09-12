@@ -73,11 +73,11 @@ describe("applied transaction register synchronization", () => {
     });
     expect(payload).toContain("V2|B=KIB|D=T");
     expect(payload).toContain("P=1/1");
-    expect(payload).toContain("O=50.00|L=125.00");
-    expect(payload).toContain("F=FT260804ABC-FT260805DEF");
-    expect(payload).toContain("R=BAK-ACCT-20260804-0001");
+    expect(payload).toContain("L=125.00");
+    expect(payload).not.toContain("F=");
+    expect(payload).toContain("R=BAK-ACCT-20260804-00");
     expect(payload).toContain("N=Client");
-    expect(payload.length).toBeLessThan(240);
+    expect(payload.length).toBeLessThan(180);
     expect(payload).not.toContain("٢٢ محرم");
     const statusPayload = buildVerificationQrPayload({
       reference: "BAK-ACCT-20260804-0001",
@@ -102,7 +102,6 @@ describe("applied transaction register synchronization", () => {
     expect(statusPayload).toContain("B=KIB");
     expect(statusPayload).not.toContain("TRAINING");
     expect(statusPayload).toContain("V2|B=KIB|D=S");
-    expect(statusPayload).toContain("H=22-Muharram-1448-AH");
     const barcode = buildVerificationBarcodePayload(
       "BAK-ACCT-20260804-0001",
       1,
@@ -165,8 +164,8 @@ describe("applied transaction register synchronization", () => {
     const qr = buildYcbStatementQrPayload(input);
     const barcode = buildYcbStatementBarcodePayload(input);
     expect(qr).toContain("N=Ahmed Al-Qahtani");
-    expect(qr).toContain("F=0379297-0379302");
-    expect(qr).toContain("O=15283.00|L=19915.00");
+    expect(qr).not.toContain("F=");
+    expect(qr).toContain("L=19915.00");
     expect(barcode).toContain("V2|B=YCB|D=T|R=YCB-2026-001|P=1/2");
     expect(barcode).toContain("F=0379297-0379302|L=19915.00");
     expect(barcode).not.toContain("N=Ahmed Al-Qahtani");
