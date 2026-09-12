@@ -8,7 +8,6 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/\"/g, "&quot;")
   .replace(/'/g, "&#39;");
 const money = (value: number | undefined) => Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentAdenTime = () => new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Aden" }).format(new Date()).replace(/PM$/, "AM");
 
 const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   const safeHighlight = Number(item.credit || 0) > 0 ? "#dff3e3" : "";
@@ -30,7 +29,7 @@ export function renderOriginalTadhamonStatementPage(profile: YcbStatementProfile
     .replace("24-Jun-2025", escapeHtml(profile.periodEnd))
     .replace(/(<b>Currency:<\/b>\s*)USD(\s*&nbsp;\s*&nbsp;\s*<b>Page:<\/b>\s*)1 of 1/, `$1${escapeHtml(profile.currency)}$2${pageNumber} of ${pageCount}`)
     .replace(/id="print-date">[^<]*/, `id="print-date">${escapeHtml(profile.issueDate)}`)
-    .replace(/id="print-time">[^<]*/, `id="print-time">${escapeHtml(profile.printTime || currentAdenTime())}`)
+    .replace(/id="print-time">[^<]*/, `id="print-time">${escapeHtml(profile.printTime || "")}`)
     .replace("3,500.00", money(profile.openingBalance))
     .replace("13,548.00", money(profile.totalCredit))
     .replace("5,600.00", money(profile.totalDebit))
