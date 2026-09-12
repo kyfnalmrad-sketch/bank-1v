@@ -10,6 +10,7 @@ const client = {
   branch: "Sana’a Main Branch",
   customerSince: "15/01/2020",
   dateOfBirth: "1988-04-12",
+  placeOfBirth: "Sana'a, Yemen",
   accountNumber: "YCB-0045827319",
   accountType: "Current Account",
   currency: "YER",

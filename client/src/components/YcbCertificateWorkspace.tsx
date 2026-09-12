@@ -4,7 +4,7 @@ import { openPrintWindow } from "@/lib/printDocument";
 import { ycbOfficialCertificateTemplate } from "@/lib/ycbOfficialCertificateTemplate";
 
 export type YcbClient = {
-  name: string; passport: string; branch: string; customerSince: string; dateOfBirth: string;
+  name: string; passport: string; branch: string; customerSince: string; dateOfBirth: string; placeOfBirth: string;
   accountNumber: string; accountType: string; currency: string; opening: string; issueDate: string;
   referenceNumber: string; customerServiceName: string; branchManagerName: string; periodStart?: string; periodEnd?: string;
 };
@@ -43,7 +43,7 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     "[ACCOUNT_NUMBER]": client.accountNumber,
     "[PASSPORT_LINE]": client.passport ? `, holder of Passport No. ${client.passport}` : "",
     "[BIRTH_DATE_LINE]": client.dateOfBirth ? `, born on ${formatOptionalDate(client.dateOfBirth)}` : "",
-    "[BIRTH_SENTENCE]": client.dateOfBirth ? ` The account holder was born on <span class="strong">${escapeHtml(formatOptionalDate(client.dateOfBirth))}</span>.` : "",
+    "[BIRTH_SENTENCE]": client.dateOfBirth ? ` The account holder was born on <span class="strong">${escapeHtml(formatOptionalDate(client.dateOfBirth))}</span>${client.placeOfBirth.trim() ? ` in <span class="strong">${escapeHtml(client.placeOfBirth)}</span>` : ""}.` : "",
     "[PERIOD_SENTENCE]": client.periodStart && client.periodEnd ? ` This statement covers the account history for the period from <span class="strong">${escapeHtml(formatOptionalDate(client.periodStart))}</span> to <span class="strong">${escapeHtml(formatOptionalDate(client.periodEnd))}</span>.` : "",
     "[CUSTOMER_SINCE_LINE]": client.customerSince.trim() ? `Customer since: ${formatOptionalDate(client.customerSince)}` : "",
     "[BALANCE_IN_WORDS]": `${formatFinancialAmount(client.opening)} ${currencyWords(client.currency)}`,
@@ -123,6 +123,7 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
       <label>Branch name<input dir="ltr" value={client.branch} onChange={(e) => onChange("branch", e.target.value)} /></label>
       <label>Customer since<input value={client.customerSince} onChange={(e) => onChange("customerSince", e.target.value)} /></label>
       <label>Date of birth <span className="field-note">Optional</span><input type="date" value={client.dateOfBirth} onChange={(e) => onChange("dateOfBirth", e.target.value)} /></label>
+      <label>Place of birth <span className="field-note">Optional</span><input value={client.placeOfBirth} onChange={(e) => onChange("placeOfBirth", e.target.value)} placeholder="City, country" /></label>
     </div></section>
     <section className="panel bank-form-panel"><div className="panel-heading"><div><h2>Account Information</h2><p className="hint">Fields used by the independent YCB account certificate.</p></div></div><div className="grid">
       <label>Account type<input dir="ltr" value={client.accountType} onChange={(e) => onChange("accountType", e.target.value)} /></label>

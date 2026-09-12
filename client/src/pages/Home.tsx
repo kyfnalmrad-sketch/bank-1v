@@ -159,6 +159,7 @@ const defaultYcbClient = {
   branch: "Sana’a Main Branch",
   customerSince: "15/01/2020",
   dateOfBirth: "",
+  placeOfBirth: "",
   accountNumber: "YCB-0045827319",
   accountType: "Current Account",
   currency: "YER",
@@ -775,7 +776,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setClient((current) => ({ ...current, [key]: value }));
     if (selectedBank === "ycb") {
       const ycbKeyMap: Partial<Record<keyof typeof defaultClient, keyof typeof ycbClient>> = {
-        name: "name", passport: "passport", branch: "branch", customerSince: "customerSince", dateOfBirth: "dateOfBirth", accountNumber: "accountNumber", accountType: "accountType", currency: "currency", opening: "opening", issueDate: "issueDate",
+        name: "name", passport: "passport", branch: "branch", customerSince: "customerSince", dateOfBirth: "dateOfBirth", placeOfBirth: "placeOfBirth", accountNumber: "accountNumber", accountType: "accountType", currency: "currency", opening: "opening", issueDate: "issueDate",
       };
       const ycbKey = ycbKeyMap[key];
       if (ycbKey) setYcbClient((current) => ({ ...current, [ycbKey]: value }));
@@ -1174,7 +1175,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
             {selectedBank === "tadhamon" && <label>الاسم بالعربية / Arabic name<input dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="الاسم كما يظهر في الكشف السريع" /></label>}
-            {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of Birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label></>}
+            {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={ycbClient.placeOfBirth} onChange={(event) => updateYcbClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
             <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
