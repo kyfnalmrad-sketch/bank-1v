@@ -345,8 +345,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     acceptedRows.forEach((row) => counts.set(row.date || "N/A", (counts.get(row.date || "N/A") || 0) + 1));
     return Array.from(counts.entries()).slice(-14);
   }, [acceptedRows]);
+  const missingCustomerFields = useMemo(() => {
+    const required = selectedBank === "karimi"
+      ? [{ key: "name" as const, label: "اسم العميل / Customer name" }, { key: "momaizNo" as const, label: "رقم المميز / Momaiz No." }]
+      : [{ key: "name" as const, label: "اسم العميل / Customer name" }, { key: "accountNumber" as const, label: "رقم الحساب / Account number" }];
+    return required.filter(({ key }) => !documentClient[key].trim()).map(({ label }) => label);
+  }, [documentClient, selectedBank]);
   const tabWarnings = [
-    !documentClient.name || (selectedBank === "ycb" ? !documentClient.accountNumber : !documentClient.momaizNo) ? "بيانات العميل ناقصة / Customer details are incomplete" : "",
+    missingCustomerFields.length > 0 ? `بيانات العميل ناقصة: ${missingCustomerFields.join("، ")} / Missing: ${missingCustomerFields.join(", ")}` : "",
     acceptedRows.length === 0 ? "لم يتم اعتماد عمليات / No accepted transactions" : "",
     rejectedRows.length > 0 ? `${rejectedRows.length} صفوف تحتاج مراجعة / rows need review` : "",
     financialAudit.issues.length > 0 ? `تدقيق مالي: ${financialAudit.issues.length} ملاحظة — راجع الصف والسبب / Financial audit: ${financialAudit.issues.length} item(s) to review` : "",
@@ -909,7 +915,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
-    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع الإصدار حتى تصحيح الرصيد أو الرجوع إلى السجل المالي الأصلي."); return; }
     if (isPrintHoliday) { setImportNote(`لا يمكن إصدار الكشف في يوم ${printHolidayLabel}. الخميس والجمعة عطلة. غيّر تاريخ الطباعة ثم حاول مرة أخرى.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
@@ -920,7 +925,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {
-    if (financialAudit.issues.some((issue) => issue.severity === "critical")) { setImportNote("يوجد خطأ مالي حرج. تم منع إنشاء PDF حتى تصحيح الرصيد أو اعتماد قيد تصحيح موثق."); return; }
     if (isPrintHoliday) { setImportNote(`لا يمكن إصدار PDF في يوم ${printHolidayLabel}. الخميس والجمعة عطلة.`); return; }
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, tadhamonFastStatementHtml);
@@ -1232,8 +1236,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
-        {financialAudit.issues.length > 0 && <aside className="tab-warning" role="alert"><AlertTriangle size={18} /><div><strong>مراجعة التدقيق المالي / Financial Audit Review ({financialAudit.issues.length})</strong><span>{financialAudit.issues[0]?.message}</span><small>الإصلاح: راجع الصف المذكور في Excel، ثم صحح الرصيد الافتتاحي أو مبلغ العملية أو الإجمالي المطبوع حسب السبب. إذا كان الكشف صحيحًا لكن Excel لا يحتوي رصيدًا افتتاحيًا، اتركه فارغًا وسيتم استنتاجه من أول رصيد مطبوع. الحفظ والترحيل إلى السجلات مسموحان رغم ظهور هذا التنبيه؛ المنع يخص الطباعة وPDF عند وجود فرق حرج فقط.</small></div></aside>}
-          <div className="review-grid"><div className="validation-card"><span>Customer status</span><strong>{client.name && (selectedBank === "ycb" || selectedBank === "tadhamon" ? client.accountNumber : client.momaizNo) ? "Ready for review" : "Customer details required"}</strong><small>{selectedBank === "ycb" ? "Customer name and account number are required for YCB." : selectedBank === "tadhamon" ? "Customer name and account number are required for Tadhamon." : "Customer name and Momaiz No. are required on the statement."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
+        {financialAudit.issues.length > 0 && <aside className="tab-warning" role="alert"><AlertTriangle size={18} /><div><strong>مراجعة التدقيق المالي / Financial Audit Review ({financialAudit.issues.length})</strong><span>{financialAudit.issues[0]?.message}</span><small>الإصلاح: راجع الصف المذكور في Excel، ثم صحح الرصيد الافتتاحي أو مبلغ العملية أو الإجمالي المطبوع حسب السبب. إذا كان الكشف صحيحًا لكن Excel لا يحتوي رصيدًا افتتاحيًا، اتركه فارغًا وسيتم استنتاجه من أول رصيد مطبوع. الحفظ والتصدير والترحيل مسموحة رغم ظهور التنبيه.</small></div></aside>}
+          <div className="review-grid"><div className="validation-card"><span>Customer status / حالة العميل</span><strong>{missingCustomerFields.length === 0 ? "Ready for review / جاهز للمراجعة" : "Customer details required / بيانات ناقصة"}</strong><small>{missingCustomerFields.length > 0 ? `الناقص: ${missingCustomerFields.join("، ")} / Missing: ${missingCustomerFields.join(", ")}` : "الحقول الأساسية مكتملة. الحقول الأخرى اختيارية حسب نوع المستند."}</small></div><div className="validation-card"><span>Transaction status</span><strong>{acceptedRows.length ? `${acceptedRows.length} accepted transactions` : "No transactions imported"}</strong><small>{rejectedRows.length ? `${rejectedRows.length} rejected rows remain visible for review.` : "No rejected rows currently."}</small></div><div className="validation-card"><span>Page limit</span><strong>18 transactions per page</strong><small>Current estimate: {Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE))} statement page(s).</small></div><div className="validation-card"><span>Local browser memory</span><strong>{descriptionMemory.length} descriptions · {nameMemory.length} names</strong><small>Stored in this browser only and not sent to another service.</small></div></div>
         <div className="review-actions" aria-label="Document actions / إجراءات المستندات">
           <div className="review-action-group">
             <span className="review-action-label">البيانات / Data</span>
