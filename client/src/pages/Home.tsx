@@ -418,7 +418,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     customerName: documentClient.name,
     passport: documentClient.passport,
     address: ycbClient.address,
-    dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? ycbClient.dateOfBirth : "",
+    dateOfBirth: ycbClient.dateOfBirth,
+    placeOfBirth: ycbClient.placeOfBirth,
     branchName: documentClient.branch,
     accountNumber: documentClient.accountNumber,
     accountType: documentClient.accountType,
@@ -431,7 +432,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     totalCredit: reportedTotalCredit,
     totalDebit: reportedTotalDebit,
     issueDate: documentPrintDate,
-  }), [documentClient.accountNumber, documentClient.accountType, documentClient.branch, documentClient.currency, documentClient.name, documentClient.opening, documentClient.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth]);
+  }), [documentClient.accountNumber, documentClient.accountType, documentClient.branch, documentClient.currency, documentClient.name, documentClient.opening, documentClient.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth, ycbClient.placeOfBirth]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
     reference: row.operationNumber,
@@ -447,7 +448,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     passport: documentClient.passport,
     branch: documentClient.branch,
     customerSince: documentClient.customerSince,
-    dateOfBirth: dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? documentClient.dateOfBirth : "",
+    dateOfBirth: ycbClient.dateOfBirth || (dateOfBirthPlacement === "status" || dateOfBirthPlacement === "both" ? documentClient.dateOfBirth : ""),
+    placeOfBirth: ycbClient.placeOfBirth,
     accountNumber: documentClient.accountNumber,
     accountType: documentClient.accountType,
     currency: documentClient.currency,
