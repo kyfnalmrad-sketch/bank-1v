@@ -29,6 +29,13 @@ describe("financial audit engine", () => {
     expect(result.calculatedClosing).toBe(100);
   });
 
+  it("detects the reported 13,700 credit, 7,200 debit, and 7,140 closing mismatch", () => {
+    const result = auditFinancialStatement({ openingBalance: 0, rows: [{ rowNumber: 1, date: "2026-08-29", operationNumber: "DEP-1", description: "Deposits", debit: 0, credit: 13700, balance: 6650 }, { rowNumber: 2, date: "2026-08-31", operationNumber: "ATM-1", description: "ATM withdrawal", debit: 7200, credit: 0, balance: 6500 }], printedCredit: 13700, printedDebit: 7200, printedClosing: 7140 });
+    expect(result.calculatedClosing).toBe(6500);
+    expect(result.issues.find((issue) => issue.type === "closing-balance")?.difference).toBe(640);
+    expect(result.isMatch).toBe(false);
+  });
+
   it("flags a row with both debit and credit and possible duplicates", () => {
     const rows = [{ rowNumber: 1, date: "2026-08-01", operationNumber: "A1", description: "Same", debit: 10, credit: 10, balance: 0 }, { rowNumber: 2, date: "2026-08-01", operationNumber: "A1", description: "Same", debit: 10, credit: 10, balance: 0 }];
     const result = auditFinancialStatement({ openingBalance: 0, rows });
