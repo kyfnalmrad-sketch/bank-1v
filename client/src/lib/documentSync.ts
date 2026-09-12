@@ -49,8 +49,23 @@ export type VerificationQrInput = {
 };
 
 const qrMoney = (value: number | undefined) => Number(value ?? 0).toFixed(2);
-const qrText = (value: string | undefined) => value?.trim() || "N/A";
+const qrText = (value: string | undefined) => value?.trim() || "-";
 const qrNumber = (value: number | undefined) => String(value ?? 0);
+/** Keep names readable while removing repeated long names from printed codes. */
+export function compactPersonName(value: string | undefined) {
+  const words = (value || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "-";
+  if (words.length === 1) return words[0].slice(0, 18);
+  return `${words[0].slice(0, 18)} ${words.at(-1)!.slice(0, 18)}`;
+}
+function compactCodeText(value: string | undefined, max = 32) {
+  return qrText(value).replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-+/g, "-").slice(0, max);
+}
+function bankCode(bankName: string | undefined) {
+  if (bankName === "YEMEN COMMERCIAL BANK") return "YCB";
+  if (bankName === "TADHAMON BANK") return "TAD";
+  return "KIB";
+}
 
 const hijriMonthNames: Record<string, string> = {
   "محرم": "Muharram",
@@ -80,30 +95,26 @@ function verificationChecksum(value: string) {
 }
 
 export function buildVerificationQrPayload(input: VerificationQrInput) {
-  const typeLabel = input.documentType === "status" ? "ACCOUNT STATUS" : "ACCOUNT STATEMENT";
-  const lines = [
-    input.bankName || "KURAIMI ISLAMIC BANK",
-    `TYPE=${typeLabel}`,
-    `PAGE=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
-    `CLIENT=${qrText(input.customerName)}`,
-    `ACCT=${qrText(input.accountNumber)}`,
-    `PERIOD=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
-    `DATE=${qrText(input.issueDate)}`,
-    `CUR=${qrText(input.currency)}`,
-    `REF1=${qrText(input.firstReference)}`,
-    `REFN=${qrText(input.lastReference)}`,
-    `TX=${qrNumber(input.transactionCount)}`,
-    `DEBIT=${qrNumber(input.debitCount)};${qrMoney(input.totalDebit)}`,
-    `CREDIT=${qrNumber(input.creditCount)};${qrMoney(input.totalCredit)}`,
-    `OPEN=${qrMoney(input.openingBalance)}`,
-    `CLOSE=${qrMoney(input.closing)}`,
-    `VERIFY=${qrText(input.reference)}`,
+  const typeLabel = input.documentType === "status" ? "S" : "T";
+  const core = [
+    `V=2|B=${bankCode(input.bankName)}|D=${typeLabel}`,
+    `P=${qrNumber(input.pageNumber)}/${qrNumber(input.pageCount)}`,
+    `N=${compactPersonName(input.customerName)}`,
+    `A=${compactCodeText(input.accountNumber, 24)}`,
+    `T=${compactCodeText(input.periodStart, 12)}-${compactCodeText(input.periodEnd, 12)}`,
+    `I=${compactCodeText(input.issueDate, 12)}`,
+    `C=${compactCodeText(input.currency, 6)}`,
+    `R=${compactCodeText(input.reference, 28)}`,
+    `X=${qrNumber(input.transactionCount)};${qrNumber(input.debitCount)};${qrNumber(input.creditCount)}`,
+    `O=${qrMoney(input.openingBalance)};${qrMoney(input.closing)}`,
   ];
-  const hijriDate = formatHijriForQr(input.issueDateHijri);
-  if (hijriDate) lines.splice(7, 0, `HIJRI=${hijriDate}`);
-  return lines.join("\n");
+  if (input.firstReference || input.lastReference) core.push(`F=${compactCodeText(input.firstReference, 18)}-${compactCodeText(input.lastReference, 18)}`);
+  if (input.documentType === "status") {
+    const hijriDate = formatHijriForQr(input.issueDateHijri);
+    if (hijriDate) core.push(`H=${compactCodeText(hijriDate, 24)}`);
+  }
+  return core.join("\n");
 }
-
 export type TadhamonStatementQrInput = {
   customerName?: string;
   dateOfBirth?: string;
@@ -122,26 +133,20 @@ export type TadhamonStatementQrInput = {
 /** Tadhamon QR: compact identity and statement locator payload; transaction details stay out for fast scanning. */
 export function buildTadhamonStatementQrPayload(input: TadhamonStatementQrInput) {
   return [
-    "TADHAMON BANK|DOC=STMT",
+    "V=2|B=TAD|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
-    `N=${qrText(input.customerName)}`,
-    `DOB=${qrText(input.dateOfBirth)}`,
-    `A=${qrText(input.address)}`,
-    `POB=${qrText(input.placeOfBirth)}`,
-    `AC=${qrText(input.accountNumber)}`,
-    `B=${qrText(input.branchName)}`,
-    `C=${qrText(input.currency)}`,
-    `T=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
-    `REF=${qrText(input.statementReference)}`,
+    `N=${compactPersonName(input.customerName)}`,
+    `A=${compactCodeText(input.accountNumber, 24)}`,
+    `B=${compactCodeText(input.branchName, 16)}`,
+    `C=${compactCodeText(input.currency, 6)}`,
+    `T=${compactCodeText(input.periodStart, 12)}-${compactCodeText(input.periodEnd, 12)}`,
+    `R=${compactCodeText(input.statementReference, 28)}`,
   ].join("\n");
 }
-
 export function buildVerificationBarcodePayload(reference: string, pageNumber: number, pageCount: number, bankName: "KURAIMI ISLAMIC BANK" | "YEMEN COMMERCIAL BANK" | "TADHAMON BANK" = "KURAIMI ISLAMIC BANK") {
-  const normalizedReference = qrText(reference).replace(/\s+/g, "-");
-  const core = `${bankName}|VERIFY|STMT|REF=${normalizedReference}|PAGE=${pageNumber}/${pageCount}`;
-  return `${core}|CHK=${verificationChecksum(core)}`;
+  const core = `V2|B=${bankCode(bankName)}|D=STMT|R=${compactCodeText(reference, 32)}|P=${pageNumber}/${pageCount}`;
+  return `${core}|C=${verificationChecksum(core)}`;
 }
-
 export type YcbStatementCodeInput = {
   customerName?: string;
   passport?: string;
@@ -169,40 +174,31 @@ export type YcbStatementCodeInput = {
 /** YCB QR: identity, customer details, balances, and the page's operations summary. */
 export function buildYcbStatementQrPayload(input: YcbStatementCodeInput) {
   return [
-    "YCB|YEMEN COMMERCIAL BANK",
-    "DOC=STMT",
+    "V=2|B=YCB|D=T",
     `P=${input.pageNumber}/${input.pageCount}`,
-    `N=${qrText(input.customerName)}`,
-    `PP=${qrText(input.passport)}`,
-    `A=${qrText(input.address)}`,
-    `B=${qrText(input.branchName)}`,
-    `AC=${qrText(input.accountNumber)}`,
-    `C=${qrText(input.currency)}`,
-    `T=${qrText(input.periodStart)}-${qrText(input.periodEnd)}`,
-    `D=${qrText(input.issueDate)}`,
-    `R1=${qrText(input.firstReference)}`,
-    `RN=${qrText(input.lastReference)}`,
-    `O=${qrNumber(input.transactionCount)}`,
-    `CR=${qrNumber(input.creditCount)};${qrMoney(input.totalCredit)}`,
-    `DR=${qrNumber(input.debitCount)};${qrMoney(input.totalDebit)}`,
-    `OP=${qrMoney(input.openingBalance)}`,
-    `CL=${qrMoney(input.closingBalance)}`,
-    `REF=${qrText(input.statementReference)}`,
+    `N=${compactPersonName(input.customerName)}`,
+    `A=${compactCodeText(input.accountNumber, 24)}`,
+    `B=${compactCodeText(input.branchName, 16)}`,
+    `C=${compactCodeText(input.currency, 6)}`,
+    `T=${compactCodeText(input.periodStart, 12)}-${compactCodeText(input.periodEnd, 12)}`,
+    `I=${compactCodeText(input.issueDate, 12)}`,
+    `R=${compactCodeText(input.statementReference, 28)}`,
+    `F=${compactCodeText(input.firstReference, 18)}-${compactCodeText(input.lastReference, 18)}`,
+    `X=${input.transactionCount};${input.creditCount};${input.debitCount}`,
+    `M=${qrMoney(input.totalCredit)};${qrMoney(input.totalDebit)}`,
+    `O=${qrMoney(input.openingBalance)};${qrMoney(input.closingBalance)}`,
   ].join("\n");
 }
-
 /** YCB linear/PDF417 barcode: compact references and page reconciliation data. */
 export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
   const core = [
-    "YCB",
-    "STMT",
-    `DOC=${qrText(input.statementReference).replace(/\s+/g, "-")}`,
-    `PAGE=${input.pageNumber}/${input.pageCount}`,
-    `REF1=${qrText(input.firstReference).replace(/\s+/g, "-")}`,
-    `REFN=${qrText(input.lastReference).replace(/\s+/g, "-")}`,
-    `OPS=${input.transactionCount}`,
-    `OPEN=${qrMoney(input.openingBalance)}`,
-    `CLOSE=${qrMoney(input.closingBalance)}`,
+    "V2", "B=YCB", "D=STMT",
+    `R=${compactCodeText(input.statementReference, 28)}`,
+    `P=${input.pageNumber}/${input.pageCount}`,
+    `F=${compactCodeText(input.firstReference, 16)}-${compactCodeText(input.lastReference, 16)}`,
+    `X=${input.transactionCount}`,
+    `O=${qrMoney(input.openingBalance)}`,
+    `L=${qrMoney(input.closingBalance)}`,
   ].join("|");
-  return `${core}|CHK=${verificationChecksum(core)}`;
+  return `${core}|C=${verificationChecksum(core)}`;
 }

@@ -1,59 +1,179 @@
 import { describe, expect, it } from "vitest";
-import { buildVerificationBarcodePayload, buildVerificationQrPayload, buildYcbStatementBarcodePayload, buildYcbStatementQrPayload, synchronizeDocumentData } from "./documentSync";
+import {
+  buildVerificationBarcodePayload,
+  buildVerificationQrPayload,
+  buildYcbStatementBarcodePayload,
+  buildYcbStatementQrPayload,
+  synchronizeDocumentData,
+} from "./documentSync";
 
 describe("applied transaction register synchronization", () => {
   it("uses the applied register as the only source for totals, balances and QR payload", () => {
     const source = [
-      { rowNumber: 1, date: "2026-08-04", description: "Cash deposit", debit: 0, credit: 100, balance: 150, externalReference: "", operationNumber: "FT260804ABC", rejected: false },
-      { rowNumber: 2, date: "2026-08-05", description: "ATM withdrawal", debit: 25, credit: 0, balance: null, externalReference: "", operationNumber: "FT260805DEF", rejected: false },
-      { rowNumber: 3, date: "2026-08-06", description: "Utility bill payment", debit: 12, credit: 0, balance: null, externalReference: "", operationNumber: "FT260806GHI", rejected: true },
+      {
+        rowNumber: 1,
+        date: "2026-08-04",
+        description: "Cash deposit",
+        debit: 0,
+        credit: 100,
+        balance: 150,
+        externalReference: "",
+        operationNumber: "FT260804ABC",
+        rejected: false,
+      },
+      {
+        rowNumber: 2,
+        date: "2026-08-05",
+        description: "ATM withdrawal",
+        debit: 25,
+        credit: 0,
+        balance: null,
+        externalReference: "",
+        operationNumber: "FT260805DEF",
+        rejected: false,
+      },
+      {
+        rowNumber: 3,
+        date: "2026-08-06",
+        description: "Utility bill payment",
+        debit: 12,
+        credit: 0,
+        balance: null,
+        externalReference: "",
+        operationNumber: "FT260806GHI",
+        rejected: true,
+      },
     ];
     const synced = synchronizeDocumentData(source, 50);
     expect(synced.totalCredit).toBe(100);
     expect(synced.totalDebit).toBe(25);
-    expect(synced.statementRows.map((row) => row.balance)).toEqual([150, 125]);
+    expect(synced.statementRows.map(row => row.balance)).toEqual([150, 125]);
     expect(synced.closing).toBe(125);
-    const payload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "statement", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", firstReference: "FT260804ABC", lastReference: "FT260805DEF", transactionCount: synced.acceptedRows.length, debitCount: 1, creditCount: 1, totalDebit: synced.totalDebit, totalCredit: synced.totalCredit, openingBalance: 50, currency: "USD", closing: synced.closing, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
-    expect(payload).toContain("TYPE=ACCOUNT STATEMENT");
-    expect(payload).toContain("PAGE=1/1");
-    expect(payload).toContain("TX=2");
-    expect(payload).toContain("DEBIT=1;25.00");
-    expect(payload).toContain("CREDIT=1;100.00");
-    expect(payload).toContain("REF1=FT260804ABC");
-    expect(payload).toContain("OPEN=50.00");
-    expect(payload).toContain("CLOSE=125.00");
+    const payload = buildVerificationQrPayload({
+      reference: "BAK-ACCT-20260804-0001",
+      accountNumber: "1001",
+      customerName: "Client",
+      documentType: "statement",
+      pageNumber: 1,
+      pageCount: 1,
+      periodStart: "04/08/2026",
+      periodEnd: "05/08/2026",
+      firstReference: "FT260804ABC",
+      lastReference: "FT260805DEF",
+      transactionCount: synced.acceptedRows.length,
+      debitCount: 1,
+      creditCount: 1,
+      totalDebit: synced.totalDebit,
+      totalCredit: synced.totalCredit,
+      openingBalance: 50,
+      currency: "USD",
+      closing: synced.closing,
+      issueDate: "05/08/2026",
+      issueDateHijri: "٢٢ محرم ١٤٤٨ هـ",
+    });
+    expect(payload).toContain("V=2|B=KIB|D=T");
+    expect(payload).toContain("P=1/1");
+    expect(payload).toContain("X=2;1;1");
+    expect(payload).toContain("O=50.00;125.00");
+    expect(payload).toContain("F=FT260804ABC-FT260805DEF");
+    expect(payload).toContain("R=BAK-ACCT-20260804-0001");
+    expect(payload).toContain("N=Client");
+    expect(payload.length).toBeLessThan(240);
     expect(payload).not.toContain("٢٢ محرم");
-    const statusPayload = buildVerificationQrPayload({ reference: "BAK-ACCT-20260804-0001", accountNumber: "1001", customerName: "Client", documentType: "status", pageNumber: 1, pageCount: 1, periodStart: "04/08/2026", periodEnd: "05/08/2026", transactionCount: 2, debitCount: 1, creditCount: 1, totalDebit: 25, totalCredit: 100, openingBalance: 50, currency: "USD", closing: 125, issueDate: "05/08/2026", issueDateHijri: "٢٢ محرم ١٤٤٨ هـ" });
-    expect(statusPayload).toContain("KURAIMI ISLAMIC BANK");
+    const statusPayload = buildVerificationQrPayload({
+      reference: "BAK-ACCT-20260804-0001",
+      accountNumber: "1001",
+      customerName: "Client",
+      documentType: "status",
+      pageNumber: 1,
+      pageCount: 1,
+      periodStart: "04/08/2026",
+      periodEnd: "05/08/2026",
+      transactionCount: 2,
+      debitCount: 1,
+      creditCount: 1,
+      totalDebit: 25,
+      totalCredit: 100,
+      openingBalance: 50,
+      currency: "USD",
+      closing: 125,
+      issueDate: "05/08/2026",
+      issueDateHijri: "٢٢ محرم ١٤٤٨ هـ",
+    });
+    expect(statusPayload).toContain("B=KIB");
     expect(statusPayload).not.toContain("TRAINING");
-    expect(statusPayload).toContain("TYPE=ACCOUNT STATUS");
-    expect(statusPayload).toContain("HIJRI=22 Muharram 1448 AH");
-    const barcode = buildVerificationBarcodePayload("BAK-ACCT-20260804-0001", 1, 3);
-    expect(barcode.startsWith("KURAIMI ISLAMIC BANK|VERIFY|STMT|REF=BAK-ACCT-20260804-0001|PAGE=1/3|CHK=")).toBe(true);
+    expect(statusPayload).toContain("V=2|B=KIB|D=S");
+    expect(statusPayload).toContain("H=22-Muharram-1448-AH");
+    const barcode = buildVerificationBarcodePayload(
+      "BAK-ACCT-20260804-0001",
+      1,
+      3
+    );
+    expect(
+      barcode.startsWith("V2|B=KIB|D=STMT|R=BAK-ACCT-20260804-0001|P=1/3|C=")
+    ).toBe(true);
     expect(barcode).not.toContain("TRAINING");
     expect(barcode.slice(-8)).toMatch(/^[0-9A-F]{8}$/);
   });
 
   it("uses Yemen Commercial Bank identity for YCB QR and barcode payloads", () => {
-    const qr = buildVerificationQrPayload({ bankName: "YEMEN COMMERCIAL BANK", reference: "YCB-2026-001", accountNumber: "YCB-1001", transactionCount: 0, currency: "YER", closing: 0 });
-    const barcode = buildVerificationBarcodePayload("YCB-2026-001", 1, 1, "YEMEN COMMERCIAL BANK");
-    expect(qr.startsWith("YEMEN COMMERCIAL BANK\n")).toBe(true);
+    const qr = buildVerificationQrPayload({
+      bankName: "YEMEN COMMERCIAL BANK",
+      reference: "YCB-2026-001",
+      accountNumber: "YCB-1001",
+      transactionCount: 0,
+      currency: "YER",
+      closing: 0,
+    });
+    const barcode = buildVerificationBarcodePayload(
+      "YCB-2026-001",
+      1,
+      1,
+      "YEMEN COMMERCIAL BANK"
+    );
+    expect(qr.startsWith("V=2|B=YCB|D=T\n")).toBe(true);
     expect(qr).not.toContain("KURAIMI ISLAMIC BANK");
-    expect(barcode.startsWith("YEMEN COMMERCIAL BANK|VERIFY|STMT|REF=YCB-2026-001|PAGE=1/1|CHK=")).toBe(true);
+    expect(barcode.startsWith("V2|B=YCB|D=STMT|R=YCB-2026-001|P=1/1|C=")).toBe(
+      true
+    );
     expect(barcode).not.toContain("KURAIMI ISLAMIC BANK");
   });
 
   it("keeps YCB QR and barcode payloads distinct while carrying page references", () => {
-    const input = { customerName: "Ahmed Al-Qahtani", passport: "P1234567", address: "Sana'a", accountNumber: "YCB-1001", branchName: "AL-ZUBAIRI", currency: "YER", statementReference: "YCB-2026-001", pageNumber: 1, pageCount: 2, periodStart: "01-Jan-26", periodEnd: "31-Jan-26", issueDate: "31-Jan-26", firstReference: "0379297", lastReference: "0379302", transactionCount: 6, creditCount: 2, debitCount: 4, totalCredit: 9032, totalDebit: 4400, openingBalance: 15283, closingBalance: 19915 };
+    const input = {
+      customerName: "Ahmed Al-Qahtani",
+      passport: "P1234567",
+      address: "Sana'a",
+      accountNumber: "YCB-1001",
+      branchName: "AL-ZUBAIRI",
+      currency: "YER",
+      statementReference: "YCB-2026-001",
+      pageNumber: 1,
+      pageCount: 2,
+      periodStart: "01-Jan-26",
+      periodEnd: "31-Jan-26",
+      issueDate: "31-Jan-26",
+      firstReference: "0379297",
+      lastReference: "0379302",
+      transactionCount: 6,
+      creditCount: 2,
+      debitCount: 4,
+      totalCredit: 9032,
+      totalDebit: 4400,
+      openingBalance: 15283,
+      closingBalance: 19915,
+    };
     const qr = buildYcbStatementQrPayload(input);
     const barcode = buildYcbStatementBarcodePayload(input);
     expect(qr).toContain("N=Ahmed Al-Qahtani");
-    expect(qr).toContain("R1=0379297");
-    expect(qr).toContain("CL=19915.00");
-    expect(barcode).toContain("YCB|STMT|DOC=YCB-2026-001|PAGE=1/2");
-    expect(barcode).toContain("REF1=0379297|REFN=0379302|OPS=6");
+    expect(qr).toContain("F=0379297-0379302");
+    expect(qr).toContain("O=15283.00;19915.00");
+    expect(barcode).toContain("V2|B=YCB|D=STMT|R=YCB-2026-001|P=1/2");
+    expect(barcode).toContain("F=0379297-0379302|X=6");
     expect(barcode).not.toContain("N=Ahmed Al-Qahtani");
     expect(qr).not.toBe(barcode);
-    expect(buildYcbStatementBarcodePayload({ ...input, pageNumber: 2 })).not.toBe(barcode);
+    expect(
+      buildYcbStatementBarcodePayload({ ...input, pageNumber: 2 })
+    ).not.toBe(barcode);
   });
 });

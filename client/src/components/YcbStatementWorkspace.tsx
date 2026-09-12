@@ -46,7 +46,7 @@ export default function YcbStatementWorkspace({ profile, transactions, onBack, o
     Promise.all(pageGroups.map((rows, index) => QRCode.toDataURL(buildYcbStatementQrPayload(buildInput(rows, index + 1)), { width: 520, margin: 4, errorCorrectionLevel: "H", color: { dark: "#2d3192", light: "#ffffff" } }))).then((sources) => { if (!cancelled) setQrSources(sources); }).catch(() => { if (!cancelled) setQrSources([]); });
     try {
       const generated = pageGroups.map((rows, index) => {
-        const svg = bwipjs.toSVG({ bcid: "pdf417", text: buildYcbStatementBarcodePayload(buildInput(rows, index + 1)), scaleX: 2, scaleY: 2, padding: 4, backgroundcolor: "FFFFFF", barcolor: "2D3192" });
+        const svg = bwipjs.toSVG({ bcid: "code128", text: buildYcbStatementBarcodePayload(buildInput(rows, index + 1)), scaleX: 2, scaleY: 3, padding: 6, includetext: true, textxalign: "center", backgroundcolor: "FFFFFF", barcolor: "2D3192" });
         return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
       });
       if (!cancelled) setBarcodeSources(generated);
