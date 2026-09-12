@@ -217,7 +217,6 @@ export function buildYcbStatementBarcodePayload(input: YcbStatementCodeInput) {
     "D=T",
     `R=${compactCodeText(input.statementReference, 24)}`,
     `P=${input.pageNumber}/${input.pageCount}`,
-    `F=${compactCodeText(input.firstReference, 12)}-${compactCodeText(input.lastReference, 12)}`,
     `L=${qrMoney(input.closingBalance)}`,
   ].join("|");
   return `${core}|C=${verificationChecksum(core)}`;
