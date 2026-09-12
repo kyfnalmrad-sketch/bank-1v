@@ -638,7 +638,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const openStatementHistory = async (id: number) => {
     setHistoryRestoreState("loading");
     setSelectedHistoryId(id);
-    setActiveTab("account");
+    setImportNote("جارٍ تحميل السجل كاملًا للتعديل… / Loading the complete record for editing…");
   };
   useEffect(() => {
     if (selectedHistoryId === null || getHistoryQuery.isLoading) return;
@@ -675,6 +675,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
     setHistoryRestoreState("success");
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
+    setActiveTab("account");
     setSelectedHistoryId(null);
   }, [getHistoryQuery.data, getHistoryQuery.isError, getHistoryQuery.isLoading, selectedHistoryId]);
   const deleteStatementHistory = async (id: number) => {
