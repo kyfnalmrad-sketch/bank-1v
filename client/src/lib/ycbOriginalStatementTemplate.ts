@@ -47,9 +47,10 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const pageCredit = money(pageTotals?.totalCredit ?? transactions.reduce((sum, item) => sum + (item.credit || 0), 0));
   const pageDebit = money(pageTotals?.totalDebit ?? transactions.reduce((sum, item) => sum + (item.debit || 0), 0));
   const pageClosing = money(pageTotals?.closingBalance ?? transactions.at(-1)?.balance ?? profile.closingBalance);
+  const passportBlock = profile.passport?.trim() ? `<div class="address-passport"><span class="label">Passport Number:</span><span class="value">${escapeHtml(profile.passport)}</span></div>` : "";
   const page = originalTemplate
     .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
-    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div><div class="address-passport"><span class="label">Passport Number:</span><span class="value">${escapeHtml(profile.passport || "—")}</span></div></span>`)
+    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>${passportBlock}</span>`)
     .replace("Personal Current Account", escapeHtml(profile.accountType || "Personal Current Account"))
     .replace("<div style=\"font-size:7.5pt;color:#425766;margin-top:1.4mm\">Yemen Commercial Bank</div>", `<div style="font-size:7.5pt;color:#425766;margin-top:1.4mm">Yemen Commercial Bank</div><div style="font-size:6.8pt;color:#425766;margin-top:1mm">Issue Date: ${escapeHtml(profile.issueDate || "—")}</div>`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))

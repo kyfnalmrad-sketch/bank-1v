@@ -30,4 +30,26 @@ describe("approved YCB statement template", () => {
     expect(html).toContain('class="address-qr"');
     expect(html).toContain('class="title-pdf417"');
   });
+
+  it("hides the passport row when no passport number is provided", () => {
+    const html = renderOriginalYcbStatementPage({
+      customerName: "Customer Without Passport",
+      passport: "",
+      address: "Live Address",
+      dateOfBirth: "12-Apr-1988",
+      branchName: "LIVE BRANCH",
+      accountNumber: "LIVE-002",
+      accountType: "Savings Account",
+      currency: "USD",
+      periodStart: "01/09/2026",
+      periodEnd: "10/09/2026",
+      statementReference: "LIVE-REF-2",
+      openingBalance: 100,
+      closingBalance: 100,
+      totalCredit: 0,
+      totalDebit: 0,
+      issueDate: "10/09/2026",
+    }, [], 1, 1);
+    expect(html).not.toContain("Passport Number:");
+  });
 });
