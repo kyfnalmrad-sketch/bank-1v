@@ -6,10 +6,11 @@ import { ycbOfficialCertificateTemplate } from "@/lib/ycbOfficialCertificateTemp
 export type YcbClient = {
   name: string; passport: string; branch: string; customerSince: string; dateOfBirth: string;
   accountNumber: string; accountType: string; currency: string; opening: string; issueDate: string;
-  referenceNumber: string; customerServiceName: string; branchManagerName: string;
+  referenceNumber: string; customerServiceName: string; branchManagerName: string; periodStart?: string; periodEnd?: string;
 };
 
-type Props = { client: YcbClient; onChange: (key: keyof YcbClient, value: string) => void; onBack: () => void };
+type EditableYcbKey = Exclude<keyof YcbClient, "periodStart" | "periodEnd">;
+type Props = { client: YcbClient; onChange: (key: EditableYcbKey, value: string) => void; onBack: () => void };
 type LockedField = "customerServiceName" | "branchManagerName";
 const defaultsStorageKey = "bak-web-staging-ycb-authorized-defaults";
 
@@ -42,6 +43,7 @@ export function renderYcbCertificateHtml(client: YcbClient) {
     "[ACCOUNT_NUMBER]": client.accountNumber,
     "[PASSPORT_LINE]": client.passport ? `, holder of Passport No. ${client.passport}` : "",
     "[BIRTH_DATE_LINE]": client.dateOfBirth ? `, born on ${formatOptionalDate(client.dateOfBirth)}` : "",
+    "[PERIOD_LINE]": client.periodStart && client.periodEnd ? ` This statement covers the account history for the period from ${formatOptionalDate(client.periodStart)} to ${formatOptionalDate(client.periodEnd)}` : "",
     "[CUSTOMER_SINCE_LINE]": client.customerSince.trim() ? `Customer since: ${formatOptionalDate(client.customerSince)}` : "",
     "[BALANCE_IN_WORDS]": `${formatFinancialAmount(client.opening)} ${currencyWords(client.currency)}`,
     "[BALANCE_NUMERIC]": formatFinancialAmount(client.opening),

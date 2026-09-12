@@ -18,7 +18,7 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
 .header-customer-since:empty{display:none}
 .content{position:absolute;top:72mm;left:16mm;right:16mm}
 .title{text-align:center;font-size:18pt;font-weight:700;letter-spacing:.2px;text-transform:uppercase;text-decoration:underline;text-decoration-thickness:1.2pt;text-underline-offset:2.2pt;margin:9mm 0 12mm;padding:0}
-.body{width:182mm;margin:0 auto;font-size:18pt;font-weight:400;line-height:1.5;text-align:justify;color:#151b29;word-break:normal;overflow-wrap:normal;hyphens:none}
+.body{width:182mm;margin:0 auto;font-size:18pt;font-weight:400;line-height:1.5;text-align:left;color:#151b29;word-break:normal;overflow-wrap:normal;hyphens:none}
 .body p{margin:0 0 10mm}
 .body .strong{font-size:18pt;font-weight:700}.body p .strong{white-space:nowrap;display:inline-block}
 .disclaimer{font-size:10.5pt!important;line-height:1.42!important;margin:0 auto!important;color:#a30000;text-align:center}
@@ -42,7 +42,7 @@ body{font-family:Arial,Calibri,sans-serif;color:#172a63}
     <h1 class="title">TO WHOM IT MAY CONCERN</h1>
     <section class="body">
       <p>Best regards are presented to you from Yemen Commercial Bank, and we wish you continued success.</p>
-      <p>We, at Yemen Commercial Bank, hereby confirm that our client, <span class="strong">[CUSTOMER_NAME]</span>[PASSPORT_LINE][BIRTH_DATE_LINE], holds a <span class="strong">[ACCOUNT_TYPE]</span> with us under account number <span class="strong">[ACCOUNT_NUMBER]</span> with a total bank balance of <span class="strong">[BALANCE_NUMERIC] [CURRENCY]</span> as of [AS_OF_DATE].</p>
+      <p>We, at Yemen Commercial Bank, hereby confirm that our client, <span class="strong">[CUSTOMER_NAME]</span>[PASSPORT_LINE][BIRTH_DATE_LINE], holds a <span class="strong">[ACCOUNT_TYPE]</span> with us under account number <span class="strong">[ACCOUNT_NUMBER]</span> with a total bank balance of <span class="strong">[BALANCE_NUMERIC] [CURRENCY]</span> as of [AS_OF_DATE].[PERIOD_LINE].</p>
     </section>
     <div class="closing">Yours faithfully,</div>
     <section class="signatures">

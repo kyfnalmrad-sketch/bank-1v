@@ -15,6 +15,8 @@ const demoClient: YcbClient = {
   referenceNumber: "YCB-DEMO-2026-091",
   customerServiceName: "Sarah Abdullah Al-Maqtari",
   branchManagerName: "Khaled Ali Al-Hadrami",
+  periodStart: "2026-01-01",
+  periodEnd: "2026-08-31",
 };
 
 describe("YCB certificate data placement", () => {
@@ -22,6 +24,7 @@ describe("YCB certificate data placement", () => {
     const html = renderYcbCertificateHtml(demoClient);
     expect(html).toContain("holder of Passport No. P1234567");
     expect(html).toContain("born on 12 April 1988");
+    expect(html).toContain("This statement covers the account history for the period from 01 January 2026 to 31 August 2026");
     expect(html).toContain("Customer since: 15/01/2020");
     expect(html).toContain("Reference:</b> YCB-DEMO-2026-091");
     expect(html).toContain("1,250,000 YER");
@@ -38,6 +41,7 @@ describe("YCB certificate data placement", () => {
     const html = renderYcbCertificateHtml({ ...demoClient, passport: "", dateOfBirth: "", referenceNumber: "" });
     expect(html).not.toContain("Passport No.");
     expect(html).not.toContain("born on");
+    expect(html).toContain("This statement covers the account history for the period from 01 January 2026 to 31 August 2026");
     expect(html).toContain("Customer since: 15/01/2020");
     expect(html).not.toContain("Reference:</b>");
     expect(html).not.toContain("PENDING");

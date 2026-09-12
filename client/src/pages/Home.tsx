@@ -452,6 +452,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     currency: documentClient.currency,
     opening: String(reportedClosing),
     issueDate: documentPrintDate,
+    periodStart: client.periodStart || documentPeriodStart,
+    periodEnd: client.periodEnd || documentPeriodEnd,
   }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
