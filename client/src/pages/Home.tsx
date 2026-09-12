@@ -488,11 +488,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const payload = snapshotQuery.data?.payload as Partial<SnapshotPayload> | undefined;
     if (payload?.bankId && payload.bankId !== selectedBank) return;
     snapshotRestored.current = true;
-    if (payload?.schemaVersion !== 1 || !payload.client) {
+    if (payload?.schemaVersion !== 1 || !(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient)) {
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
       return;
     }
-    const restoredClient = { ...defaultClient, ...payload.client };
+    const restoredClient = { ...defaultClient, ...(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient) };
     setClient(restoredClient);
     setPublishedClient(restoredClient);
     if (selectedBank === "ycb") {
@@ -654,9 +654,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   useEffect(() => {
     const history = getHistoryQuery.data as { id?: number; payload?: Partial<SnapshotPayload> } | null;
     const payload = history?.payload;
-    if (selectedHistoryId !== null && history?.id === selectedHistoryId && payload?.client) {
-      if (!payload?.client) return;
-      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...payload.client });
+    const legacyClient = (payload as (Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }) | undefined)?.documentClient;
+    if (selectedHistoryId !== null && history?.id === selectedHistoryId && (payload?.client || legacyClient)) {
+      setEditingHistoryId(selectedHistoryId); setClient({ ...defaultClient, ...(payload?.client || legacyClient) });
       if (payload.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
       setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal"); setIncludeBranch(payload.includeBranch === true); setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both"); setFileName(payload.fileName || ""); setColumnMap(payload.columnMap || {}); setMappedFields(payload.mappedFields || []);
       setTransactions(payload.transactions || []); setAppliedTransactions(payload.appliedTransactions || []); setTotalCreditOverride(payload.totalCreditOverride || ""); setTotalDebitOverride(payload.totalDebitOverride || ""); setClosingBalanceOverride(payload.closingBalanceOverride || ""); setPublishedClosingBalanceOverride(payload.closingBalanceOverride || ""); setStatementReferenceOverride(payload.statementReferenceOverride || ""); setFastHighlightColors(payload.fastHighlightColors || {}); setFastMinimumDeposit(payload.fastMinimumDeposit || ""); setActiveTab("account");
