@@ -31,20 +31,6 @@ function formatFinancialAmount(value: string) {
 function currencyWords(currency: string) {
   return ({ YER: "Yemeni Rials", USD: "US Dollars", SAR: "Saudi Riyals" } as Record<string, string>)[currency] || currency;
 }
-function certificateQrDataUri(client: YcbClient) {
-  const qr = QRCode.create(buildYcbCertificateQrPayload({ customerName: client.name, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, balance: client.opening, referenceNumber: client.referenceNumber, issueDate: client.issueDate }), { errorCorrectionLevel: "M" });
-  const quiet = 4;
-  const size = qr.modules.size + quiet * 2;
-  const rects: string[] = [];
-  for (let row = 0; row < qr.modules.size; row += 1) {
-    for (let col = 0; col < qr.modules.size; col += 1) {
-      if (qr.modules.get(row, col)) rects.push(`<rect x="${col + quiet}" y="${row + quiet}" width="1" height="1"/>`);
-    }
-  }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#ffffff"/><g fill="#172a63">${rects.join("")}</g></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 export function renderYcbCertificateHtml(client: YcbClient, qrUri = "") {
   const issueDate = new Date(client.issueDate);
   const hijriDate = Number.isNaN(issueDate.getTime()) ? "PENDING" : new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-arab", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(issueDate);
@@ -77,8 +63,17 @@ export function YcbCertificateWorkspace({ client, onChange, onBack }: Props) {
   const [preview, setPreview] = useState(false);
   const [lockedFields, setLockedFields] = useState<Record<LockedField, boolean>>({ customerServiceName: false, branchManagerName: false });
   const [defaultMessage, setDefaultMessage] = useState("");
-  const certificateQr = useMemo(() => certificateQrDataUri(client), [client]);
+  const [certificateQr, setCertificateQr] = useState("");
   const html = useMemo(() => renderYcbCertificateHtml(client, certificateQr), [certificateQr, client]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const payload = buildYcbCertificateQrPayload({ customerName: client.name, accountNumber: client.accountNumber, accountType: client.accountType, currency: client.currency, balance: client.opening, referenceNumber: client.referenceNumber, issueDate: client.issueDate });
+    QRCode.toDataURL(payload, { width: 260, margin: 2, errorCorrectionLevel: "M", color: { dark: "#172a63", light: "#ffffff" } })
+      .then((source) => { if (!cancelled) setCertificateQr(source); })
+      .catch(() => { if (!cancelled) setCertificateQr(""); });
+    return () => { cancelled = true; };
+  }, [client.accountNumber, client.accountType, client.currency, client.issueDate, client.name, client.opening, client.referenceNumber]);
 
   useEffect(() => {
     const defaults = readDefaults();
