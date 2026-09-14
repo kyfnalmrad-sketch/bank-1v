@@ -23,10 +23,12 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .page > .top{height:68mm!important}
  .page > .summary{margin-top:3mm!important}
  .page > .table{margin-top:3mm!important}
-.address-qr-wrap{position:relative;display:block;width:20mm;height:20mm;flex:0 0 20mm}
-.address-qr-wrap .address-qr{position:absolute;inset:0;width:20mm;height:20mm;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
-.address-qr-logo{position:absolute;left:50%;top:50%;width:5.8mm;height:3.8mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
-.title-pdf417{width:52mm!important;height:10mm!important;object-fit:fill!important}
+	.address-qr-wrap{position:relative;display:block;width:20mm;height:20mm;flex:0 0 20mm}
+	.address-qr-wrap .address-qr{position:absolute;inset:0;width:20mm;height:20mm;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
+	.address-qr-logo{position:absolute;left:50%;top:50%;width:5.8mm;height:3.8mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
+	.title-pdf417-wrap{display:inline-flex;flex-direction:column;align-items:center;width:52mm;max-width:52mm;vertical-align:top}
+	.title-pdf417{display:block;width:52mm!important;height:10mm!important;object-fit:fill!important}
+	.title-pdf417-name{display:block;width:52mm;max-width:52mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font:700 7pt/3.2mm Arial,sans-serif;color:#1B365D}
  .address-date-of-birth,.address-passport{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .address-date-of-birth .value,.address-passport .value{display:block;margin-top:.7mm;font-weight:400}

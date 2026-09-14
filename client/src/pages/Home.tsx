@@ -457,10 +457,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     issueDate: documentPrintDate,
     periodStart: client.periodStart || documentPeriodStart,
     periodEnd: client.periodEnd || documentPeriodEnd,
-  }) : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
+  }, statusQrSource || "/assets/ycb-certificate-qr.png") : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
-    qrUri: statusQrSource || "/assets/tadhamon-official-qr-documentClient.png",
+    qrUri: statusQrSource || "/assets/tadhamon-official-qr-client.png",
     qrLogoUri: referenceAssets.qrBrandLogo,
     customerName: documentClient.name,
     momaizNo: documentClient.momaizNo,
