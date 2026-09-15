@@ -83,6 +83,7 @@ const shortPersonName = (value: string) => {
 type TabId = "dashboard" | "account" | "transactions" | "review" | "fastStatement" | "barcodes" | "history" | "analytics";
 type DateOfBirthPlacement = "none" | "status" | "statement" | "both";
 type Transaction = ImportedTransaction;
+type FieldMemory = Record<string, string[]>;
 type SnapshotPayload = {
   schemaVersion: 1;
   bankId: "karimi" | "ycb" | "tadhamon";
@@ -103,6 +104,7 @@ type SnapshotPayload = {
   fastKeyword?: string;
   fastKeywordColor?: string;
   fastRowsPerPage?: number;
+  fieldMemory?: FieldMemory;
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -204,6 +206,20 @@ function loadLocalList(key: string) {
   }
 }
 
+function rememberFieldValue(key: string, value: string, limit = 120) {
+  const clean = value.trim();
+  if (!clean || typeof window === "undefined") return;
+  const storageKey = `bak-web-staging-field-${key}`;
+  const next = Array.from(new Set([clean, ...loadLocalList(storageKey)])).slice(0, limit);
+  window.localStorage.setItem(storageKey, JSON.stringify(next));
+}
+
+function mergeFieldMemory(memory: FieldMemory, key: string, value: string, limit = 120): FieldMemory {
+  const clean = value.trim();
+  if (!clean) return memory;
+  return { ...memory, [key]: Array.from(new Set([clean, ...(memory[key] || [])])).slice(0, limit) };
+}
+
 function clearSessionToken() {
   try {
     sessionStorage.removeItem("manus-cookie");
@@ -303,9 +319,15 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : selectedBank === "tadhamon" ? "bak-web-staging-tadhamon" : "bak-web-staging-karimi";
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-descriptions`));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-names`));
+  const [fieldMemory, setFieldMemory] = useState<FieldMemory>(() => {
+    const fields = ["name", "nameAr", "branch", "accountType", "accountNumber", "passport", "address", "placeOfBirth", "employeeName", "managerName"];
+    return Object.fromEntries(fields.map((field) => [field, loadLocalList(`${localMemoryPrefix}-${field}`)]));
+  });
   useEffect(() => {
     setDescriptionMemory(loadLocalList(`${localMemoryPrefix}-descriptions`));
     setNameMemory(loadLocalList(`${localMemoryPrefix}-names`));
+    const fields = ["name", "nameAr", "branch", "accountType", "accountNumber", "passport", "address", "placeOfBirth", "employeeName", "managerName"];
+    setFieldMemory(Object.fromEntries(fields.map((field) => [field, loadLocalList(`${localMemoryPrefix}-${field}`)])));
   }, [localMemoryPrefix]);
   const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
   const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
@@ -520,7 +542,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, fastRowsPerPage, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fastRowsPerPage, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, fastRowsPerPage, fieldMemory, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fastRowsPerPage, fieldMemory, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -581,6 +603,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const restoredRowsPerPage = typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(35, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 35;
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
+    if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -715,6 +738,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const restoredRowsPerPage = typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(35, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 35;
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
+    if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
     setHistoryRestoreState("success");
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
     setActiveTab("account");
@@ -799,6 +823,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
     setClient((current) => ({ ...current, [key]: value }));
+    const rememberedField = ["name", "nameAr", "branch", "accountType", "accountNumber", "passport", "address", "placeOfBirth", "employeeName", "managerName"].includes(key);
+    if (rememberedField && value.trim()) {
+      rememberFieldValue(`${localMemoryPrefix}-${key}`, value);
+      setFieldMemory((current) => mergeFieldMemory(current, key, value));
+    }
     if (selectedBank === "ycb") {
       const ycbKeyMap: Partial<Record<keyof typeof defaultClient, keyof typeof ycbClient>> = {
         name: "name", passport: "passport", branch: "branch", customerSince: "customerSince", dateOfBirth: "dateOfBirth", placeOfBirth: "placeOfBirth", accountNumber: "accountNumber", accountType: "accountType", currency: "currency", opening: "opening", issueDate: "issueDate",
@@ -1223,17 +1252,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <section className="panel">
           <h2>المعلومات الشخصية / Customer Information</h2>
           <div className="grid">
-            <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
+            <label>اسم العميل / Customer name<input list="memory-name" value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /><datalist id="memory-name">{fieldMemory.name?.map((value) => <option key={value} value={value} />)}</datalist></label>
             {selectedBank === "tadhamon" && <label>الاسم بالعربية / Arabic name<input dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="الاسم كما يظهر في الكشف السريع" /></label>}
             {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={ycbClient.placeOfBirth} onChange={(event) => updateYcbClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
-            <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /></label>
-            <label className="wide">اسم الفرع / Branch name<input dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /></label>
+            <label>رقم الجواز / Passport No. <span className="field-note">اختياري / Optional</span><input list="memory-passport" dir="ltr" value={client.passport} onChange={(event) => updateClient("passport", event.target.value)} /><datalist id="memory-passport">{fieldMemory.passport?.map((value) => <option key={value} value={value} />)}</datalist></label>
+            <label className="wide">اسم الفرع / Branch name<input list="memory-branch" dir="ltr" value={client.branch} onChange={(event) => updateClient("branch", event.target.value)} placeholder="Branch Name" /><datalist id="memory-branch">{fieldMemory.branch?.map((value) => <option key={value} value={value} />)}</datalist></label>
             <label>تاريخ بدء العميل / Customer since {selectedBank === "tadhamon" && <span className="field-note">يظهر في بيان الحالة / Shown on status statement</span>}<input type="date" lang="en-GB" value={client.customerSince} onChange={(event) => updateClient("customerSince", event.target.value)} /></label>
             {selectedBank !== "ycb" && <label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" lang="en-GB" value={client.dateOfBirth} onChange={(event) => updateClient("dateOfBirth", event.target.value)} /></label>}
-            <label>نوع الحساب / Account Type<input dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /></label>
-            <label>رقم الحساب / Account Number<input dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /></label>
+            <label>نوع الحساب / Account Type<input list="memory-account-type" dir="ltr" value={client.accountType} onChange={(event) => updateClient("accountType", event.target.value)} /><datalist id="memory-account-type">{fieldMemory.accountType?.map((value) => <option key={value} value={value} />)}</datalist></label>
+            <label>رقم الحساب / Account Number<input list="memory-account-number" dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /><datalist id="memory-account-number">{fieldMemory.accountNumber?.map((value) => <option key={value} value={value} />)}</datalist></label>
           </div>
         </section>
         {selectedBank === "ycb" && <>
@@ -1257,8 +1286,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>بيانات التوقيع / Signature Details</h2>
           <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان.</p>
           <div className="grid">
-            <label>اسم الموظف / Employee name<input value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /></label>
-            <label>اسم المدير / Manager name<input value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /></label>
+            <label>اسم الموظف / Employee name<input list="memory-employee" value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="memory-employee">{fieldMemory.employeeName?.map((value) => <option key={value} value={value} />)}</datalist></label>
+            <label>اسم المدير / Manager name<input list="memory-manager" value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="memory-manager">{fieldMemory.managerName?.map((value) => <option key={value} value={value} />)}</datalist></label>
           </div>
         </section>}
         <section className="panel">
