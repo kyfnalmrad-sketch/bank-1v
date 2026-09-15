@@ -105,6 +105,7 @@ type SnapshotPayload = {
   fastKeywordColor?: string;
   fastRowsPerPage?: number;
   fieldMemory?: FieldMemory;
+  lockedSignatureNames?: { employee: boolean; manager: boolean };
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -306,6 +307,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastKeywordColor, setFastKeywordColor] = useState("#dcfce7");
   const [fastRowsPerPage, setFastRowsPerPage] = useState(35);
   const [fastRowsPerPageInput, setFastRowsPerPageInput] = useState("35");
+  const [lockedSignatureNames, setLockedSignatureNames] = useState({ employee: false, manager: false });
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [closingBalanceOverride, setClosingBalanceOverride] = useState("");
@@ -542,7 +544,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, fastRowsPerPage, fieldMemory, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fastRowsPerPage, fieldMemory, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, fastRowsPerPage, fieldMemory, lockedSignatureNames, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fastRowsPerPage, fieldMemory, fileName, includeBranch, lockedSignatureNames, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -604,6 +606,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
     if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
+    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object") setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -658,7 +661,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     skipSnapshotRestore.current = true;
     skipNextSnapshotSave.current = true;
     snapshotRestored.current = true;
-    setClient({ ...defaultClient });
+    setClient({ ...defaultClient, employeeName: lockedSignatureNames.employee ? client.employeeName : "", managerName: lockedSignatureNames.manager ? client.managerName : "" });
     setYcbClient({ ...defaultYcbClient });
     setReferenceSource("internal");
     setIncludeBranch(false);
@@ -739,6 +742,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
     if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
+    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object") setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
     setHistoryRestoreState("success");
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
     setActiveTab("account");
@@ -822,6 +826,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [selectedBank, statementPageCount, statementReference, statementPageGroups, statementPageSummaries, ycbStatementProfile]);
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
+    if (key === "employeeName" && lockedSignatureNames.employee) return;
+    if (key === "managerName" && lockedSignatureNames.manager) return;
     setClient((current) => ({ ...current, [key]: value }));
     const rememberedField = ["name", "nameAr", "branch", "accountType", "accountNumber", "passport", "address", "placeOfBirth", "employeeName", "managerName"].includes(key);
     if (rememberedField && value.trim()) {
@@ -1286,8 +1292,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>بيانات التوقيع / Signature Details</h2>
           <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان.</p>
           <div className="grid">
-            <label>اسم الموظف / Employee name<input list="memory-employee" value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="memory-employee">{fieldMemory.employeeName?.map((value) => <option key={value} value={value} />)}</datalist></label>
-            <label>اسم المدير / Manager name<input list="memory-manager" value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="memory-manager">{fieldMemory.managerName?.map((value) => <option key={value} value={value} />)}</datalist></label>
+            <label>اسم الموظف / Employee name<input list="memory-employee" value={client.employeeName} disabled={lockedSignatureNames.employee} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="memory-employee">{fieldMemory.employeeName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.employee} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, employee: event.target.checked }))} /> تثبيت اسم الموظف / Keep fixed</span></label>
+            <label>اسم المدير / Manager name<input list="memory-manager" value={client.managerName} disabled={lockedSignatureNames.manager} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="memory-manager">{fieldMemory.managerName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.manager} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, manager: event.target.checked }))} /> تثبيت اسم المدير / Keep fixed</span></label>
           </div>
         </section>}
         <section className="panel">
