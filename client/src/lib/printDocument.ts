@@ -276,7 +276,8 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
 
     const pages = Array.from(frameDocument.querySelectorAll<HTMLElement>(".page"));
     const targets = pages.length ? pages : [frameDocument.body];
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true });
+    const ownerPassword = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true, encryption: { ownerPassword, userPermissions: ["print"] } });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
@@ -292,11 +293,11 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
         height: target.scrollHeight,
       });
       if (index > 0) pdf.addPage();
-      const imageData = canvas.toDataURL("image/jpeg", 0.96);
+      const imageData = canvas.toDataURL("image/png");
       const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
       const width = canvas.width * ratio;
       const height = canvas.height * ratio;
-      pdf.addImage(imageData, "JPEG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
+      pdf.addImage(imageData, "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
     }
 
     pdf.setProperties({ title, subject: "Flattened visual statement PDF", creator: "Bank statement system" });
