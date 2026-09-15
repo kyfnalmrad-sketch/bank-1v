@@ -250,6 +250,38 @@ async function inlineFrameAssets(frameDocument: Document) {
   await Promise.all(Array.from(frameDocument.querySelectorAll<HTMLImageElement>("img")).map(waitForImage));
 }
 
+async function waitForFonts(frameDocument: Document) {
+  if (frameDocument.fonts?.ready) await frameDocument.fonts.ready;
+}
+
+async function rasterizeInlineSvgImages(frameDocument: Document) {
+  const svgImages = Array.from(frameDocument.images).filter((image) => (image.currentSrc || image.src).startsWith("data:image/svg+xml"));
+  await Promise.all(svgImages.map(async (image) => {
+    const source = image.currentSrc || image.src;
+    const loaded = new Image();
+    loaded.decoding = "sync";
+    loaded.src = source;
+    await waitForImage(loaded);
+    if (!loaded.naturalWidth || !loaded.naturalHeight) return;
+    const width = Math.max(1, image.clientWidth || loaded.naturalWidth);
+    const height = Math.max(1, image.clientHeight || loaded.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.imageSmoothingEnabled = false;
+    context.drawImage(loaded, 0, 0, canvas.width, canvas.height);
+    image.src = canvas.toDataURL("image/png");
+  }));
+}
+
+function waitForStableLayout() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
   if (!html || typeof window === "undefined") return false;
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
@@ -267,7 +299,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
   // from the downloaded document while preserving the visual preview exactly.
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none";
+  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:1;pointer-events:none";
   document.body.appendChild(frame);
 
   try {
@@ -278,6 +310,9 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
     if (!frameDocument) throw new Error("Unable to access the PDF preview.");
     await inlineFrameAssets(frameDocument);
     await Promise.all(Array.from(frameDocument.images).map(waitForImage));
+    await waitForFonts(frameDocument);
+    await rasterizeInlineSvgImages(frameDocument);
+    await waitForStableLayout();
 
     const pages = Array.from(frameDocument.querySelectorAll<HTMLElement>(".page"));
     const targets = pages.length ? pages : [frameDocument.body];
@@ -288,14 +323,21 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
 
     for (let index = 0; index < targets.length; index += 1) {
       const target = targets[index];
+      const bounds = target.getBoundingClientRect();
+      const targetWidth = Math.ceil(bounds.width || target.offsetWidth || 794);
+      const targetHeight = Math.ceil(bounds.height || target.offsetHeight || 1123);
       const canvas = await html2canvas(target, {
         backgroundColor: "#ffffff",
-        scale: Math.min(2, window.devicePixelRatio || 1),
+        scale: 2,
         useCORS: true,
         logging: false,
         imageTimeout: 15000,
-        width: target.scrollWidth,
-        height: target.scrollHeight,
+        width: targetWidth,
+        height: targetHeight,
+        windowWidth: targetWidth,
+        windowHeight: targetHeight,
+        scrollX: 0,
+        scrollY: 0,
       });
       if (index > 0) pdf.addPage();
       const imageData = canvas.toDataURL("image/png");
