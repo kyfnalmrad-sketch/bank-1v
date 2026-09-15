@@ -1,3 +1,6 @@
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+
 export type PrintableWindow = {
   document: Pick<Document, "open" | "write" | "close"> & Partial<Pick<Document, "querySelectorAll">>;
   focus: () => void;
@@ -250,10 +253,61 @@ async function inlineFrameAssets(frameDocument: Document) {
 export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
   if (!html || typeof window === "undefined") return false;
   const selected = selectPrintableDocument(kind, html, html);
-  // The browser print engine preserves the reference CSS layout. Rendering the
-  // whole A4 page through html2canvas can clip transformed table-cell content.
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
-  return openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title);
+  const title = person ? `${person} - ${selected.title}` : selected.title;
+  const fileName = directPdfFilename(kind, undefined, customerName);
+
+  // Flatten every rendered page into one raster image before creating the PDF.
+  // This intentionally removes selectable/movable HTML, text, and SVG objects
+  // from the downloaded document while preserving the visual preview exactly.
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none";
+  document.body.appendChild(frame);
+
+  try {
+    const frameLoaded = waitForFrameLoad(frame);
+    frame.srcdoc = withPrintTitle(selected.html, title);
+    await frameLoaded;
+    const frameDocument = frame.contentDocument;
+    if (!frameDocument) throw new Error("Unable to access the PDF preview.");
+    await inlineFrameAssets(frameDocument);
+    await Promise.all(Array.from(frameDocument.images).map(waitForImage));
+
+    const pages = Array.from(frameDocument.querySelectorAll<HTMLElement>(".page"));
+    const targets = pages.length ? pages : [frameDocument.body];
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#ffffff",
+        scale: Math.min(2, window.devicePixelRatio || 1),
+        useCORS: true,
+        logging: false,
+        imageTimeout: 15000,
+        width: target.scrollWidth,
+        height: target.scrollHeight,
+      });
+      if (index > 0) pdf.addPage();
+      const imageData = canvas.toDataURL("image/jpeg", 0.96);
+      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+      const width = canvas.width * ratio;
+      const height = canvas.height * ratio;
+      pdf.addImage(imageData, "JPEG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
+    }
+
+    pdf.setProperties({ title, subject: "Flattened visual statement PDF", creator: "Bank statement system" });
+    pdf.save(fileName);
+    return true;
+  } catch (error) {
+    console.error("Unable to create flattened PDF", error);
+    return false;
+  } finally {
+    frame.remove();
+  }
 }
 
 export function openPrintWindow(html: string, title: string, host: PrintHost = window) {

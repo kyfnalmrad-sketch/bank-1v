@@ -974,7 +974,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setDownloadingDocument(kind);
     try {
       const opened = await downloadDocumentPdf(kind, selected.html, client.name);
-      setImportNote(opened ? `${selected.title} print dialog opened. Choose Save as PDF to create the file.` : "The PDF print window could not be opened. Please allow pop-ups for this site and try again.");
+      setImportNote(opened ? `${selected.title} downloaded as a flattened PDF image.` : "The PDF could not be created. Please try again after confirming the preview is fully visible.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);
       setImportNote("The PDF could not be created. Please try again after confirming the preview is fully visible.");
