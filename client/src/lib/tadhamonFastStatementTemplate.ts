@@ -1,6 +1,7 @@
 import type { YcbStatementProfile, YcbStatementTransaction } from "./ycbStatementPreview";
 
 export type TadhamonFastStatementProfile = YcbStatementProfile & {
+  bankName?: string;
   openingDate?: string;
   customerSince?: string;
   holderNameAr?: string;
@@ -43,7 +44,7 @@ export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfil
     const isLast = pageIndex === pages - 1;
     return `<main class="page">${pageIndex === 0 ? header(profile) : ""}<table class="statement"><colgroup><col class="date"><col class="ref"><col class="desc"><col class="debit"><col class="credit"><col class="balance"><col class="remarks"></colgroup>${tableHeader()}<tbody>${pageRows.map((item) => row(item, highlights)).join("")}</tbody></table>${isLast ? closing(profile, profile.qrUri || "") : ""}</main>`;
   }).join("");
-  return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Tadhamon Bank — Quick Account Statement</title><style>${css}</style></head><body>${pageMarkup}</body></html>`;
+  return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>${esc(profile.bankName || "Tadhamon Bank")} — Quick Account Statement</title><style>${css}</style></head><body>${pageMarkup}</body></html>`;
 }
 
 export function renderTadhamonFastStatementPages(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 35) {
