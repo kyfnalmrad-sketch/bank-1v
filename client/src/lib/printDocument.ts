@@ -252,9 +252,14 @@ async function inlineFrameAssets(frameDocument: Document) {
 
 export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
   if (!html || typeof window === "undefined") return false;
-  const selected = selectPrintableDocument(kind, html, html);
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
-  const title = person ? `${person} - ${selected.title}` : selected.title;
+  const titleByKind: Record<PrintDocumentKind, string> = {
+    accountStatus: "Account Status Statement",
+    accountStatement: "Account Statement",
+    unified: "Unified Account Statement Package",
+    unifiedAll: "Unified Statement Package — Status, Account, Quick",
+  };
+  const title = person ? `${person} - ${titleByKind[kind]}` : titleByKind[kind];
   const fileName = directPdfFilename(kind, undefined, customerName);
 
   // Flatten every rendered page into one raster image before creating the PDF.
@@ -267,7 +272,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
 
   try {
     const frameLoaded = waitForFrameLoad(frame);
-    frame.srcdoc = withPrintTitle(selected.html, title);
+    frame.srcdoc = withPrintTitle(html, title);
     await frameLoaded;
     const frameDocument = frame.contentDocument;
     if (!frameDocument) throw new Error("Unable to access the PDF preview.");
