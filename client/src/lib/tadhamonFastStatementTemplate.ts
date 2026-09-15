@@ -35,17 +35,17 @@ function closing(profile: TadhamonFastStatementProfile, qrUri: string) {
   return `<div class="closing-row"><div><div class="bottom-date"><div class="date-label">DATE / التاريخ</div><div class="date-value">${esc(profile.issueDate)}</div></div><section class="footer"><div class="identity-block"><div class="name-box"><span>${esc(profile.customerName)}</span><span class="name-ar">${esc(profile.holderNameAr || "—")}</span></div><div class="total-row"><div class="total-combined">Total Balance: ${money(profile.closingBalance)}</div><div class="time">Time: <span>${esc(profile.statementTime || "—")}</span></div></div></div></section></div><div class="qr-block"><span class="qr-name">${esc(shortName(profile.customerName))}</span>${qrUri ? `<img class="qr-image" alt="QR code for account holder" src="${esc(qrUri)}">` : ""}</div></div>`;
 }
 
-export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}) {
-  const rowsPerPage = 35;
-  const pages = Math.max(1, Math.ceil(transactions.length / rowsPerPage));
+export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 35) {
+  const safeRowsPerPage = Math.min(35, Math.max(1, Math.floor(rowsPerPage)));
+  const pages = Math.max(1, Math.ceil(transactions.length / safeRowsPerPage));
   const pageMarkup = Array.from({ length: pages }, (_, pageIndex) => {
-    const pageRows = transactions.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
+    const pageRows = transactions.slice(pageIndex * safeRowsPerPage, (pageIndex + 1) * safeRowsPerPage);
     const isLast = pageIndex === pages - 1;
     return `<main class="page">${pageIndex === 0 ? header(profile) : ""}<table class="statement"><colgroup><col class="date"><col class="ref"><col class="desc"><col class="debit"><col class="credit"><col class="balance"><col class="remarks"></colgroup>${tableHeader()}<tbody>${pageRows.map((item) => row(item, highlights)).join("")}</tbody></table>${isLast ? closing(profile, profile.qrUri || "") : ""}</main>`;
   }).join("");
   return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Tadhamon Bank — Quick Account Statement</title><style>${css}</style></head><body>${pageMarkup}</body></html>`;
 }
 
-export function renderTadhamonFastStatementPages(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}) {
-  return renderTadhamonFastStatement(profile, transactions, highlights);
+export function renderTadhamonFastStatementPages(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 35) {
+  return renderTadhamonFastStatement(profile, transactions, highlights, rowsPerPage);
 }

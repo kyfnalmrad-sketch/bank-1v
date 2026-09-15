@@ -102,6 +102,7 @@ type SnapshotPayload = {
   fastMinimumDeposit?: string;
   fastKeyword?: string;
   fastKeywordColor?: string;
+  fastRowsPerPage?: number;
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -287,6 +288,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastMinimumDeposit, setFastMinimumDeposit] = useState("");
   const [fastKeyword, setFastKeyword] = useState("");
   const [fastKeywordColor, setFastKeywordColor] = useState("#dcfce7");
+  const [fastRowsPerPage, setFastRowsPerPage] = useState(35);
+  const [fastRowsPerPageInput, setFastRowsPerPageInput] = useState("35");
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [closingBalanceOverride, setClosingBalanceOverride] = useState("");
@@ -517,7 +520,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, fastKeyword, fastKeywordColor, fastRowsPerPage, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastKeyword, fastKeywordColor, fastMinimumDeposit, fastRowsPerPage, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -575,6 +578,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
     setFastKeyword(typeof payload.fastKeyword === "string" ? payload.fastKeyword : "");
     setFastKeywordColor(typeof payload.fastKeywordColor === "string" ? payload.fastKeywordColor : "#dcfce7");
+    const restoredRowsPerPage = typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(35, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 35;
+    setFastRowsPerPage(restoredRowsPerPage);
+    setFastRowsPerPageInput(String(restoredRowsPerPage));
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -706,6 +712,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
     setFastKeyword(typeof payload.fastKeyword === "string" ? payload.fastKeyword : "");
     setFastKeywordColor(typeof payload.fastKeywordColor === "string" ? payload.fastKeywordColor : "#dcfce7");
+    const restoredRowsPerPage = typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(35, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 35;
+    setFastRowsPerPage(restoredRowsPerPage);
+    setFastRowsPerPageInput(String(restoredRowsPerPage));
     setHistoryRestoreState("success");
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
     setActiveTab("account");
@@ -944,6 +953,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastHighlightColors(next);
     setImportNote(`تم تلوين ${matches} إيداع يحتوي وصفه على كلمة: ${fastKeyword}`);
   };
+  const applyFastRowsPerPage = () => {
+    const requested = Number(fastRowsPerPageInput);
+    const next = Number.isFinite(requested) && requested > 0 ? Math.min(35, Math.floor(requested)) : 35;
+    setFastRowsPerPage(next);
+    setFastRowsPerPageInput(String(next));
+    setImportNote(`تم تحديث الكشف السريع إلى ${next} عملية كحد أقصى لكل صفحة.`);
+  };
   const removeTransaction = (rowNumber: number) => {
     setTransactions((current) => current.filter((transaction) => transaction.rowNumber !== rowNumber));
     setRegisterDirty(true);
@@ -985,8 +1001,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const keyword = fastKeyword.trim().toLocaleLowerCase();
     const keywordHighlights = keyword ? Object.fromEntries(rows.filter((row) => (row.credit || 0) > 0 && String(row.description || "").toLocaleLowerCase().includes(keyword)).map((row) => [row.reference, fastKeywordColor])) : {};
     const fastHighlights = { ...keywordHighlights, ...Object.fromEntries(rows.filter((row) => row.highlightColor && row.highlightColor.toLowerCase() !== "#ffed00").map((row) => [row.reference, row.highlightColor as string])) };
-    return renderTadhamonFastStatementPages(profile, rows, fastHighlights);
-  }, [barcodeSources, documentClient, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors, fastKeyword, fastKeywordColor]);
+    return renderTadhamonFastStatementPages(profile, rows, fastHighlights, fastRowsPerPage);
+  }, [barcodeSources, documentClient, documentPrintDate, documentPeriodEnd, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors, fastKeyword, fastKeywordColor, fastRowsPerPage]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
@@ -1169,7 +1185,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       {activeTab === "fastStatement" && selectedBank === "tadhamon" && <section className="panel print-preview-panel" dir="rtl">
         <div className="panel-heading"><div><h2>طبعة كشف حساب سريع / Quick Account Statement</h2><p className="hint">مسار مستقل وسريع يعتمد على نفس بيانات العميل والسجل المعتمد، ولا يغيّر القالب الرسمي أو تصميم بيان الحالة.</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="review-grid"><div className="validation-card"><span>العميل / Customer</span><strong>{client.name || "—"}</strong><small>{client.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>الرصيد الختامي / Closing</span><strong>{formatMoney(reportedClosing)}</strong><small>{client.currency}</small></div><div className="validation-card"><span>العمليات / Transactions</span><strong>{acceptedRows.length}</strong><small>From the applied register</small></div><div className="validation-card"><span>الفترة / Period</span><strong>{documentPeriodStart} — {documentPeriodEnd}</strong><small>Quick print only</small></div></div>
-        <div className="actions"><button type="button" className="secondary-button" onClick={() => highlightDepositsWhite()}><RefreshCcw size={17} /> تلوين الإيداعات بالأبيض / White Deposits</button><label className="computed-field"><span>حد مبلغ الإيداع / Minimum Deposit</span><input className="transaction-edit-input" type="number" min="0" step="0.01" dir="ltr" value={fastMinimumDeposit} onChange={(event) => setFastMinimumDeposit(event.target.value)} placeholder="100.00" /></label><button type="button" className="secondary-button" onClick={() => { const minimum = money(fastMinimumDeposit); if (minimum > 0) highlightDepositsWhite(minimum); }} disabled={!fastMinimumDeposit.trim() || money(fastMinimumDeposit) <= 0}><RefreshCcw size={17} /> تحديث حسب المبلغ / Apply Minimum</button><div className="keyword-color-controls" style={{ display: "flex", gap: "10px", alignItems: "end", flexWrap: "wrap", width: "100%", padding: "12px", border: "1px solid #dbe3ec", borderRadius: "8px", background: "#f8fafc" }}><label className="computed-field"><span>كلمة البحث في الإيداعات / Deposit Keyword</span><input className="transaction-edit-input" value={fastKeyword} onChange={(event) => setFastKeyword(event.target.value)} placeholder="مثال: إيداع أو راتب" /></label><label className="computed-field"><span>لون الوصف المطابق / Match Color</span><select className="transaction-edit-input" value={fastKeywordColor} onChange={(event) => setFastKeywordColor(event.target.value)}><option value="#e5e7eb">أسود / Black</option><option value="#dcfce7">أخضر / Green</option><option value="#dbeafe">أزرق / Blue</option><option value="#fef9c3">أصفر / Yellow</option><option value="#fee2e2">أحمر / Red</option></select></label><button type="button" className="secondary-button" onClick={applyFastKeywordColor} disabled={!fastKeyword.trim()}>تطبيق على الأوصاف المطابقة / Apply</button><small style={{ color: "#475569", width: "100%" }}>يتم تلوين الإيداعات المطابقة فقط؛ السحوبات وباقي العمليات لا تتغير، والخط يبقى أسوداً. / Deposits only; all other rows stay unchanged.</small></div><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><FileText size={17} /> معاينة / Preview</button><button type="button" onClick={() => void downloadPdf("accountStatement")}><Printer size={17} /> طباعة / Print</button><button type="button" className="unified-print-button" onClick={() => printDocument("unifiedAll")}><Printer size={17} /> طباعة موحدة / Unified Print</button></div>
+        <div className="actions"><label className="computed-field"><span>عدد العمليات لكل صفحة / Rows per page</span><input className="transaction-edit-input" type="number" min="1" max="35" step="1" value={fastRowsPerPageInput} onChange={(event) => setFastRowsPerPageInput(event.target.value)} placeholder="35" /></label><button type="button" className="secondary-button" onClick={applyFastRowsPerPage}><RefreshCcw size={17} /> تحديث عدد الصفوف / Update Rows</button><button type="button" className="secondary-button" onClick={() => highlightDepositsWhite()}><RefreshCcw size={17} /> تلوين الإيداعات بالأبيض / White Deposits</button><label className="computed-field"><span>حد مبلغ الإيداع / Minimum Deposit</span><input className="transaction-edit-input" type="number" min="0" step="0.01" dir="ltr" value={fastMinimumDeposit} onChange={(event) => setFastMinimumDeposit(event.target.value)} placeholder="100.00" /></label><button type="button" className="secondary-button" onClick={() => { const minimum = money(fastMinimumDeposit); if (minimum > 0) highlightDepositsWhite(minimum); }} disabled={!fastMinimumDeposit.trim() || money(fastMinimumDeposit) <= 0}><RefreshCcw size={17} /> تحديث حسب المبلغ / Apply Minimum</button><div className="keyword-color-controls" style={{ display: "flex", gap: "10px", alignItems: "end", flexWrap: "wrap", width: "100%", padding: "12px", border: "1px solid #dbe3ec", borderRadius: "8px", background: "#f8fafc" }}><label className="computed-field"><span>كلمة البحث في الإيداعات / Deposit Keyword</span><input className="transaction-edit-input" value={fastKeyword} onChange={(event) => setFastKeyword(event.target.value)} placeholder="مثال: إيداع أو راتب" /></label><label className="computed-field"><span>لون الوصف المطابق / Match Color</span><select className="transaction-edit-input" value={fastKeywordColor} onChange={(event) => setFastKeywordColor(event.target.value)}><option value="#e5e7eb">أسود / Black</option><option value="#dcfce7">أخضر / Green</option><option value="#dbeafe">أزرق / Blue</option><option value="#fef9c3">أصفر / Yellow</option><option value="#fee2e2">أحمر / Red</option></select></label><button type="button" className="secondary-button" onClick={applyFastKeywordColor} disabled={!fastKeyword.trim()}>تطبيق على الأوصاف المطابقة / Apply</button><small style={{ color: "#475569", width: "100%" }}>يتم تلوين الإيداعات المطابقة فقط؛ السحوبات وباقي العمليات لا تتغير، والخط يبقى أسوداً. / Deposits only; all other rows stay unchanged.</small></div><button type="button" className="preview-button" onClick={() => openPrintWindow(tadhamonFastStatementHtml, "Tadhamon Bank — Quick Account Statement")}><FileText size={17} /> معاينة / Preview</button><button type="button" onClick={() => void downloadPdf("accountStatement")}><Printer size={17} /> طباعة / Print</button><button type="button" className="unified-print-button" onClick={() => printDocument("unifiedAll")}><Printer size={17} /> طباعة موحدة / Unified Print</button></div>
         {transactions.length > 0 && <div className="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Color</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>{transactions.map((row) => <tr key={`fast-${row.rowNumber}-${row.operationNumber}`}><td>{displayStatementDate(row.date)}</td><td dir="ltr">{row.operationNumber}</td><td><label className="operation-color-control"><span className="sr-only">لون العملية {row.operationNumber}</span><input aria-label={`Quick highlight ${row.operationNumber}`} type="color" value={fastHighlightColors[row.rowNumber] || "#ffed00"} onChange={(event) => updateFastHighlight(row.rowNumber, event.target.value)} /><select aria-label={`Quick preset color ${row.operationNumber}`} value={fastHighlightColors[row.rowNumber] || "#ffed00"} onChange={(event) => updateFastHighlight(row.rowNumber, event.target.value)}><option value="#ffed00">أصفر فاتح</option><option value="#e5e7eb">أسود فاتح</option><option value="#dcfce7">أخضر فاتح</option><option value="#dbeafe">أزرق فاتح</option><option value="#fef9c3">أصفر خفيف</option><option value="#fee2e2">أحمر فاتح</option></select><button type="button" className="secondary-button" title="إرجاع اللون الأصفر" onClick={() => updateFastHighlight(row.rowNumber, "#ffed00")}>إعادة</button></label></td><td>{row.description}</td><td>{row.debit ? formatMoney(row.debit) : "—"}</td><td>{row.credit ? formatMoney(row.credit) : "—"}</td><td>{formatMoney(row.balance || 0)}</td></tr>)}</tbody></table></div>}
         <div className="document-frame-wrap"><iframe className="document-frame" title="Tadhamon quick account statement preview" srcDoc={tadhamonFastStatementHtml} /></div>
       </section>}
