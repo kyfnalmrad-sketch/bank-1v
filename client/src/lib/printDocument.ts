@@ -250,16 +250,7 @@ async function inlineFrameAssets(frameDocument: Document) {
   await Promise.all(Array.from(frameDocument.querySelectorAll<HTMLImageElement>("img")).map(waitForImage));
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
-  if (!html || typeof window === "undefined") return false;
-  const selected = selectPrintableDocument(kind, html, html);
-  const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
-  const title = person ? `${person} - ${selected.title}` : selected.title;
-  const fileName = directPdfFilename(kind, undefined, customerName);
-
-  // Flatten every rendered page into one raster image before creating the PDF.
-  // This intentionally removes selectable/movable HTML, text, and SVG objects
-  // from the downloaded document while preserving the visual preview exactly.
+async function rasterizeDocumentPages(html: string, title: string) {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none";
@@ -267,22 +258,17 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
 
   try {
     const frameLoaded = waitForFrameLoad(frame);
-    frame.srcdoc = withPrintTitle(selected.html, title);
+    frame.srcdoc = withPrintTitle(html, title);
     await frameLoaded;
     const frameDocument = frame.contentDocument;
-    if (!frameDocument) throw new Error("Unable to access the PDF preview.");
+    if (!frameDocument) throw new Error("Unable to access the rendered document.");
     await inlineFrameAssets(frameDocument);
     await Promise.all(Array.from(frameDocument.images).map(waitForImage));
 
     const pages = Array.from(frameDocument.querySelectorAll<HTMLElement>(".page"));
     const targets = pages.length ? pages : [frameDocument.body];
-    const ownerPassword = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true, encryption: { ownerPassword, userPermissions: ["print"] } });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    for (let index = 0; index < targets.length; index += 1) {
-      const target = targets[index];
+    const images: string[] = [];
+    for (const target of targets) {
       const canvas = await html2canvas(target, {
         backgroundColor: "#ffffff",
         scale: Math.min(2, window.devicePixelRatio || 1),
@@ -292,12 +278,33 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
         width: target.scrollWidth,
         height: target.scrollHeight,
       });
+      images.push(canvas.toDataURL("image/png"));
+    }
+    return images;
+  } finally {
+    frame.remove();
+  }
+}
+
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
+  if (!html || typeof window === "undefined") return false;
+  const selected = selectPrintableDocument(kind, html, html);
+  const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
+  const title = person ? `${person} - ${selected.title}` : selected.title;
+  const fileName = directPdfFilename(kind, undefined, customerName);
+
+  try {
+    // Flatten every rendered page into one raster image before creating the PDF.
+    // This intentionally removes selectable/movable HTML, text, and SVG objects.
+    const images = await rasterizeDocumentPages(selected.html, title);
+    const ownerPassword = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true, encryption: { ownerPassword, userPermissions: ["print"] } });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    for (let index = 0; index < images.length; index += 1) {
       if (index > 0) pdf.addPage();
-      const imageData = canvas.toDataURL("image/png");
-      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-      const width = canvas.width * ratio;
-      const height = canvas.height * ratio;
-      pdf.addImage(imageData, "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
+      pdf.addImage(images[index], "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
     }
 
     pdf.setProperties({ title, subject: "Flattened visual statement PDF", creator: "Bank statement system" });
@@ -306,8 +313,6 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
   } catch (error) {
     console.error("Unable to create flattened PDF", error);
     return false;
-  } finally {
-    frame.remove();
   }
 }
 
