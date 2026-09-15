@@ -36,9 +36,10 @@ function closing(profile: TadhamonFastStatementProfile, qrUri: string) {
 }
 
 export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}) {
-  const pages = Math.max(1, Math.ceil(transactions.length / 45));
+  const rowsPerPage = 35;
+  const pages = Math.max(1, Math.ceil(transactions.length / rowsPerPage));
   const pageMarkup = Array.from({ length: pages }, (_, pageIndex) => {
-    const pageRows = transactions.slice(pageIndex * 45, (pageIndex + 1) * 45);
+    const pageRows = transactions.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
     const isLast = pageIndex === pages - 1;
     return `<main class="page">${pageIndex === 0 ? header(profile) : ""}<table class="statement"><colgroup><col class="date"><col class="ref"><col class="desc"><col class="debit"><col class="credit"><col class="balance"><col class="remarks"></colgroup>${tableHeader()}<tbody>${pageRows.map((item) => row(item, highlights)).join("")}</tbody></table>${isLast ? closing(profile, profile.qrUri || "") : ""}</main>`;
   }).join("");

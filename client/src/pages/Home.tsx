@@ -973,9 +973,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       printTime: formatMorningTime(documentClient.printTime),
     };
     const rows: YcbStatementTransaction[] = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: row.highlightColor }));
-    const highlights = Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string]));
+    const keyword = fastKeyword.trim().toLocaleLowerCase();
+    const keywordHighlights = keyword ? Object.fromEntries(rows.filter((row) => (row.credit || 0) > 0 && String(row.description || "").toLocaleLowerCase().includes(keyword)).map((row) => [row.reference, fastKeywordColor])) : {};
+    const highlights = { ...keywordHighlights, ...Object.fromEntries(rows.filter((row) => row.highlightColor).map((row) => [row.reference, row.highlightColor as string])) };
     return assemblePrintableStatementHtml(renderTadhamonStatementPages(profile, rows, statementQrSources, barcodeSources, highlights));
-  }, [barcodeSources, documentClient, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
+  }, [barcodeSources, documentClient, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, fastKeyword, fastKeywordColor, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows]);
   const tadhamonFastStatementHtml = useMemo(() => {
     if (selectedBank !== "tadhamon") return "";
     const profile = { customerName: documentClient.name, passport: documentClient.momaizNo || documentClient.passport, address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType, currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: documentClient.customerSince, holderNameAr: documentClient.nameAr, statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo };
