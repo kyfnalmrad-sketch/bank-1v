@@ -12,6 +12,7 @@ export type PreviewTransaction = {
   debit: number;
   credit: number;
   balance: number | null;
+  highlightColor?: string;
 };
 
 export type AccountStatusPreviewInput = {
@@ -157,7 +158,12 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     ? `<div class="side-barcode"><div class="barcode-frame"><img src="${escapeHtml(data.barcodeUri)}" alt="Verification barcode"></div><span>${value(data.barcodeLabel)}</span></div>`
     : "";
   const tableRows = rows.length
-    ? rows.map((row) => `<tr data-operation="${escapeHtml(row.operationNumber)}"><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td>${includeBranch ? `<td class="branch-cell"><span>${value(row.branch)}</span></td>` : ""}<td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`).join("")
+    ? rows.map((row) => {
+      const highlight = typeof row.highlightColor === "string" && /^#[0-9a-f]{6}$/i.test(row.highlightColor) ? row.highlightColor : "";
+      const highlightClass = highlight ? " highlighted" : "";
+      const highlightStyle = highlight ? ` style="--row-highlight:${highlight}"` : "";
+      return `<tr class="${highlightClass.trim()}" data-operation="${escapeHtml(row.operationNumber)}"${highlightStyle}><td class="date-cell"><span>${value(row.date)}</span></td><td class="particular-cell"><span class="description-line ${descriptionClass(row.description)}">${value(row.description)}</span></td>${includeBranch ? `<td class="branch-cell"><span>${value(row.branch)}</span></td>` : ""}<td class="operation-cell"><span>${value(row.operationNumber)}</span></td><td class="number-cell${row.debit ? "" : " debit-placeholder-cell"}"><span>${row.debit ? `-${amount(row.debit)}` : "-----"}</span></td><td class="credit-cell${row.credit ? "" : " placeholder-cell"}"><span>${row.credit ? amount(row.credit) : "-----"}</span></td><td class="balance-cell"><span>${balanceAmount(row.balance)}</span></td></tr>`;
+    }).join("")
     : `<tr><td class="date-cell"><span>—</span></td><td class="particular-cell"><span class="description-line description-standard">No imported transactions</span></td>${includeBranch ? `<td class="branch-cell"><span>—</span></td>` : ""}<td class="operation-cell"><span>—</span></td><td class="number-cell debit-placeholder-cell"><span>-----</span></td><td class="credit-cell placeholder-cell"><span>-----</span></td><td class="balance-cell"><span>${balanceAmount(data.closing)}</span></td></tr>`;
   const finalSection = data.pageNumber === data.pageCount
     ? `<section class="end${includeBranch ? " with-branch" : ""}"><div class="end-label">END OF REPORT</div><div class="end-balance-label">BALANCE</div><div class="end-balance-value">${balanceAmount(data.closing)}</div></section><p class="notice">Please review this statement and report any discrepancy to AlKuraimi Islamic Microfinance Bank within fifteen (15) calendar days of receipt.</p>`
@@ -194,7 +200,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;min-width:0;line-height:1.1}
     .transactions tr{break-inside:avoid;page-break-inside:avoid;min-height:9.3mm}
     .transactions td{min-width:0;min-height:9.3mm;padding:.7mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .transactions tr:nth-child(even) td{background:#e7e6e6}
+    .transactions tr:nth-child(even) td{background:#e7e6e6}.transactions tr.highlighted td{background:var(--row-highlight)!important;color:#111!important}
     .date-cell{text-align:center;white-space:nowrap;font:400 10.5pt/10.5pt Calibri,Arial,sans-serif}
     .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;padding:.65mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
     .branch-cell{font:400 8pt/3.2mm Arial,Tahoma,sans-serif;white-space:normal;overflow-wrap:anywhere}

@@ -100,6 +100,10 @@ type SnapshotPayload = {
   statementReferenceOverride?: string;
   fastHighlightColors?: Record<number, string>;
   fastMinimumDeposit?: string;
+  nameMemory?: string[];
+  employeeMemory?: string[];
+  managerMemory?: string[];
+  lockedSignatureNames?: { employee: boolean; manager: boolean };
   ycbClient?: typeof defaultYcbClient;
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
@@ -201,6 +205,13 @@ function loadLocalList(key: string) {
   }
 }
 
+function rememberLocalValue(key: string, value: string, limit = 220) {
+  const clean = value.trim();
+  if (!clean || typeof window === "undefined") return;
+  const current = loadLocalList(key);
+  window.localStorage.setItem(key, JSON.stringify(Array.from(new Set([clean, ...current])).slice(0, limit)));
+}
+
 function clearSessionToken() {
   try {
     sessionStorage.removeItem("manus-cookie");
@@ -296,9 +307,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const localMemoryPrefix = selectedBank === "ycb" ? "bak-web-staging-ycb" : selectedBank === "tadhamon" ? "bak-web-staging-tadhamon" : "bak-web-staging-karimi";
   const [descriptionMemory, setDescriptionMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-descriptions`));
   const [nameMemory, setNameMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-names`));
+  const [employeeMemory, setEmployeeMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-employees`));
+  const [managerMemory, setManagerMemory] = useState<string[]>(() => loadLocalList(`${localMemoryPrefix}-managers`));
+  const [lockedSignatureNames, setLockedSignatureNames] = useState({ employee: false, manager: false });
   useEffect(() => {
     setDescriptionMemory(loadLocalList(`${localMemoryPrefix}-descriptions`));
     setNameMemory(loadLocalList(`${localMemoryPrefix}-names`));
+    setEmployeeMemory(loadLocalList(`${localMemoryPrefix}-employees`));
+    setManagerMemory(loadLocalList(`${localMemoryPrefix}-managers`));
   }, [localMemoryPrefix]);
   const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
   const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
@@ -513,7 +529,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     enclosurePages: statementPageCount,
     referenceNo: statementReference,
   }), [documentClient, dateOfBirthPlacement, documentPrintDate, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statusQrSource, statementPageCount, statementReference, ycbClient]);
-  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, mappedFields, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
+  const snapshotPayload = useMemo<SnapshotPayload>(() => ({ schemaVersion: 1, bankId: selectedBank === "ycb" ? "ycb" : selectedBank === "tadhamon" ? "tadhamon" : "karimi", client, referenceSource, includeBranch, fileName, columnMap, mappedFields, transactions, appliedTransactions, totalCreditOverride, totalDebitOverride, closingBalanceOverride, statementReferenceOverride, fastHighlightColors, fastMinimumDeposit, nameMemory, employeeMemory, managerMemory, lockedSignatureNames, dateOfBirthPlacement, ycbClient: selectedBank === "ycb" ? ycbClient : undefined }), [appliedTransactions, client, columnMap, dateOfBirthPlacement, employeeMemory, fastHighlightColors, fastMinimumDeposit, fileName, includeBranch, lockedSignatureNames, managerMemory, mappedFields, nameMemory, referenceSource, selectedBank, statementReferenceOverride, totalCreditOverride, totalDebitOverride, transactions, ycbClient, closingBalanceOverride]);
 
   useEffect(() => {
     if (skipSnapshotRestore.current) {
@@ -569,6 +585,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
     setFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
+    if (Array.isArray(payload.nameMemory)) setNameMemory(payload.nameMemory.filter((value): value is string => typeof value === "string"));
+    if (Array.isArray(payload.employeeMemory)) setEmployeeMemory(payload.employeeMemory.filter((value): value is string => typeof value === "string"));
+    if (Array.isArray(payload.managerMemory)) setManagerMemory(payload.managerMemory.filter((value): value is string => typeof value === "string"));
+    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object") {
+      setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
+    }
     setSnapshotState("restored");
   }, [selectedBank, snapshotQuery.data, snapshotQuery.isError, snapshotQuery.isLoading]);
 
@@ -623,7 +645,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     skipSnapshotRestore.current = true;
     skipNextSnapshotSave.current = true;
     snapshotRestored.current = true;
-    setClient({ ...defaultClient });
+    setClient({ ...defaultClient, employeeName: lockedSignatureNames.employee ? client.employeeName : "", managerName: lockedSignatureNames.manager ? client.managerName : "" });
     setYcbClient({ ...defaultYcbClient });
     setReferenceSource("internal");
     setIncludeBranch(false);
@@ -698,6 +720,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setStatementReferenceOverride(typeof payload.statementReferenceOverride === "string" ? payload.statementReferenceOverride : "");
     setFastHighlightColors(payload.fastHighlightColors && typeof payload.fastHighlightColors === "object" ? payload.fastHighlightColors : {});
     setFastMinimumDeposit(typeof payload.fastMinimumDeposit === "string" ? payload.fastMinimumDeposit : "");
+    if (Array.isArray(payload.nameMemory)) setNameMemory(payload.nameMemory.filter((value): value is string => typeof value === "string"));
+    if (Array.isArray(payload.employeeMemory)) setEmployeeMemory(payload.employeeMemory.filter((value): value is string => typeof value === "string"));
+    if (Array.isArray(payload.managerMemory)) setManagerMemory(payload.managerMemory.filter((value): value is string => typeof value === "string"));
+    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object") {
+      setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
+    }
     setHistoryRestoreState("success");
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
     setActiveTab("account");
@@ -743,7 +771,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     barcodeLabel: `REF P${pageIndex + 1} of ${statementPageCount}`,
     closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
     pageSummary: statementPageSummaries[pageIndex],
-      transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
+      transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance, highlightColor: row.highlightColor })),
   })), [barcodeSources, documentClient, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
@@ -781,7 +809,21 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [selectedBank, statementPageCount, statementReference, statementPageGroups, statementPageSummaries, ycbStatementProfile]);
 
   const updateClient = (key: keyof typeof defaultClient, value: string) => {
+    if (key === "employeeName" && lockedSignatureNames.employee) return;
+    if (key === "managerName" && lockedSignatureNames.manager) return;
     setClient((current) => ({ ...current, [key]: value }));
+    if (key === "name") {
+      rememberLocalValue(`${localMemoryPrefix}-names`, value);
+      setNameMemory((current) => Array.from(new Set([value.trim(), ...current].filter(Boolean))).slice(0, 220));
+    }
+    if (key === "employeeName") {
+      rememberLocalValue(`${localMemoryPrefix}-employees`, value);
+      setEmployeeMemory((current) => Array.from(new Set([value.trim(), ...current].filter(Boolean))).slice(0, 220));
+    }
+    if (key === "managerName") {
+      rememberLocalValue(`${localMemoryPrefix}-managers`, value);
+      setManagerMemory((current) => Array.from(new Set([value.trim(), ...current].filter(Boolean))).slice(0, 220));
+    }
     if (selectedBank === "ycb") {
       const ycbKeyMap: Partial<Record<keyof typeof defaultClient, keyof typeof ycbClient>> = {
         name: "name", passport: "passport", branch: "branch", customerSince: "customerSince", dateOfBirth: "dateOfBirth", placeOfBirth: "placeOfBirth", accountNumber: "accountNumber", accountType: "accountType", currency: "currency", opening: "opening", issueDate: "issueDate",
@@ -905,10 +947,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const updateTransactionHighlight = (rowNumber: number, color: string) => {
-    setRegisterDirty(true);
-    setTransactions((current) => current.map((transaction) => transaction.rowNumber === rowNumber
-      ? { ...transaction, highlightColor: color || undefined }
-      : transaction));
+    const nextColor = color || undefined;
+    const update = (current: Transaction[]) => current.map((transaction) => transaction.rowNumber === rowNumber
+      ? { ...transaction, highlightColor: nextColor }
+      : transaction);
+    setTransactions(update);
+    setAppliedTransactions(update);
+    setRegisterDirty(false);
+    setImportNote(nextColor ? "تم تطبيق لون الحركة على الكشف والمعاينة." : "تم إلغاء لون الحركة.");
   };
 
   const updateFastHighlight = (rowNumber: number, color: string) => {
@@ -1181,7 +1227,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <section className="panel">
           <h2>المعلومات الشخصية / Customer Information</h2>
           <div className="grid">
-            <label>اسم العميل / Customer name<input value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /></label>
+            <label>اسم العميل / Customer name<input list="customer-name-suggestions" value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /><datalist id="customer-name-suggestions">{nameMemory.map((value) => <option key={value} value={value} />)}</datalist></label>
             {selectedBank === "tadhamon" && <label>الاسم بالعربية / Arabic name<input dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="الاسم كما يظهر في الكشف السريع" /></label>}
             {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={ycbClient.placeOfBirth} onChange={(event) => updateYcbClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
@@ -1215,8 +1261,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>بيانات التوقيع / Signature Details</h2>
           <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان.</p>
           <div className="grid">
-            <label>اسم الموظف / Employee name<input value={client.employeeName} onChange={(event) => updateClient("employeeName", event.target.value)} /></label>
-            <label>اسم المدير / Manager name<input value={client.managerName} onChange={(event) => updateClient("managerName", event.target.value)} /></label>
+            <label>اسم الموظف / Employee name<input list="employee-name-suggestions" value={client.employeeName} disabled={lockedSignatureNames.employee} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="employee-name-suggestions">{employeeMemory.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.employee} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, employee: event.target.checked }))} /> تثبيت اسم الموظف / Keep fixed</span></label>
+            <label>اسم المدير / Manager name<input list="manager-name-suggestions" value={client.managerName} disabled={lockedSignatureNames.manager} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="manager-name-suggestions">{managerMemory.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.manager} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, manager: event.target.checked }))} /> تثبيت اسم المدير / Keep fixed</span></label>
           </div>
         </section>}
         <section className="panel">
