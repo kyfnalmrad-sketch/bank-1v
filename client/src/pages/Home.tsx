@@ -1348,7 +1348,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <button type="button" className="unified-print-button" onClick={() => printDocument("accountStatement")}><Printer size={17} /> طباعة كشف الحساب / Print Account Statement</button>
           </div>
           <div className="review-action-group">
-            <span className="review-action-label">حفظ PDF / Save PDF</span>
+            <span className="review-action-label">حفظ PDF كصورة / Save Image PDF</span>
             <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatus"} onClick={() => void downloadPdf("accountStatus")}><Download size={17} /> {downloadingDocument === "accountStatus" ? "جارٍ الفتح… / Opening…" : selectedBank === "tadhamon" ? "حفظ بيان الحالة — بنك التضامن PDF / Save Tadhamon Status PDF" : "حفظ بيان البنك PDF / Save Bank Status PDF"}</button>
             <button type="button" className="preview-button" disabled={downloadingDocument === "accountStatement"} onClick={() => void downloadPdf("accountStatement")}><Download size={17} /> {downloadingDocument === "accountStatement" ? "جارٍ الفتح… / Opening…" : "حفظ كشف الحساب PDF / Save Account Statement PDF"}</button>
           </div>
