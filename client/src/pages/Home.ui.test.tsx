@@ -185,4 +185,13 @@ describe("Home applied transaction register", () => {
     expect(html).toContain("Statement of Account");
     expect(html).toContain("Tadhamon Bank");
   });
+
+  it.each([
+    ["بنك اليمن التجاري", /بنك اليمن التجاري/],
+    ["بنك الكريمي", /بنك الكريمي/],
+  ])("shows the quick statement sidebar tab for %s", (_label, bankButton) => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: bankButton }));
+    expect(screen.getAllByRole("button", { name: /كشف/ }).length).toBeGreaterThanOrEqual(2);
+  });
 });
