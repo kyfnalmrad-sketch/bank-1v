@@ -34,6 +34,8 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .address-date-of-birth .value,.address-passport .value{display:block;margin-top:.7mm;font-weight:400}
  .address-passport .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
  .page > .notes{margin-top:3mm!important}
+ .row:not(.head):not(.total){height:6.6mm;min-height:6.6mm;max-height:6.6mm}
+ .row:not(.head):not(.total) .cell{height:6.6mm;min-height:6.6mm;max-height:6.6mm}
  .row:nth-child(odd):not(.head):not(.total) .cell{background:#E2E6EA}
  .row.credit-row .cell{background:#E8F8F5;color:#1B365D}
  .row.credit-row .cell.amount:first-of-type{color:#117A65;font-weight:700}
