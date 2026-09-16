@@ -31,4 +31,14 @@ describe("Tadhamon quick statement template", () => {
     expect(html).toContain("class=\"qr-image\"");
     expect(html).toContain("data:image/png;base64,TEST");
   });
+  it("splits after 35 real operations without empty rows", () => {
+    const rows = Array.from({ length: 36 }, (_, index) => ({ date: "01/01/2026", reference: `R-${index + 1}`, description: `Operation ${index + 1}`, credit: 100, debit: 0, balance: 100 }));
+    const html = renderTadhamonFastStatement({ customerName: "Test", accountNumber: "A", openingBalance: 0, closingBalance: 100, totalCredit: 3600, totalDebit: 0, issueDate: "01 January 2026", qrUri: "" }, rows, {}, 35);
+    expect((html.match(/class="page"/g) || []).length).toBe(2);
+    expect(html).toContain("Operation 35");
+    expect(html).toContain("Operation 36");
+    expect(html).not.toContain("empty-row");
+    expect(html).not.toContain("&nbsp;");
+  });
+
 });
