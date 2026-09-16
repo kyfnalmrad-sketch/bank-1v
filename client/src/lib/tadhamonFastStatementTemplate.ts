@@ -25,7 +25,7 @@ function tableHeader() {
 }
 
 function row(item: YcbStatementTransaction, highlights: Record<string, string>) {
-  const highlightColor = /^#[0-9a-fA-F]{6}$/.test(highlights[item.reference] || "") ? highlights[item.reference] : "";
+  const highlightColor = (item.credit || 0) > 0 && /^#[0-9a-fA-F]{6}$/.test(highlights[item.reference] || "") ? highlights[item.reference] : "";
   const highlight = highlightColor ? ` highlight" style="--highlight-color:${highlightColor}` : "";
   const deposit = (item.credit || 0) > 0 ? " deposit" : "";
   const cells = [dateText(item.date), item.reference, item.description, item.debit ? money(item.debit) : "", item.credit ? money(item.credit) : "", money(item.balance), ""];
@@ -37,7 +37,7 @@ function closing(profile: TadhamonFastStatementProfile, qrUri: string) {
 }
 
 export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 35) {
-  const safeRowsPerPage = Math.min(35, Math.max(1, Math.floor(rowsPerPage)));
+  const safeRowsPerPage = Math.max(1, Math.floor(rowsPerPage));
   const pages = Math.max(1, Math.ceil(transactions.length / safeRowsPerPage));
   const pageMarkup = Array.from({ length: pages }, (_, pageIndex) => {
     const pageRows = transactions.slice(pageIndex * safeRowsPerPage, (pageIndex + 1) * safeRowsPerPage);
