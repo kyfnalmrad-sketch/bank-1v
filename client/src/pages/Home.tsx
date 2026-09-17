@@ -668,10 +668,21 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const title = `${documentClient.name || "Untitled customer"} — ${documentPeriodStart} to ${documentPeriodEnd}`;
     const input = { title, reference: statementReference, customerName: documentClient.name, accountNumber: documentClient.accountNumber, payload: payloadOverride || snapshotPayload };
     try {
-      if (editingHistoryId) await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input, workspaceKey });
-      else await createHistoryMutation.mutateAsync({ ...input, workspaceKey });
-      await historyQuery.refetch(); setActiveTab("history");
-    } catch { setImportNote("The statement could not be saved to the history database."); }
+      const result = editingHistoryId
+        ? await updateHistoryMutation.mutateAsync({ id: editingHistoryId, ...input, workspaceKey })
+        : await createHistoryMutation.mutateAsync({ ...input, workspaceKey });
+      if (!result?.saved) {
+        setImportNote("تعذر ترحيل السجل: قاعدة بيانات السجلات غير متاحة أو لم تؤكد الحفظ. / Record was not posted: the history database did not confirm the save.");
+        return false;
+      }
+      await historyQuery.refetch();
+      setActiveTab("history");
+      return true;
+    } catch (error) {
+      console.error("Statement history save failed", error);
+      setImportNote("تعذر ترحيل السجل. تحقق من اتصال قاعدة البيانات ثم حاول مرة أخرى. / The record could not be posted. Check the database connection and try again.");
+      return false;
+    }
   };
   const postToRecords = async () => {
     const committedTransactions = transactions.map((transaction) => ({ ...transaction }));
@@ -682,9 +693,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     };
     setAppliedTransactions(committedTransactions);
     setRegisterDirty(false);
-    await saveStatementHistory(committedPayload);
-    setActiveTab("history");
-    setImportNote("تم ترحيل الكشف إلى السجلات / Statement posted to records.");
+    const saved = await saveStatementHistory(committedPayload);
+    if (saved) setImportNote("تم ترحيل الكشف إلى السجلات بنجاح / Statement posted to records successfully.");
+    return saved;
   };
   const startNewData = () => {
     skipSnapshotRestore.current = true;
@@ -716,8 +727,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setImportNote("بيانات جديدة جاهزة للإدخال. البيانات المرحّلة سابقًا محفوظة في السجلات.");
   };
   const postAndStartNewData = async () => {
-    await postToRecords();
-    startNewData();
+    const saved = await postToRecords();
+    if (saved) startNewData();
   };
 
   const openStatementHistory = async (id: number | string) => {
