@@ -282,7 +282,7 @@ function waitForStableLayout() {
   });
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "") {
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "", previewDocument?: Document) {
   if (!html || typeof window === "undefined") return false;
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
   const titleByKind: Record<PrintDocumentKind, string> = {
@@ -294,19 +294,22 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
   const title = person ? `${person} - ${titleByKind[kind]}` : titleByKind[kind];
   const fileName = directPdfFilename(kind, undefined, customerName);
 
-  // Flatten every rendered page into one raster image before creating the PDF.
-  // This intentionally removes selectable/movable HTML, text, and SVG objects
-  // from the downloaded document while preserving the visual preview exactly.
-  const frame = document.createElement("iframe");
-  frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:1;pointer-events:none";
-  document.body.appendChild(frame);
-
+  // Flatten the already rendered preview when it is open. This avoids a second
+  // layout pass with a different viewport, which could reflow text or reorder
+  // visual spacing in the downloaded PDF.
+  let frame: HTMLIFrameElement | undefined;
   try {
-    const frameLoaded = waitForFrameLoad(frame);
-    frame.srcdoc = withPrintTitle(html, title);
-    await frameLoaded;
-    const frameDocument = frame.contentDocument;
+    let frameDocument = previewDocument;
+    if (!frameDocument) {
+      frame = document.createElement("iframe");
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:1;pointer-events:none";
+      document.body.appendChild(frame);
+      const frameLoaded = waitForFrameLoad(frame);
+      frame.srcdoc = withPrintTitle(html, title);
+      await frameLoaded;
+      frameDocument = frame.contentDocument || undefined;
+    }
     if (!frameDocument) throw new Error("Unable to access the PDF preview.");
     await inlineFrameAssets(frameDocument);
     await Promise.all(Array.from(frameDocument.images).map(waitForImage));
@@ -354,7 +357,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
     console.error("Unable to create flattened PDF", error);
     return false;
   } finally {
-    frame.remove();
+    frame?.remove();
   }
 }
 

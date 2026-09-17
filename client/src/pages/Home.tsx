@@ -1123,7 +1123,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, quickStatementHtml);
     setDownloadingDocument(kind);
     try {
-      const opened = await downloadDocumentPdf(kind, selected.html, client.name);
+      const previewTitle = kind === "accountStatus" ? "Account Status Statement print preview" : kind === "accountStatement" ? "Account Statement print preview" : "";
+      const previewDocument = previewTitle
+        ? document.querySelector<HTMLIFrameElement>(`iframe[title="${previewTitle}"]`)?.contentDocument || undefined
+        : undefined;
+      const opened = await downloadDocumentPdf(kind, selected.html, client.name, previewDocument);
       setImportNote(opened ? `${selected.title} downloaded as a flattened PDF image.` : "The PDF could not be created. Please try again after confirming the preview is fully visible.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);
