@@ -10,6 +10,10 @@ export function getDatabaseConnectionString() {
   return process.env.RENDER_POSTGRES_URL || process.env.EXTERNAL_POSTGRES_URL || process.env.DATABASE_URL;
 }
 
+function hasDatabaseConnection() {
+  return Boolean(getDatabaseConnectionString());
+}
+
 export function getRenderPool() {
   if (!renderPool) {
     const connectionString = getDatabaseConnectionString();
@@ -137,7 +141,7 @@ export function databaseErrorMessage(error: unknown) {
 export type RenderSnapshotPayload = Record<string, unknown>;
 
 export async function getRenderSnapshot(workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return null;
+  if (!hasDatabaseConnection()) return null;
   await ensureRenderStagingSchema();
   const result = await getRenderPool().query<{ payload: RenderSnapshotPayload; updated_at: string }>(
     "SELECT payload, updated_at FROM staging_snapshots WHERE workspace_key = $1 LIMIT 1",
@@ -148,7 +152,7 @@ export async function getRenderSnapshot(workspaceKey: string) {
 }
 
 export async function saveRenderSnapshot(workspaceKey: string, payload: RenderSnapshotPayload) {
-  if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
+  if (!hasDatabaseConnection()) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   await getRenderPool().query(
     `INSERT INTO staging_snapshots (workspace_key, payload, updated_at)
@@ -177,7 +181,7 @@ function historyScopeSql(workspaceKey: string) {
 }
 
 export async function listStatementHistory(workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return [];
+  if (!hasDatabaseConnection()) return [];
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
   const result = await getRenderPool().query(
@@ -191,7 +195,7 @@ export async function listStatementHistory(workspaceKey: string) {
 }
 
 export async function getStatementHistory(id: number, workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return null;
+  if (!hasDatabaseConnection()) return null;
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
   const result = await getRenderPool().query(
@@ -204,7 +208,7 @@ export async function getStatementHistory(id: number, workspaceKey: string) {
 }
 
 export async function createStatementHistory(payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string, workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
+  if (!hasDatabaseConnection()) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const result = await getRenderPool().query<{ id: string }>(
     `INSERT INTO staging_statement_history (title, statement_reference, customer_name, account_number, payload, workspace_key)
@@ -215,7 +219,7 @@ export async function createStatementHistory(payload: RenderSnapshotPayload, tit
 }
 
 export async function updateStatementHistory(id: number, payload: RenderSnapshotPayload, title: string, reference: string, customerName: string, accountNumber: string, workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
+  if (!hasDatabaseConnection()) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
   const result = await getRenderPool().query(
@@ -227,7 +231,7 @@ export async function updateStatementHistory(id: number, payload: RenderSnapshot
 }
 
 export async function deleteStatementHistory(id: number, workspaceKey: string) {
-  if (!process.env.RENDER_POSTGRES_URL) return { deleted: false as const, reason: "database-unavailable" as const };
+  if (!hasDatabaseConnection()) return { deleted: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
   const result = await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1 AND (workspace_key = ANY($2::varchar[]) OR payload->>'bankId' = $3)", [id, scope.keys, scope.bank]);

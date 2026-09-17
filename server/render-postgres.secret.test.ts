@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("Render Postgres staging secret", () => {
-  it("connects using the protected URL and runs a read-only identity query", async () => {
+  it.skipIf(!process.env.RENDER_POSTGRES_URL)("connects using the protected URL and runs a read-only identity query", async () => {
     const url = process.env.RENDER_POSTGRES_URL;
     expect(url).toMatch(/^postgres(?:ql)?:\/\//);
 

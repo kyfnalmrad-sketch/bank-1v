@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ensureRenderStagingSchema, getRenderPool } from "./renderPg";
+import { ensureRenderStagingSchema, getDatabaseConnectionString, getRenderPool } from "./renderPg";
 
 describe("Render Postgres staging schema", () => {
-  it.skipIf(!process.env.RENDER_POSTGRES_URL)("creates the required empty staging tables and reports their count", async () => {
+  it.skipIf(!getDatabaseConnectionString())("creates the required empty staging tables and reports their count", async () => {
     const result = await ensureRenderStagingSchema();
     expect(result.tableCount).toBeGreaterThanOrEqual(8);
 
