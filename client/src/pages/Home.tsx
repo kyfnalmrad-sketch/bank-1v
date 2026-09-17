@@ -58,6 +58,7 @@ import {
   statementReferenceFromTransactions,
   bankStatementReference,
   reviewDescription,
+  operationNumberWithDate,
   displayStatementDate,
   formatHijriDate,
   formatEnglishGregorianDate,
@@ -1000,6 +1001,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   const updateTransaction = (rowNumber: number, field: "date" | "description" | "branch" | "externalReference" | "operationNumber" | "debit" | "credit" | "balance", input: string) => {
     setRegisterDirty(true);
+    const editedTransaction = transactions.find((transaction) => transaction.rowNumber === rowNumber);
+    const updatedOperationNumber = field === "date" && editedTransaction
+      ? operationNumberWithDate(editedTransaction.operationNumber, input, selectedBank || "karimi")
+      : undefined;
+    if (field === "date" && editedTransaction && updatedOperationNumber && updatedOperationNumber !== editedTransaction.operationNumber) {
+      setImportNote(`تنبيه: تم تحديث الرقم المرجعي الداخلي تلقائيًا ليتوافق مع التاريخ الجديد: ${updatedOperationNumber}`);
+    }
     setTransactions((current) => current.map((transaction) => {
       if (transaction.rowNumber !== rowNumber) return transaction;
       if (field === "branch") return { ...transaction, branch: input };
@@ -1008,7 +1016,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         const review = reviewDescription(input);
         return { ...transaction, description: review.description, rejected: !review.accepted, rejectionReason: review.reason, personName: review.personName, suggestedDescription: review.suggestedDescription };
       }
-      if (field === "date") return { ...transaction, date: input, dateChangedFromExcel: Boolean(transaction.sourceDate && input !== transaction.sourceDate) };
+      if (field === "date") {
+        return { ...transaction, date: input, operationNumber: updatedOperationNumber || transaction.operationNumber, dateChangedFromExcel: Boolean(transaction.sourceDate && input !== transaction.sourceDate) };
+      }
       if (field === "externalReference") return { ...transaction, externalReference: input };
       if (field === "balance") return { ...transaction, balance: input.trim() === "" ? null : money(input) };
       return { ...transaction, [field]: money(input) };

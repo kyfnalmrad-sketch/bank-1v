@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import * as XLSX from "xlsx";
-import { bankStatementReference, buildImportedTransactions, discoverStatementHeader, displayStatementDate, extractStatementProfile, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
+import { bankStatementReference, buildImportedTransactions, discoverStatementHeader, displayStatementDate, extractStatementProfile, formatEnglishGregorianDate, formatHijriDate, formatImportedDate, operationNumberWithDate, reviewDescription, statementReferenceFromTransactions } from "./statementImport";
 
 describe("statement Excel import", () => {
   it("selects the actual Arabic heading row after preface rows without inventing columns", () => {
@@ -99,6 +99,23 @@ describe("statement Excel import", () => {
     expect(transaction.date).toBe("2026-02-14");
     expect(transaction.externalReference).toBe("FT260214EMYF");
     expect(transaction.operationNumber).toBe("FT260214IMX");
+  });
+
+  it("does not turn a statement footer without a date into a fake transaction", () => {
+    const transactions = buildImportedTransactions([
+      ["14-Feb-26", "Incoming transfer - Mohammed Al-Harazi", "FT260214EMYF", "", 100, 100],
+      ["Please review this statement and report any discrepancy", "", "", "", "", ""],
+    ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true, "karimi");
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0].operationNumber).toBe("FT260214IMX");
+    expect(transactions.some((transaction) => transaction.operationNumber.includes("000000"))).toBe(false);
+  });
+
+  it("updates only the date portion when a register date changes", () => {
+    expect(operationNumberWithDate("FT260214IMX", "2026-08-14", "karimi")).toBe("FT260814IMX");
+    expect(operationNumberWithDate("YCB260214IMX", "2026-08-14", "ycb")).toBe("YCB260814IMX");
+    expect(operationNumberWithDate("TDB260214IMX", "2026-08-14", "tadhamon")).toBe("TDB260814IMX");
+    expect(operationNumberWithDate("FT260214IMX", "not-a-date", "karimi")).toBe("FT260214IMX");
   });
 
   it("uses FT for Karimi, YCB for Yemen Commercial Bank, and preserves Tadhamon TDB", () => {

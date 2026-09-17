@@ -388,10 +388,19 @@ function operationNumber(date: string, seed: string, used: Set<string>, bank: "k
   return reference;
 }
 
+export function operationNumberWithDate(operationNumberValue: string, date: string, bank: "karimi" | "ycb" | "tadhamon") {
+  const dateCode = operationDateCode(date);
+  if (dateCode === "000000") return operationNumberValue;
+  const bankPrefix = bank === "tadhamon" ? "TDB" : bank === "ycb" ? "YCB" : "FT";
+  const suffixStart = bankPrefix.length + 6;
+  const suffix = String(operationNumberValue).startsWith(bankPrefix) ? String(operationNumberValue).slice(suffixStart) : String(operationNumberValue).slice(3);
+  return `${bankPrefix}${dateCode}${suffix}`;
+}
+
 export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap, useExternalReference = false, bank: "karimi" | "ycb" | "tadhamon" = "karimi"): ImportedTransaction[] {
   const usedOperationNumbers = new Set<string>();
   return rows
-    .filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""))
+    .filter((row) => row.some((cell) => String(cell ?? "").trim() !== "") && operationDateCode(formatImportedDate(getCell(row, map.date))) !== "000000")
     .map((row, index) => {
       const amount = asNumber(getCell(row, map.amount));
       const direction = normalizeHeader(getCell(row, map.direction));
