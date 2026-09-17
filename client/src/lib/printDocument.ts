@@ -79,8 +79,10 @@ function printAfterAssetsLoad(printWindow: PrintableWindow) {
     .then(print);
 }
 
-export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref()) {
-  return html.replace("<head>", `<head><base href="${safeTitle(baseHref)}"><title>${safeTitle(title)}</title>${printAssetStyles}`);
+export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref(), branch = "") {
+  const generatedAt = createPrintTimestamp(branch);
+  const issuanceMeta = `<meta name="issued-at" content="${safeTitle(generatedAt.iso)}"><meta name="issued-date" content="${safeTitle(generatedAt.date)}"><meta name="issued-time" content="${safeTitle(generatedAt.time)}"><meta name="issued-time-zone" content="${safeTitle(generatedAt.timeZone)}">`;
+  return html.replace("<head>", `<head><base href="${safeTitle(baseHref)}"><title>${safeTitle(title)}</title>${issuanceMeta}${printAssetStyles}`);
 }
 
 function assemblePrintablePages(pages: string[]) {
@@ -369,12 +371,12 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
   }
 }
 
-export function openPrintWindow(html: string, title: string, host: PrintHost = window) {
+export function openPrintWindow(html: string, title: string, host: PrintHost = window, branch = "") {
   if (!html) return false;
   const printWindow = host.open("", "_blank");
   if (!printWindow) return false;
   printWindow.document.open();
-  printWindow.document.write(withPrintTitle(html, title));
+  printWindow.document.write(withPrintTitle(html, title, currentBaseHref(), branch));
   printWindow.addEventListener("load", () => {
     printAfterAssetsLoad(printWindow);
   }, { once: true });

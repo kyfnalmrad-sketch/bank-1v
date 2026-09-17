@@ -1170,7 +1170,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const statementHtml = printableStatementHtml;
     const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, quickStatementHtml);
     const person = client.name.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
-    if (!openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title)) {
+    if (!openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title, window, client.branch)) {
       setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
     }
   };
