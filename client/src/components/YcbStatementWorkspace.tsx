@@ -15,8 +15,8 @@ type Props = {
   onTransactionHighlightChange: (reference: string, color: string) => void;
 };
 
-function printHtml(html: string, branch = "") {
-  return openPrintWindow(html, "Yemen Commercial Bank — Statement of Account", window, branch);
+function printHtml(html: string, branch = "", printDate = "") {
+  return openPrintWindow(html, "Yemen Commercial Bank — Statement of Account", window, branch, printDate);
 }
 
 export function renderYcbStatementPages(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], qrSources: string[] = [], barcodeSources: string[] = [], rowHighlights: Record<string, string> = {}) {
@@ -66,7 +66,7 @@ export default function YcbStatementWorkspace({ profile, transactions, onBack, o
   return <main className="bank-workspace" dir="ltr">
     <div className="panel-heading"><div><h1>Yemen Commercial Bank — Statement of Account</h1><p className="hint">هذا القسم مستقل عن الشهادة، ويستخدم نفس بيانات العميل والحركات المدخلة في النظام. لا يحتوي على توقيعات.</p></div><FileText size={28} className="heading-icon" /></div>
     <section className="panel"><div className="review-grid"><div className="validation-card"><span>Customer</span><strong>{profile.customerName || "—"}</strong><small>{profile.accountNumber || "Account number required"}</small></div><div className="validation-card"><span>Period</span><strong>{profile.periodStart} — {profile.periodEnd}</strong><small>{profile.currency} · {profile.branchName || "—"}</small></div><div className="validation-card"><span>Transactions</span><strong>{transactions.length}</strong><small>Linked to the current data-entry register · 18 rows per page</small></div><div className="validation-card"><span>Closing balance</span><strong>{profile.closingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong><small>Calculated from the same register</small></div></div></section>
-    <div className="actions"><button type="button" className="secondary-button" onClick={onBack}><ChevronLeft size={16} /> Back to YCB workspace</button><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" className="preview-button" onClick={() => printHtml(html, profile.branchName)}><Printer size={17} /> Print / Save PDF</button></div>
+    <div className="actions"><button type="button" className="secondary-button" onClick={onBack}><ChevronLeft size={16} /> Back to YCB workspace</button><button type="button" onClick={() => setPreview((value) => !value)}><FileText size={17} /> {preview ? "Hide preview" : "Show preview"}</button><button type="button" className="preview-button" onClick={() => printHtml(html, profile.branchName, profile.issueDate)}><Printer size={17} /> Print / Save PDF</button></div>
     <section className="panel"><div className="panel-heading"><div><h2>تمييز العمليات</h2><p className="hint">اضغط علامة ✓ بجانب الحركة في سجل Excel لتلوينها بالأصفر. ويمكن النقر على صف الحركة في المعاينة لتبديل التمييز.</p></div></div></section>
     {preview && <section className="panel print-preview-panel"><div className="panel-heading"><div><h2>YCB Statement Preview — Approved Template</h2><p className="hint">هذه هي نسخة الكشف المعتمد نفسها. اضغط على أي صف لتلوينه بالأصفر أو إزالة التلوين، ثم اطبع نفس المعاينة بصيغة PDF.</p></div></div><div className="document-frame-wrap"><iframe className="document-frame" title="Yemen Commercial Bank statement preview" srcDoc={html} /></div></section>}
   </main>;
