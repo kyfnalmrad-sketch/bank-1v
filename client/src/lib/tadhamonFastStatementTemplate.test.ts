@@ -30,8 +30,11 @@ describe("Tadhamon quick statement template", () => {
     expect(html).toContain("Total Balance:");
     expect(html).toContain("class=\"qr-image\"");
     expect(html).toContain("data:image/png;base64,TEST");
-    expect(html.indexOf("Account Number")).toBeLessThan(html.indexOf("Opening Balance"));
-    expect(html.indexOf("Opening Balance")).toBeLessThan(html.indexOf("Account Opening Date"));
+    expect(html).toContain('style="grid-column:1 / span 2"');
+    expect(html).toContain('style="grid-column:6"');
+    expect(html).toContain('style="grid-column:7"');
+    expect(html.indexOf("Account Opening Date")).toBeLessThan(html.indexOf("Opening Balance"));
+    expect(html.indexOf("Opening Balance")).toBeLessThan(html.indexOf("Account Number"));
   });
   it("splits after 35 real operations without empty rows", () => {
     const rows = Array.from({ length: 36 }, (_, index) => ({ date: "01/01/2026", reference: `R-${index + 1}`, description: `Operation ${index + 1}`, credit: 100, debit: 0, balance: 100 }));
