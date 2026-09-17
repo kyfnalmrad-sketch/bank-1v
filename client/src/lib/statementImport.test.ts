@@ -80,12 +80,20 @@ describe("statement Excel import", () => {
     expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("FT000001");
   });
 
-  it("uses a bank-specific operation prefix for Tadhamon and YCB", () => {
+  it("uses an Excel serial date in the internal reference instead of 000000", () => {
+    const transactions = buildImportedTransactions([
+      ["46057", "Cash deposit", "EXCEL-REF", "", 100, 100],
+    ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true, "karimi");
+    expect(transactions[0].date).toBe("2026-02-04");
+    expect(transactions[0].operationNumber).toBe("FT260204CXX");
+  });
+
+  it("uses FT for Karimi, YCB for Yemen Commercial Bank, and preserves Tadhamon TDB", () => {
     const map = { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 };
     const rows = [["04/02/2026", "Cash deposit", "EXCEL-REF", "", 100, 100]];
+    expect(buildImportedTransactions(rows, map, false, "karimi")[0].operationNumber).toBe("FT260204CXX");
     expect(buildImportedTransactions(rows, map, false, "tadhamon")[0].operationNumber).toBe("TDB260204CXX");
     expect(buildImportedTransactions(rows, map, false, "ycb")[0].operationNumber).toBe("YCB260204CXX");
-    expect(buildImportedTransactions(rows, map, false, "karimi")[0].operationNumber).toBe("FT260204CXX");
   });
 
   it("uses one initial from the person, branch, and operation description", () => {
@@ -134,8 +142,11 @@ describe("statement Excel import", () => {
 
   it("stores imported Excel dates in ISO format for native date editing", () => {
     expect(formatImportedDate(46057)).toBe("2026-02-04");
+    expect(formatImportedDate("46057")).toBe("2026-02-04");
     expect(formatImportedDate("04/08/2026")).toBe("2026-08-04");
     expect(formatImportedDate("2026/08/04")).toBe("2026-08-04");
+    expect(formatImportedDate("04.08.2026 00:00:00")).toBe("2026-08-04");
+    expect(formatImportedDate("٠٤/٠٨/٢٠٢٦")).toBe("2026-08-04");
   });
 
   it("keeps the original Excel date so later edits can be flagged", () => {

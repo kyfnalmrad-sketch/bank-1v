@@ -118,14 +118,21 @@ function asNumber(value: unknown) {
 }
 
 export function formatImportedDate(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}-${String(value.getUTCDate()).padStart(2, "0")}`;
+  }
   if (typeof value === "number" && Number.isFinite(value)) {
     const epoch = new Date(Date.UTC(1899, 11, 30) + value * 86_400_000);
     return `${epoch.getUTCFullYear()}-${String(epoch.getUTCMonth() + 1).padStart(2, "0")}-${String(epoch.getUTCDate()).padStart(2, "0")}`;
   }
-  const text = String(value ?? "").trim();
-  const iso = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  const text = String(value ?? "").trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  const serial = text.match(/^\d+(?:\.\d+)?$/);
+  if (serial && Number(serial[0]) >= 30_000 && Number(serial[0]) <= 80_000) {
+    return formatImportedDate(Number(serial[0]));
+  }
+  const iso = text.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?:[ T].*)?$/);
   if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, "0")}-${String(iso[3]).padStart(2, "0")}`;
-  const display = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  const display = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[ T].*)?$/);
   if (display) return `${display[3]}-${String(display[2]).padStart(2, "0")}-${String(display[1]).padStart(2, "0")}`;
   return text;
 }
