@@ -3,6 +3,7 @@ export type PrintTimestamp = {
   date: string;
   time: string;
   timeZone: string;
+  timeZoneLabel: string;
 };
 
 const DEFAULT_TIME_ZONE = "Asia/Aden";
@@ -16,9 +17,14 @@ export function branchTimeZone(branch: string): string {
   return DEFAULT_TIME_ZONE;
 }
 
+export function branchTimeZoneLabel(branch: string): string {
+  return branchTimeZone(branch) === "Asia/Aden" ? "Yemen/Sana'a" : branchTimeZone(branch);
+}
+
 /** Builds print metadata from the selected document date/time when provided. */
 export function createPrintTimestamp(branch: string, now = new Date(), dateOverride = "", timeOverride = ""): PrintTimestamp {
   const timeZone = branchTimeZone(branch);
+  const timeZoneLabel = branchTimeZoneLabel(branch);
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -47,7 +53,7 @@ export function createPrintTimestamp(branch: string, now = new Date(), dateOverr
     : systemTime;
   // Keep the selected calendar date/time stable when jsPDF serializes /CreationDate.
   const iso = date === systemDate && time === systemTime ? now.toISOString() : `${date}T${time}Z`;
-  return { iso, date, time, timeZone };
+  return { iso, date, time, timeZone, timeZoneLabel };
 }
 
 export function displayPrintTime(timestamp: PrintTimestamp): string {

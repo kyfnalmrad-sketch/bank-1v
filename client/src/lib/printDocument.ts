@@ -81,7 +81,7 @@ function printAfterAssetsLoad(printWindow: PrintableWindow) {
 
 export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref(), branch = "", printDate = "", printTime = "") {
   const generatedAt = createPrintTimestamp(branch, new Date(), printDate, printTime);
-  const issuanceMeta = `<meta name="issued-at" content="${safeTitle(generatedAt.iso)}"><meta name="issued-date" content="${safeTitle(generatedAt.date)}"><meta name="issued-time" content="${safeTitle(generatedAt.time)}"><meta name="issued-time-zone" content="${safeTitle(generatedAt.timeZone)}">`;
+  const issuanceMeta = `<meta name="issued-at" content="${safeTitle(generatedAt.iso)}"><meta name="issued-date" content="${safeTitle(generatedAt.date)}"><meta name="issued-time" content="${safeTitle(generatedAt.time)}"><meta name="issued-time-zone" content="${safeTitle(generatedAt.timeZoneLabel)}">`;
   return html.replace("<head>", `<head><base href="${safeTitle(baseHref)}"><title>${safeTitle(title)}</title>${issuanceMeta}${printAssetStyles}`);
 }
 
@@ -356,9 +356,9 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
     pdf.setCreationDate?.(new Date(generatedAt.iso));
     pdf.setProperties({
       title,
-      subject: `Flattened visual statement PDF — issued ${generatedAt.date} ${generatedAt.time} ${generatedAt.timeZone}`,
+      subject: `Flattened visual statement PDF — issued ${generatedAt.date} ${generatedAt.time} ${generatedAt.timeZoneLabel}`,
       creator: "Bank statement system",
-      keywords: `issuedAt=${generatedAt.iso};timeZone=${generatedAt.timeZone}`,
+      keywords: `issuedAt=${generatedAt.iso};timeZone=${generatedAt.timeZoneLabel}`,
     });
     const pdfUrl = String(pdf.output("bloburl"));
     const previewWindow = window.open(pdfUrl, "_blank");
