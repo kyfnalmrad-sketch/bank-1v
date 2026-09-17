@@ -881,7 +881,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const buildTransactions = (rows: unknown[][], map: StatementColumnMap) => {
-    const nextRows = buildImportedTransactions(rows, map, referenceSource === "excel");
+    const nextRows = buildImportedTransactions(rows, map, referenceSource === "excel", selectedBank || "karimi");
     setTransactions(nextRows);
     setAppliedTransactions(nextRows);
     setRegisterDirty(false);

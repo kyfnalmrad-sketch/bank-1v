@@ -319,6 +319,24 @@ function operationDateCode(value: string) {
   return "000000";
 }
 
+function operationInitials(...values: string[]) {
+  const initials = values.map((value) => String(value).trim()[0]?.toUpperCase()).filter(Boolean).join("");
+  return `${initials}XXX`.slice(0, 3);
+}
+
+function operationCodeFromDescription(description: string, personName: string, branch: string) {
+  const segments = description.split(/\s+-\s+/).map((segment) => segment.trim()).filter(Boolean);
+  const operationType = segments[0]?.split(/\s+/)[0] || description.split(/\s+/)[0] || "";
+  const branchName = branch || segments.find((segment) => /\bbranch\b|فرع/i.test(segment)) || "";
+  const candidates = segments.slice(1)
+    .map((segment) => segment.replace(/\bA\/C\b.*$/i, "").trim())
+    .filter(Boolean)
+    .map((segment) => segment.replace(/^(?:by|from)\s+/i, "").split(/\s+via\s+/i)[0].trim())
+    .filter((segment) => segment && !/^A\/C$/i.test(segment));
+  const contentName = candidates.find((candidate) => !/\bbranch\b/i.test(candidate)) || personName || "";
+  return operationInitials(operationType, contentName, branchName);
+}
+
 function threeLetters(seed: string) {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   let hash = 2_166_136_261;
@@ -335,19 +353,20 @@ function threeLetters(seed: string) {
   return result;
 }
 
-function operationNumber(date: string, seed: string, used: Set<string>) {
-  const prefix = `FT${operationDateCode(date)}`;
+function operationNumber(date: string, seed: string, used: Set<string>, bank: "karimi" | "ycb" | "tadhamon", operationCode: string) {
+  const bankPrefix = bank === "tadhamon" ? "TDB" : bank === "ycb" ? "YCB" : "FT";
+  const prefix = `${bankPrefix}${operationDateCode(date)}`;
   let collision = 0;
-  let reference = `${prefix}${threeLetters(seed)}`;
+  let reference = `${prefix}${operationCode}`;
   while (used.has(reference)) {
     collision += 1;
-    reference = `${prefix}${threeLetters(`${seed}|${collision}`)}`;
+    reference = `${prefix}${operationCode.slice(0, 2)}${threeLetters(`${seed}|${collision}`).slice(0, 1)}`;
   }
   used.add(reference);
   return reference;
 }
 
-export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap, useExternalReference = false): ImportedTransaction[] {
+export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap, useExternalReference = false, bank: "karimi" | "ycb" | "tadhamon" = "karimi"): ImportedTransaction[] {
   const usedOperationNumbers = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""))
@@ -364,19 +383,21 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const date = formatImportedDateTime(getCell(row, map.date), getCell(row, map.time));
       const balance = balanceProvided ? asNumber(balanceCell) : null;
       const externalReference = String(getCell(row, map.reference) ?? "").trim();
-      const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers);
+      const branch = String(getCell(row, map.branch) ?? "").trim();
+      const operationCode = operationCodeFromDescription(review.description, review.personName || "", branch);
+      const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${branch}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers, bank, operationCode);
       return {
         rowNumber: index + 1,
         date,
         sourceDate: date,
         description: review.description,
-        branch: String(getCell(row, map.branch) ?? "").trim(),
+        branch,
         debit,
         credit,
         balance,
         balanceProvided,
         externalReference,
-        operationNumber: useExternalReference && externalReference ? externalReference : internalOperationNumber,
+        operationNumber: internalOperationNumber,
         rejected: !review.accepted,
         rejectionReason: review.reason,
         personName: review.personName,
