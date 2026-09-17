@@ -113,6 +113,7 @@ type SnapshotPayload = {
   dateOfBirthPlacement: DateOfBirthPlacement;
 };
 type HistoryItem = { id: number; title: string; statement_reference: string | null; customer_name: string | null; account_number: string | null; created_at: string; updated_at: string };
+type SignatureDefaults = { employeeName?: string; managerName?: string; employeeLocked?: boolean; managerLocked?: boolean; ycbCustomerServiceName?: string; ycbBranchManagerName?: string; ycbEmployeeLocked?: boolean; ycbManagerLocked?: boolean };
 
 const snapshotWorkspaceStorageKey = "bak-web-staging-workspace-key";
 const quickSettingsStorageKey = (bank: "karimi" | "ycb" | "tadhamon") => `bak-web-staging-quick-settings-${bank}`;
@@ -299,9 +300,11 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   });
   const quickHighlightConfig = getQuickHighlightConfig(selectedBank || "tadhamon");
   const [ycbClient, setYcbClient] = useState(defaultYcbClient);
+  const [ycbSignatureLocked, setYcbSignatureLocked] = useState({ employee: false, manager: false });
   const [showYcbCertificate, setShowYcbCertificate] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [client, setClient] = useState(defaultClient);
+  const [signatureDefaultsNotice, setSignatureDefaultsNotice] = useState("");
   const [fileName, setFileName] = useState("");
   const [referenceSource, setReferenceSource] = useState<"internal" | "excel">("internal");
   const [includeBranch, setIncludeBranch] = useState(false);
@@ -322,6 +325,28 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastRowsPerPage, setFastRowsPerPage] = useState(initialRowsPerPage);
   const [fastRowsPerPageInput, setFastRowsPerPageInput] = useState(String(initialRowsPerPage));
   const [lockedSignatureNames, setLockedSignatureNames] = useState({ employee: false, manager: false });
+  useEffect(() => {
+    if (!selectedBank || typeof window === "undefined") return;
+    const key = `bak-web-staging-signature-defaults-${selectedBank}`;
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(key) || "null") as Partial<SignatureDefaults> | null;
+      if (!saved || typeof saved !== "object") return;
+      setClient((current) => ({ ...current, employeeName: typeof saved.employeeName === "string" ? saved.employeeName : current.employeeName, managerName: typeof saved.managerName === "string" ? saved.managerName : current.managerName }));
+      setLockedSignatureNames({ employee: saved.employeeLocked === true, manager: saved.managerLocked === true });
+      if (selectedBank === "ycb") {
+        setYcbClient((current) => ({ ...current, customerServiceName: saved.ycbCustomerServiceName || current.customerServiceName, branchManagerName: saved.ycbBranchManagerName || current.branchManagerName }));
+        setYcbSignatureLocked({ employee: saved.ycbEmployeeLocked === true, manager: saved.ycbManagerLocked === true });
+      }
+      setSignatureDefaultsNotice(`تم تحميل توقيعات بنك ${selectedBank} المحفوظة / Loaded ${selectedBank} signature defaults`);
+    } catch {
+      setSignatureDefaultsNotice("تعذر قراءة توقيعات البنك المحفوظة / Could not read bank signature defaults");
+    }
+  }, [selectedBank]);
+  const persistSignatureDefaults = (next: SignatureDefaults) => {
+    if (!selectedBank || typeof window === "undefined") return;
+    window.localStorage.setItem(`bak-web-staging-signature-defaults-${selectedBank}`, JSON.stringify(next));
+    setSignatureDefaultsNotice(`تم تثبيت توقيعات بنك ${selectedBank} / Signature defaults fixed for ${selectedBank}`);
+  };
   const [totalCreditOverride, setTotalCreditOverride] = useState("");
   const [totalDebitOverride, setTotalDebitOverride] = useState("");
   const [closingBalanceOverride, setClosingBalanceOverride] = useState("");
@@ -362,6 +387,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [fastDepositColor, fastKeyword, fastKeywordColor, fastRowsPerPage, fastWithdrawalColor, selectedBank]);
   const [reviewPreview, setReviewPreview] = useState<PrintDocumentKind | null>(initialReviewPreview);
   const [downloadingDocument, setDownloadingDocument] = useState<PrintDocumentKind | null>(null);
+  const [lastDataAction, setLastDataAction] = useState("لم يتم تنفيذ حفظ أو ترحيل بعد / No save or posting action yet");
   const workspaceKey = useMemo(() => `${getWorkspaceKey()}-${selectedBank || "selector"}`, [selectedBank]);
   const [snapshotState, setSnapshotState] = useState<"loading" | "restored" | "saved" | "error">("loading");
   const snapshotRestored = useRef(false);
@@ -662,6 +688,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     try {
       const result = await saveSnapshotMutation.mutateAsync({ workspaceKey, payload: snapshotPayload });
       setSnapshotState(result.saved ? "saved" : "error");
+      if (result.saved) setLastDataAction(`تم الحفظ في ${new Date().toLocaleString()} / Saved`);
       setImportNote(result.saved ? "تم حفظ البيانات بنجاح. / Data saved successfully." : "فشل الحفظ: قاعدة البيانات لم تؤكد العملية. / Save was not confirmed by the database.");
     } catch {
       setSnapshotState("error");
@@ -690,6 +717,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       }
       if (!editingHistoryId && "id" in result && Number.isInteger(Number(result.id))) setEditingHistoryId(Number(result.id));
       await historyQuery.refetch();
+      setLastDataAction(`${editingHistoryId ? "تم تحديث السجل" : "تم ترحيل السجل"} في ${new Date().toLocaleString()} / ${editingHistoryId ? "Record updated" : "Record posted"}`);
       setActiveTab("history");
       return true;
     } catch (error) {
@@ -709,7 +737,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setAppliedTransactions(committedTransactions);
     setRegisterDirty(false);
     const saved = await saveStatementHistory(committedPayload);
-    if (saved) setImportNote("تم ترحيل الكشف إلى السجلات بنجاح / Statement posted to records successfully.");
+    if (saved) {
+      setLastDataAction(`تم ترحيل الكشف في ${new Date().toLocaleString()} / Statement posted`);
+      setImportNote("تم ترحيل الكشف إلى السجلات بنجاح / Statement posted to records successfully.");
+    }
     return saved;
   };
   const startNewData = () => {
@@ -776,8 +807,18 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       return;
     }
     setEditingHistoryId(returnedHistoryId);
-    setClient({ ...defaultClient, ...restoredClient });
-    if (payload?.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient });
+    const restoredEmployeeName = typeof restoredClient.employeeName === "string" ? restoredClient.employeeName : "";
+    const restoredManagerName = typeof restoredClient.managerName === "string" ? restoredClient.managerName : "";
+    const restoredYcb = payload?.ycbClient && typeof payload.ycbClient === "object" ? payload.ycbClient : null;
+    const restoredYcbEmployee = restoredYcb?.customerServiceName || "";
+    const restoredYcbManager = restoredYcb?.branchManagerName || "";
+    const signaturesDiffer = Boolean((client.employeeName || restoredEmployeeName) && client.employeeName !== restoredEmployeeName) || Boolean((client.managerName || restoredManagerName) && client.managerName !== restoredManagerName) || Boolean((ycbClient.customerServiceName || restoredYcbEmployee) && ycbClient.customerServiceName !== restoredYcbEmployee) || Boolean((ycbClient.branchManagerName || restoredYcbManager) && ycbClient.branchManagerName !== restoredYcbManager);
+    const useRestoredSignatures = !signaturesDiffer || window.confirm("توجد توقيعات مختلفة في السجل المستعاد. اضغط موافق لاعتماد توقيعات السجل المستعاد، أو إلغاء للإبقاء على التوقيعات الحالية.");
+    const restoredClientWithSignatures = useRestoredSignatures
+      ? { ...defaultClient, ...restoredClient }
+      : { ...defaultClient, ...restoredClient, employeeName: client.employeeName, managerName: client.managerName };
+    setClient(restoredClientWithSignatures);
+    if (payload?.ycbClient) setYcbClient({ ...defaultYcbClient, ...payload.ycbClient, customerServiceName: useRestoredSignatures ? restoredYcbEmployee : ycbClient.customerServiceName, branchManagerName: useRestoredSignatures ? restoredYcbManager : ycbClient.branchManagerName });
     setReferenceSource(payload.referenceSource === "excel" ? "excel" : "internal");
     setIncludeBranch(payload.includeBranch === true);
     setDateOfBirthPlacement(payload.dateOfBirthPlacement === "none" || payload.dateOfBirthPlacement === "status" || payload.dateOfBirthPlacement === "statement" || payload.dateOfBirthPlacement === "both" ? payload.dateOfBirthPlacement : "both");
@@ -799,8 +840,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
     if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
-    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object") setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
+    if (payload.lockedSignatureNames && typeof payload.lockedSignatureNames === "object" && useRestoredSignatures) setLockedSignatureNames({ employee: payload.lockedSignatureNames.employee === true, manager: payload.lockedSignatureNames.manager === true });
     setHistoryRestoreState("success");
+    setLastDataAction(`تمت استعادة السجل في ${new Date().toLocaleString()} / Record restored`);
     setImportNote(`تمت استعادة السجل: ${history.title || "بدون اسم"} — العميل: ${history.customer_name || restoredClient.name || "—"} — الحساب: ${history.account_number || restoredClient.accountNumber || "—"} — العمليات: ${Array.isArray(payload.transactions) ? payload.transactions.length : 0}.`);
     setActiveTab(historyPreviewAfterRestore ? "review" : "account");
     if (historyPreviewAfterRestore) setReviewPreview("accountStatement");
@@ -901,6 +943,12 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       const ycbKey = ycbKeyMap[key];
       if (ycbKey) setYcbClient((current) => ({ ...current, [ycbKey]: value }));
     }
+  };
+
+  const toggleSignatureLock = (key: "employee" | "manager", checked: boolean) => {
+    const nextLocks = { ...lockedSignatureNames, [key]: checked };
+    setLockedSignatureNames(nextLocks);
+    persistSignatureDefaults({ employeeName: client.employeeName, managerName: client.managerName, employeeLocked: nextLocks.employee, managerLocked: nextLocks.manager });
   };
 
   const applySuggestedDescription = (operationNumber: string) => {
@@ -1137,7 +1185,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       const previewDocument = previewTitle
         ? document.querySelector<HTMLIFrameElement>(`iframe[title="${previewTitle}"]`)?.contentDocument || undefined
         : undefined;
-      const opened = await downloadDocumentPdf(kind, selected.html, client.name, previewDocument);
+      const opened = await downloadDocumentPdf(kind, selected.html, client.name, previewDocument, client.branch);
       setImportNote(opened ? `${selected.title} downloaded as a flattened PDF image.` : "The PDF could not be created. Please try again after confirming the preview is fully visible.");
     } catch (error) {
       console.error("Direct PDF generation failed", error);
@@ -1157,7 +1205,14 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
 
   const updateYcbClient = (key: keyof typeof ycbClient, value: string) => {
+    if (key === "customerServiceName" && ycbSignatureLocked.employee) return;
+    if (key === "branchManagerName" && ycbSignatureLocked.manager) return;
     setYcbClient((current) => ({ ...current, [key]: value }));
+  };
+  const toggleYcbSignatureLock = (key: "employee" | "manager", checked: boolean) => {
+    const nextLocks = { ...ycbSignatureLocked, [key]: checked };
+    setYcbSignatureLocked(nextLocks);
+    persistSignatureDefaults({ ycbCustomerServiceName: ycbClient.customerServiceName, ycbBranchManagerName: ycbClient.branchManagerName, ycbEmployeeLocked: nextLocks.employee, ycbManagerLocked: nextLocks.manager });
   };
 
   const refreshAllDocumentData = () => {
@@ -1181,7 +1236,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     }
     const refreshedPayload = { ...snapshotPayload, transactions: committedTransactions, appliedTransactions: committedTransactions };
     saveSnapshotMutation.mutate({ workspaceKey, payload: refreshedPayload }, {
-      onSuccess: (result) => setSnapshotState(result.saved ? "saved" : "error"),
+      onSuccess: (result) => { setSnapshotState(result.saved ? "saved" : "error"); if (result.saved) setLastDataAction(`تم تحديث البيانات والحفظ في ${new Date().toLocaleString()} / Data refreshed and saved`); },
       onError: () => setSnapshotState("error"),
     });
     setImportNote(`تم تحديث البيانات بنجاح. ${committedTransactions.filter((item) => !item.rejected).length} عملية أصبحت معتمدة في الكشف والكشف السريع والرموز.`);
@@ -1270,6 +1325,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         <div><span>Work mode</span><strong>نظام إصدار كشفي</strong></div>
         <div><span>Staging database</span><strong>{stagingHealth.isLoading ? "Checking…" : stagingHealth.data?.database === "ready" ? `${stagingHealth.data.tableCount} tables ready` : "Unavailable"}</strong>{stagingHealth.data?.database === "error" && <small role="alert">{stagingHealth.data.message}</small>}<button type="button" className="secondary-button" onClick={() => void stagingHealth.refetch?.()} disabled={stagingHealth.isFetching}>{stagingHealth.isFetching ? "Checking…" : "تحديث اتصال قاعدة البيانات / Refresh DB"}</button></div>
         <div><span>Reference documents</span><strong>No visual changes</strong></div>
+        <div><span>آخر حالة حفظ/ترحيل</span><strong role="status">{lastDataAction}</strong><small>الحالة تخص البنك المحدد فقط: {selectedBank === "karimi" ? "الكريمي" : selectedBank === "tadhamon" ? "التضامن" : "التجاري اليمني"}.</small></div>
       </section>
 
       {tabWarnings.length > 0 && <aside className="tab-warning" role="status">
@@ -1364,17 +1420,17 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <h2>بيانات الاعتماد / Authorization Information</h2>
             <p className="hint">تُستخدم هذه الأسماء في توقيع شهادة YCB فقط / These names remain separate from the AlKuraimi workspace.</p>
             <div className="grid">
-              <label>خدمة العملاء / Customer Service<input aria-label="Customer Service" dir="ltr" value={ycbClient.customerServiceName} onChange={(event) => updateYcbClient("customerServiceName", event.target.value)} placeholder="Authorized employee name" /></label>
-              <label>مدير الفرع / Branch Manager<input aria-label="Branch Manager" dir="ltr" value={ycbClient.branchManagerName} onChange={(event) => updateYcbClient("branchManagerName", event.target.value)} placeholder="Branch manager name" /></label>
+              <label>خدمة العملاء / Customer Service<input aria-label="Customer Service" dir="ltr" disabled={ycbSignatureLocked.employee} value={ycbClient.customerServiceName} onChange={(event) => updateYcbClient("customerServiceName", event.target.value)} placeholder="Authorized employee name" /><span className="field-note"><input type="checkbox" checked={ycbSignatureLocked.employee} onChange={(event) => toggleYcbSignatureLock("employee", event.target.checked)} /> تثبيت توقيع الموظف / Keep fixed</span></label>
+              <label>مدير الفرع / Branch Manager<input aria-label="Branch Manager" dir="ltr" disabled={ycbSignatureLocked.manager} value={ycbClient.branchManagerName} onChange={(event) => updateYcbClient("branchManagerName", event.target.value)} placeholder="Branch manager name" /><span className="field-note"><input type="checkbox" checked={ycbSignatureLocked.manager} onChange={(event) => toggleYcbSignatureLock("manager", event.target.checked)} /> تثبيت توقيع المدير / Keep fixed</span></label>
             </div>
           </section>
         </>}
         {(selectedBank === "karimi" || selectedBank === "tadhamon") && <section className="panel karimi-signature-panel">
           <h2>بيانات التوقيع / Signature Details</h2>
-          <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان.</p>
+          <p className="hint">تظهر هذه البيانات في مستند البنك المختار، وترتبط تلقائيًا بمسار البيان. {signatureDefaultsNotice}</p>
           <div className="grid">
-            <label>اسم الموظف / Employee name<input list="memory-employee" value={client.employeeName} disabled={lockedSignatureNames.employee} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="memory-employee">{fieldMemory.employeeName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.employee} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, employee: event.target.checked }))} /> تثبيت اسم الموظف / Keep fixed</span></label>
-            <label>اسم المدير / Manager name<input list="memory-manager" value={client.managerName} disabled={lockedSignatureNames.manager} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="memory-manager">{fieldMemory.managerName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.manager} onChange={(event) => setLockedSignatureNames((current) => ({ ...current, manager: event.target.checked }))} /> تثبيت اسم المدير / Keep fixed</span></label>
+            <label>اسم الموظف / Employee name<input list="memory-employee" value={client.employeeName} disabled={lockedSignatureNames.employee} onChange={(event) => updateClient("employeeName", event.target.value)} /><datalist id="memory-employee">{fieldMemory.employeeName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.employee} onChange={(event) => toggleSignatureLock("employee", event.target.checked)} /> تثبيت اسم الموظف / Keep fixed</span></label>
+            <label>اسم المدير / Manager name<input list="memory-manager" value={client.managerName} disabled={lockedSignatureNames.manager} onChange={(event) => updateClient("managerName", event.target.value)} /><datalist id="memory-manager">{fieldMemory.managerName?.map((value) => <option key={value} value={value} />)}</datalist><span className="field-note"><input type="checkbox" checked={lockedSignatureNames.manager} onChange={(event) => toggleSignatureLock("manager", event.target.checked)} /> تثبيت اسم المدير / Keep fixed</span></label>
           </div>
         </section>}
         <section className="panel">

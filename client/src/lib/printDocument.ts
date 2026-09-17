@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { createPrintTimestamp } from "./printTimestamp";
 
 export type PrintableWindow = {
   document: Pick<Document, "open" | "write" | "close"> & Partial<Pick<Document, "querySelectorAll">>;
@@ -282,7 +283,7 @@ function waitForStableLayout() {
   });
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "", previewDocument?: Document) {
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "", previewDocument?: Document, branch = "") {
   if (!html || typeof window === "undefined") return false;
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
   const titleByKind: Record<PrintDocumentKind, string> = {
@@ -350,7 +351,14 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
       pdf.addImage(imageData, "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
     }
 
-    pdf.setProperties({ title, subject: "Flattened visual statement PDF", creator: "Bank statement system" });
+    const generatedAt = createPrintTimestamp(branch);
+    pdf.setCreationDate?.(new Date(generatedAt.iso));
+    pdf.setProperties({
+      title,
+      subject: `Flattened visual statement PDF — issued ${generatedAt.date} ${generatedAt.time} ${generatedAt.timeZone}`,
+      creator: "Bank statement system",
+      keywords: `issuedAt=${generatedAt.iso};timeZone=${generatedAt.timeZone}`,
+    });
     pdf.save(fileName);
     return true;
   } catch (error) {
