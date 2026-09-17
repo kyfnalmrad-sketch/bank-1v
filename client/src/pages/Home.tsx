@@ -317,7 +317,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const [fastKeywordColor, setFastKeywordColor] = useState(initialQuickSettings.keywordColor || quickHighlightConfig.keywordColor);
   const [fastDepositColor, setFastDepositColor] = useState(initialQuickSettings.depositColor || quickHighlightConfig.depositColor);
   const [fastWithdrawalColor, setFastWithdrawalColor] = useState(initialQuickSettings.withdrawalColor || quickHighlightConfig.withdrawalColor);
-  const initialRowsPerPage = Math.min(32, Math.max(1, Math.floor(initialQuickSettings.rowsPerPage || 32)));
+  const initialRowsPerPage = Math.min(30, Math.max(1, Math.floor(initialQuickSettings.rowsPerPage || 30)));
   const [fastRowsPerPage, setFastRowsPerPage] = useState(initialRowsPerPage);
   const [fastRowsPerPageInput, setFastRowsPerPageInput] = useState(String(initialRowsPerPage));
   const [lockedSignatureNames, setLockedSignatureNames] = useState({ employee: false, manager: false });
@@ -346,7 +346,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }, [localMemoryPrefix]);
   useEffect(() => {
     const settings = loadQuickLocalSettings(selectedBank);
-    const rows = Math.min(32, Math.max(1, Math.floor(settings.rowsPerPage || 32)));
+    const rows = Math.min(30, Math.max(1, Math.floor(settings.rowsPerPage || 30)));
     setFastRowsPerPage(rows);
     setFastRowsPerPageInput(String(rows));
     setFastDepositColor(settings.depositColor || quickHighlightConfig.depositColor);
@@ -631,7 +631,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastKeyword(typeof payload.fastKeyword === "string" ? payload.fastKeyword : "");
     setFastKeywordColor(typeof payload.fastKeywordColor === "string" ? payload.fastKeywordColor : "#dcfce7");
     const localRowsPerPage = loadQuickLocalSettings(selectedBank).rowsPerPage;
-    const restoredRowsPerPage = typeof localRowsPerPage === "number" && Number.isFinite(localRowsPerPage) ? Math.min(32, Math.max(1, Math.floor(localRowsPerPage))) : typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(32, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 32;
+    const restoredRowsPerPage = typeof localRowsPerPage === "number" && Number.isFinite(localRowsPerPage) ? Math.min(30, Math.max(1, Math.floor(localRowsPerPage))) : typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(30, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 30;
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
     if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
@@ -779,7 +779,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     setFastKeyword(typeof payload.fastKeyword === "string" ? payload.fastKeyword : "");
     setFastKeywordColor(typeof payload.fastKeywordColor === "string" ? payload.fastKeywordColor : "#dcfce7");
     const localRowsPerPage = loadQuickLocalSettings(selectedBank).rowsPerPage;
-    const restoredRowsPerPage = typeof localRowsPerPage === "number" && Number.isFinite(localRowsPerPage) ? Math.min(32, Math.max(1, Math.floor(localRowsPerPage))) : typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(32, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 32;
+    const restoredRowsPerPage = typeof localRowsPerPage === "number" && Number.isFinite(localRowsPerPage) ? Math.min(30, Math.max(1, Math.floor(localRowsPerPage))) : typeof payload.fastRowsPerPage === "number" && Number.isFinite(payload.fastRowsPerPage) ? Math.min(30, Math.max(1, Math.floor(payload.fastRowsPerPage))) : 30;
     setFastRowsPerPage(restoredRowsPerPage);
     setFastRowsPerPageInput(String(restoredRowsPerPage));
     if (payload.fieldMemory && typeof payload.fieldMemory === "object") setFieldMemory(payload.fieldMemory);
@@ -1037,7 +1037,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   };
   const applyFastRowsPerPage = () => {
     const requested = Number(fastRowsPerPageInput);
-    const next = Number.isFinite(requested) && requested > 0 ? Math.min(32, Math.floor(requested)) : 32;
+    const next = Number.isFinite(requested) && requested > 0 ? Math.min(30, Math.floor(requested)) : 30;
     setFastRowsPerPage(next);
     setFastRowsPerPageInput(String(next));
     if (selectedBank && typeof window !== "undefined") {
@@ -1085,7 +1085,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     const keyword = fastKeyword.trim().toLocaleLowerCase();
     const keywordHighlights = keyword ? Object.fromEntries(rows.filter((row) => (row.credit || 0) > 0 && String(row.description || "").toLocaleLowerCase().includes(keyword)).map((row) => [row.reference, fastKeywordColor])) : {};
     const fastHighlights = { ...Object.fromEntries(rows.filter((row) => ((row.credit || 0) > 0 || (row.debit || 0) > 0) && row.highlightColor).map((row) => [row.reference, row.highlightColor as string])), ...keywordHighlights };
-    return renderTadhamonFastStatementPages(profile, rows, fastHighlights, 32);
+    return renderTadhamonFastStatementPages(profile, rows, fastHighlights, fastRowsPerPage);
   }, [barcodeSources, documentClient, documentPrintDate, documentPeriodEnd, fastDepositColor, fastWithdrawalColor, quickHighlightConfig.label, reportedClosing, reportedTotalCredit, reportedTotalDebit, selectedBank, statementQrSources, statementReference, statementRows, fastHighlightColors, fastKeyword, fastKeywordColor, fastRowsPerPage, ycbClient.customerSince, ycbStatementProfile]);
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 

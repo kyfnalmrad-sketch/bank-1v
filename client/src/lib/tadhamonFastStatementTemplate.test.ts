@@ -36,12 +36,12 @@ describe("Tadhamon quick statement template", () => {
     expect(html.indexOf("Account Opening Date")).toBeLessThan(html.indexOf("Opening Balance"));
     expect(html.indexOf("Opening Balance")).toBeLessThan(html.indexOf("Account Number"));
   });
-  it("splits after 35 real operations without empty rows", () => {
-    const rows = Array.from({ length: 36 }, (_, index) => ({ date: "01/01/2026", reference: `R-${index + 1}`, description: `Operation ${index + 1}`, credit: 100, debit: 0, balance: 100 }));
-    const html = renderTadhamonFastStatement({ customerName: "Test", accountNumber: "A", openingBalance: 0, closingBalance: 100, totalCredit: 3600, totalDebit: 0, issueDate: "01 January 2026", qrUri: "" }, rows, {}, 35);
+  it("splits after 30 real operations without empty rows", () => {
+    const rows = Array.from({ length: 31 }, (_, index) => ({ date: "01/01/2026", reference: `R-${index + 1}`, description: `Operation ${index + 1}`, credit: 100, debit: 0, balance: 100 }));
+    const html = renderTadhamonFastStatement({ customerName: "Test", accountNumber: "A", openingBalance: 0, closingBalance: 100, totalCredit: 3100, totalDebit: 0, issueDate: "01 January 2026", qrUri: "" }, rows, {}, 30);
     expect((html.match(/class="page"/g) || []).length).toBe(2);
-    expect(html).toContain("Operation 35");
-    expect(html).toContain("Operation 36");
+    expect(html).toContain("Operation 30");
+    expect(html).toContain("Operation 31");
     expect(html).not.toContain("empty-row");
     expect(html).not.toContain("&nbsp;");
   });

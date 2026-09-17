@@ -36,8 +36,8 @@ function closing(profile: TadhamonFastStatementProfile, qrUri: string) {
   return `<div class="closing-row"><div><div class="bottom-date"><div class="date-label">DATE / التاريخ</div><div class="date-value">${esc(profile.issueDate)}</div></div><section class="footer"><div class="identity-block"><div class="name-box"><span>${esc(profile.customerName)}</span><span class="name-ar">${esc(profile.holderNameAr || "—")}</span></div><div class="total-row"><div class="total-combined">Total Balance: ${money(profile.closingBalance)}</div><div class="time">Time: <span>${esc(profile.statementTime || "—")}</span></div></div></div></section></div><div class="qr-block"><span class="qr-name">${esc(shortName(profile.customerName))}</span>${qrUri ? `<img class="qr-image" alt="QR code for account holder" src="${esc(qrUri)}">` : ""}</div></div>`;
 }
 
-export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 32) {
-  const safeRowsPerPage = 32;
+export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 30) {
+  const safeRowsPerPage = 30;
   const pages = Math.max(1, Math.ceil(transactions.length / safeRowsPerPage));
   const isKarimi = profile.bankName === "بنك الكريمي";
   const isYcb = profile.bankName === "البنك التجاري اليمني";
@@ -51,6 +51,6 @@ export function renderTadhamonFastStatement(profile: TadhamonFastStatementProfil
   return `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>${esc(profile.bankName || "Tadhamon Bank")} — Quick Account Statement</title><style>${css}</style></head><body>${pageMarkup}</body></html>`;
 }
 
-export function renderTadhamonFastStatementPages(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 32) {
+export function renderTadhamonFastStatementPages(profile: TadhamonFastStatementProfile, transactions: YcbStatementTransaction[], highlights: Record<string, string> = {}, rowsPerPage = 30) {
   return renderTadhamonFastStatement(profile, transactions, highlights, rowsPerPage);
 }
