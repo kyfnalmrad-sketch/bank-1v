@@ -170,7 +170,8 @@ export async function listStatementHistory(workspaceKey: string) {
   const result = await getRenderPool().query(
     `SELECT id, title, statement_reference, customer_name, account_number, created_at, updated_at
      FROM staging_statement_history
-     WHERE workspace_key = ANY($1::varchar[]) OR payload->>'bankId' = $2
+     WHERE (workspace_key = ANY($1::varchar[]) OR payload->>'bankId' = $2)
+       AND payload <> '{}'::jsonb
      ORDER BY updated_at DESC, id DESC`, [scope.keys, scope.bank],
   );
   return result.rows;
@@ -204,18 +205,18 @@ export async function updateStatementHistory(id: number, payload: RenderSnapshot
   if (!process.env.RENDER_POSTGRES_URL) return { saved: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
-  await getRenderPool().query(
+  const result = await getRenderPool().query(
     `UPDATE staging_statement_history SET title = $2, statement_reference = $3, customer_name = $4, account_number = $5, payload = $6::jsonb, updated_at = NOW()
      WHERE id = $1 AND (workspace_key = ANY($7::varchar[]) OR payload->>'bankId' = $8)`,
     [id, title, reference || null, customerName || null, accountNumber || null, JSON.stringify(payload), scope.keys, scope.bank],
   );
-  return { saved: true as const };
+  return result.rowCount === 1 ? { saved: true as const } : { saved: false as const, reason: "not-found" as const };
 }
 
 export async function deleteStatementHistory(id: number, workspaceKey: string) {
   if (!process.env.RENDER_POSTGRES_URL) return { deleted: false as const, reason: "database-unavailable" as const };
   await ensureRenderStagingSchema();
   const scope = historyScopeSql(workspaceKey);
-  await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1 AND (workspace_key = ANY($2::varchar[]) OR payload->>'bankId' = $3)", [id, scope.keys, scope.bank]);
-  return { deleted: true as const };
+  const result = await getRenderPool().query("DELETE FROM staging_statement_history WHERE id = $1 AND (workspace_key = ANY($2::varchar[]) OR payload->>'bankId' = $3)", [id, scope.keys, scope.bank]);
+  return result.rowCount === 1 ? { deleted: true as const } : { deleted: false as const, reason: "not-found" as const };
 }
