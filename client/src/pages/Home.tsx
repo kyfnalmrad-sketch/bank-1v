@@ -1254,7 +1254,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
       <section className="reference-strip" aria-label="Staging status">
         <div><span>Work mode</span><strong>نظام إصدار كشفي</strong></div>
-        <div><span>Staging database</span><strong>{stagingHealth.isLoading ? "Checking…" : stagingHealth.data ? `${stagingHealth.data.tableCount} tables ready` : "Unavailable"}</strong></div>
+        <div><span>Staging database</span><strong>{stagingHealth.isLoading ? "Checking…" : stagingHealth.data?.database === "ready" ? `${stagingHealth.data.tableCount} tables ready` : "Unavailable"}</strong>{stagingHealth.data?.database === "error" && <small role="alert">{stagingHealth.data.message}</small>}<button type="button" className="secondary-button" onClick={() => void stagingHealth.refetch?.()} disabled={stagingHealth.isFetching}>{stagingHealth.isFetching ? "Checking…" : "تحديث اتصال قاعدة البيانات / Refresh DB"}</button></div>
         <div><span>Reference documents</span><strong>No visual changes</strong></div>
       </section>
 

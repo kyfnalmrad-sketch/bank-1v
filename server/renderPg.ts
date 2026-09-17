@@ -6,10 +6,14 @@ import { Pool } from "pg";
 
 let renderPool: Pool | undefined;
 
+export function getDatabaseConnectionString() {
+  return process.env.RENDER_POSTGRES_URL || process.env.EXTERNAL_POSTGRES_URL || process.env.DATABASE_URL;
+}
+
 export function getRenderPool() {
   if (!renderPool) {
-    const connectionString = process.env.RENDER_POSTGRES_URL;
-    if (!connectionString) throw new Error("Render Postgres is not configured");
+    const connectionString = getDatabaseConnectionString();
+    if (!connectionString) throw new Error("Database connection is not configured. Set RENDER_POSTGRES_URL or EXTERNAL_POSTGRES_URL.");
     renderPool = new Pool({ connectionString, ssl: { rejectUnauthorized: true }, max: 3 });
   }
   return renderPool;
@@ -119,6 +123,15 @@ export async function ensureRenderStagingSchema() {
   } finally {
     client.release();
   }
+}
+
+export function databaseErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "Unknown database error");
+  if (/not configured/i.test(message)) return "لم يتم إعداد رابط قاعدة البيانات. أضف RENDER_POSTGRES_URL أو EXTERNAL_POSTGRES_URL في Web Service ثم أعد التشغيل.";
+  if (/password authentication failed|authentication/i.test(message)) return "فشل تسجيل الدخول إلى قاعدة البيانات. راجع اسم المستخدم وكلمة المرور في رابط الاتصال.";
+  if (/ENOTFOUND|getaddrinfo/i.test(message)) return "تعذر العثور على خادم قاعدة البيانات. راجع اسم المضيف في رابط الاتصال.";
+  if (/ECONNREFUSED|timeout|timed out|connection terminated/i.test(message)) return "تعذر الوصول إلى قاعدة البيانات. راجع حالة قاعدة البيانات والسماح بالاتصال الخارجي.";
+  return "تعذر الاتصال بقاعدة البيانات. راجع رابط الاتصال وسجلات الخدمة.";
 }
 
 export type RenderSnapshotPayload = Record<string, unknown>;

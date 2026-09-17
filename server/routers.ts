@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { passwordProtectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { PASSWORD_COOKIE_MAX_AGE, PASSWORD_SESSION_COOKIE, createPasswordSession, hasPasswordSession, passwordIsConfigured, passwordMatches } from "./_core/passwordAuth";
-import { createStatementHistory, deleteStatementHistory, ensureRenderStagingSchema, getRenderSnapshot, getStatementHistory, listStatementHistory, saveRenderSnapshot, updateStatementHistory } from "./renderPg";
+import { createStatementHistory, databaseErrorMessage, deleteStatementHistory, ensureRenderStagingSchema, getDatabaseConnectionString, getRenderSnapshot, getStatementHistory, listStatementHistory, saveRenderSnapshot, updateStatementHistory } from "./renderPg";
 import { z } from "zod";
 
 export const appRouter = router({
@@ -30,8 +30,13 @@ export const appRouter = router({
 
   staging: router({
     health: passwordProtectedProcedure.query(async () => {
-      const schema = await ensureRenderStagingSchema();
-      return { database: "ready" as const, tableCount: schema.tableCount };
+      try {
+        const schema = await ensureRenderStagingSchema();
+        return { database: "ready" as const, tableCount: schema.tableCount, source: process.env.RENDER_POSTGRES_URL ? "RENDER_POSTGRES_URL" as const : process.env.EXTERNAL_POSTGRES_URL ? "EXTERNAL_POSTGRES_URL" as const : process.env.DATABASE_URL ? "DATABASE_URL" as const : "none" as const };
+      } catch (error) {
+        console.error("Database health check failed", error);
+        return { database: "error" as const, tableCount: 0, source: getDatabaseConnectionString() ? "configured" as const : "none" as const, message: databaseErrorMessage(error) };
+      }
     }),
     loadSnapshot: passwordProtectedProcedure
       .input(z.object({ workspaceKey: z.string().min(16).max(160) }))
