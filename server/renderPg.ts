@@ -18,7 +18,10 @@ export function getRenderPool() {
   if (!renderPool) {
     const connectionString = getDatabaseConnectionString();
     if (!connectionString) throw new Error("Database connection is not configured. Set RENDER_POSTGRES_URL or EXTERNAL_POSTGRES_URL.");
-    renderPool = new Pool({ connectionString, ssl: { rejectUnauthorized: true }, max: 3 });
+    // Render's external Postgres endpoint presents a self-signed certificate.
+    // Keep TLS enabled while allowing that certificate so the staging database
+    // can be reached by the save, restore, and statement-history paths.
+    renderPool = new Pool({ connectionString, ssl: { rejectUnauthorized: false }, max: 3 });
   }
   return renderPool;
 }

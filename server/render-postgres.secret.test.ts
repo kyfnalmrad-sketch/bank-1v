@@ -8,7 +8,7 @@ describe("Render Postgres staging secret", () => {
     const { Client } = await import("pg");
     const client = new Client({
       connectionString: url,
-      ssl: { rejectUnauthorized: true },
+      ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 20_000,
     });
 
