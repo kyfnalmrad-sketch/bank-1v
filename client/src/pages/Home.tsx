@@ -368,10 +368,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const skipNextSnapshotSave = useRef(false);
   const snapshotQuery = trpc.staging.loadSnapshot.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false });
   const saveSnapshotMutation = trpc.staging.saveSnapshot.useMutation();
-  const historyQuery = trpc.staging.listHistory?.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, refetch: async () => ({}) };
+  const historyQuery = trpc.staging.listHistory?.useQuery({ workspaceKey }, { retry: false, refetchOnWindowFocus: false }) || { data: [], isLoading: false, isError: false, refetch: async () => ({}) };
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
   const [historyRestoreState, setHistoryRestoreState] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1, workspaceKey }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null };
+  const getHistoryQuery = trpc.staging.getHistory?.useQuery({ id: selectedHistoryId || 1, workspaceKey }, { enabled: selectedHistoryId !== null, retry: false }) || { data: null, isLoading: false, isError: false };
   const createHistoryMutation = trpc.staging.createHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
   const updateHistoryMutation = trpc.staging.updateHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ saved: false }) };
   const deleteHistoryMutation = trpc.staging.deleteHistory?.useMutation() || { isPending: false, mutateAsync: async () => ({ deleted: false }) };
@@ -586,6 +586,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     snapshotRestored.current = true;
     if (payload?.schemaVersion !== 1 || !(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient)) {
       setSnapshotState(snapshotQuery.isError ? "error" : "restored");
+      if (snapshotQuery.isError) setImportNote("تعذر تحميل الحفظ التلقائي من قاعدة البيانات. يمكنك المتابعة محليًا، لكن لن يتم حفظ التغييرات على الخادم حتى يعود الاتصال. / Auto-save could not be loaded from the database.");
       return;
     }
     const restoredClient = { ...defaultClient, ...(payload.client || (payload as Partial<SnapshotPayload> & { documentClient?: typeof defaultClient }).documentClient) };
@@ -648,8 +649,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     if (!snapshotRestored.current || snapshotState === "loading") return;
     const timer = window.setTimeout(() => {
       saveSnapshotMutation.mutate({ workspaceKey, payload: snapshotPayload }, {
-        onSuccess: (result) => setSnapshotState(result.saved ? "saved" : "error"),
-        onError: () => setSnapshotState("error"),
+        onSuccess: (result) => { setSnapshotState(result.saved ? "saved" : "error"); if (!result.saved) setImportNote("فشل الحفظ التلقائي: قاعدة البيانات لم تؤكد العملية. / Auto-save was not confirmed by the database."); },
+        onError: () => { setSnapshotState("error"); setImportNote("فشل الحفظ التلقائي بسبب تعذر الاتصال بقاعدة البيانات. / Auto-save failed because the database is unavailable."); },
       });
     }, 1200);
     return () => window.clearTimeout(timer);
@@ -660,8 +661,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     try {
       const result = await saveSnapshotMutation.mutateAsync({ workspaceKey, payload: snapshotPayload });
       setSnapshotState(result.saved ? "saved" : "error");
+      setImportNote(result.saved ? "تم حفظ البيانات بنجاح. / Data saved successfully." : "فشل الحفظ: قاعدة البيانات لم تؤكد العملية. / Save was not confirmed by the database.");
     } catch {
       setSnapshotState("error");
+      setImportNote("فشل الحفظ بسبب تعذر الاتصال بقاعدة البيانات. / Save failed because the database is unavailable.");
     }
   };
 
@@ -809,8 +812,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       const result = await deleteHistoryMutation.mutateAsync({ id, workspaceKey });
       await historyQuery.refetch();
       setImportNote(result.deleted ? "تم حذف قاعدة بيانات الشخص المحدد من السجلات." : "تعذر حذف سجل الشخص المحدد من قاعدة البيانات.");
-    } catch {
-      setImportNote("تعذر حذف سجل الشخص المحدد. تحقق من اتصال قاعدة البيانات ثم حاول مرة أخرى.");
+    } catch (error) {
+      console.error("Statement history delete failed", error);
+      setImportNote("فشل حذف السجل بسبب تعذر الاتصال بقاعدة البيانات. لم يتم حذف أي بيانات. / Delete failed because the database is unavailable; no data was deleted.");
     }
   };
 
@@ -1421,7 +1425,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         </section>}
       </>}
 
-      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> {getHistoryQuery.isLoading && selectedHistoryId === item.id ? "Loading…" : "Edit / Restore"}</button><button type="button" className="preview-button" onClick={() => void openStatementHistory(item.id, true)} disabled={getHistoryQuery.isLoading}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
+      {activeTab === "history" && <section className="panel history-panel"><div className="panel-heading"><div><h2>Saved Statement History</h2><p className="hint">Open a saved statement to edit its data or transactions, then print it again.</p></div><Database size={26} className="heading-icon" /></div>{historyQuery.isLoading ? <p className="hint">Loading saved statements…</p> : historyQuery.isError ? <p className="tab-warning" role="alert">تعذر تحميل السجلات. تحقق من اتصال قاعدة البيانات ثم أعد المحاولة. / Could not load records. Check the database connection and try again.</p> : (historyQuery.data as HistoryItem[] || []).length === 0 ? <p className="hint">No saved statements yet. Save one from Review & Export.</p> : <div className="history-list">{(historyQuery.data as HistoryItem[]).map((item) => <article className="history-item" key={item.id}><div><strong>{item.title}</strong><small>{item.customer_name || "—"} · {item.account_number || "—"} · Updated {new Date(item.updated_at).toLocaleString()}</small></div><div className="actions"><button type="button" onClick={() => void openStatementHistory(item.id)} disabled={getHistoryQuery.isLoading}><FolderOpen size={16} /> {getHistoryQuery.isLoading && selectedHistoryId === item.id ? "Loading…" : "Edit / Restore"}</button><button type="button" className="preview-button" onClick={() => void openStatementHistory(item.id, true)} disabled={getHistoryQuery.isLoading}><Printer size={16} /> Print</button><button type="button" className="secondary-button" onClick={() => void deleteStatementHistory(item.id)} disabled={deleteHistoryMutation.isPending}><Trash2 size={16} /> Delete</button></div></article>)}</div>}</section>}
       {activeTab === "review" && <section className="panel review-panel">
         <div className="panel-heading"><div><span className="section-kicker">Step 3 of 3</span><h2>Review & Export</h2><p className="hint">{selectedBank === "ycb" ? "Review and print the approved Yemen Commercial Bank statement from one official template." : selectedBank === "tadhamon" ? "Review and print the approved Tadhamon Bank statement from its independent official template." : "Review the connected statement first, then print the Account Status Statement after it as one combined PDF/print job."}</p></div><FileText size={26} className="heading-icon" /></div>
         <div className="preview-assurance"><CheckCircle2 size={18} /><span><strong>Connected preview</strong> uses the applied register and shared customer fields. {selectedBank === "ycb" ? "The official YCB artwork, QR code, and page arrangement are preserved." : selectedBank === "tadhamon" ? "The official Tadhamon artwork, QR code, and page arrangement are preserved." : "The official AlKuraimi artwork, QR code, and page arrangement are preserved."}</span></div>
