@@ -88,6 +88,19 @@ describe("statement Excel import", () => {
     expect(transactions[0].operationNumber).toBe("FT260204CXX");
   });
 
+  it("uses Excel dates with English month names for Operation No. imports", () => {
+    const matrix = [
+      ["Date", "Movement Description", "Operation No.", "Debit", "Credit", "Balance"],
+      ["14-Feb-26", "Incoming transfer - Mohammed Al-Harazi", "FT260214EMYF", "", 100, 100],
+    ];
+    const discovered = discoverStatementHeader(matrix);
+    expect(discovered?.map.reference).toBe(2);
+    const transaction = buildImportedTransactions(matrix.slice(1), discovered!.map, true, "karimi")[0];
+    expect(transaction.date).toBe("2026-02-14");
+    expect(transaction.externalReference).toBe("FT260214EMYF");
+    expect(transaction.operationNumber).toBe("FT260214IMX");
+  });
+
   it("uses FT for Karimi, YCB for Yemen Commercial Bank, and preserves Tadhamon TDB", () => {
     const map = { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 };
     const rows = [["04/02/2026", "Cash deposit", "EXCEL-REF", "", 100, 100]];

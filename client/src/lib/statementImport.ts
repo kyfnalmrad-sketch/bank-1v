@@ -134,6 +134,21 @@ export function formatImportedDate(value: unknown) {
   if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, "0")}-${String(iso[3]).padStart(2, "0")}`;
   const display = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[ T].*)?$/);
   if (display) return `${display[3]}-${String(display[2]).padStart(2, "0")}-${String(display[1]).padStart(2, "0")}`;
+  const namedMonth = text.match(/^(\d{1,2})[-/ .]([A-Za-z]{3,9})[-/ .](\d{2}|\d{4})(?:[ T].*)?$/);
+  if (namedMonth) {
+    const months: Record<string, number> = {
+      jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+      apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+      aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10,
+      october: 10, nov: 11, november: 11, dec: 12, december: 12,
+    };
+    const month = months[namedMonth[2].toLowerCase()];
+    if (month) {
+      const yearNumber = Number(namedMonth[3]);
+      const year = namedMonth[3].length === 2 ? 2000 + yearNumber : yearNumber;
+      return `${year}-${String(month).padStart(2, "0")}-${String(namedMonth[1]).padStart(2, "0")}`;
+    }
+  }
   return text;
 }
 
