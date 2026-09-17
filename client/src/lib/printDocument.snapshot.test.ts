@@ -15,8 +15,6 @@ const { canvasMock, pdfMock } = vi.hoisted(() => {
     addImage: vi.fn(),
     addPage: vi.fn(),
     setProperties: vi.fn(),
-    setCreationDate: vi.fn(),
-    output: vi.fn(() => "blob:generated-pdf"),
     save: vi.fn(),
   }));
   return { canvasMock, pdfMock };
@@ -29,7 +27,6 @@ import { downloadDocumentPdf } from "./printDocument";
 
 describe("PDF/PNG preview snapshot", () => {
   it("captures the existing preview page and preserves its displayed text", async () => {
-    vi.spyOn(window, "open").mockImplementation(() => ({ focus: vi.fn() } as unknown as Window));
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 1;

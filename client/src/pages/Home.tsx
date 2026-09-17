@@ -1166,7 +1166,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printableStatementHtml = useMemo(() => selectedBank === "ycb" ? ycbApprovedStatementHtml : selectedBank === "tadhamon" ? tadhamonStatementHtml : assemblePrintableStatementHtml(statementPageHtml), [selectedBank, statementPageHtml, tadhamonStatementHtml, ycbApprovedStatementHtml]);
 
   const printDocument = (kind: PrintDocumentKind) => {
-    void downloadPdf(kind);
+    if (isPrintHoliday) { setImportNote(`لا يمكن إصدار الكشف في يوم ${printHolidayLabel}. الخميس والجمعة عطلة. غيّر تاريخ الطباعة ثم حاول مرة أخرى.`); return; }
+    const statementHtml = printableStatementHtml;
+    const selected = selectPrintableDocument(kind, accountStatusHtml, statementHtml, quickStatementHtml);
+    const person = client.name.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
+    if (!openPrintWindow(selected.html, person ? `${person} - ${selected.title}` : selected.title, window, client.branch, documentClient.printDate, documentClient.printTime)) {
+      setImportNote("The browser blocked the print window. Please allow pop-ups for this site and try again.");
+    }
   };
 
   const downloadPdf = async (kind: PrintDocumentKind) => {

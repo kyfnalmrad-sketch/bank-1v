@@ -295,6 +295,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
     unifiedAll: "Unified Statement Package — Status, Account, Quick",
   };
   const title = person ? `${person} - ${titleByKind[kind]}` : titleByKind[kind];
+  const fileName = directPdfFilename(kind, undefined, customerName);
 
   // Flatten the already rendered preview when it is open. This avoids a second
   // layout pass with a different viewport, which could reflow text or reorder
@@ -360,16 +361,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
       creator: "Bank statement system",
       keywords: `issuedAt=${generatedAt.iso};timeZone=${generatedAt.timeZone}`,
     });
-    const pdfUrl = String(pdf.output("bloburl"));
-    const previewWindow = window.open(pdfUrl, "_blank");
-    if (!previewWindow) {
-      URL.revokeObjectURL(pdfUrl);
-      return false;
-    }
-    previewWindow.focus();
-    // Keep the object URL alive long enough for the browser PDF viewer's
-    // download button to save the already-generated PDF without re-rendering it.
-    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30 * 60 * 1000);
+    pdf.save(fileName);
     return true;
   } catch (error) {
     console.error("Unable to create flattened PDF", error);

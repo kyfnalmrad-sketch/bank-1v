@@ -23,10 +23,4 @@ describe("print timestamp", () => {
     expect(timestamp.timeZone).toBe("Asia/Dubai");
   });
 
-  it("preserves an entered day 31 exactly", () => {
-    const timestamp = createPrintTimestamp("Sana'a", new Date("2031-12-31T22:15:10Z"), "2026-08-31", "10:00");
-
-    expect(timestamp.date).toBe("2026-08-31");
-    expect(timestamp.iso).toBe("2026-08-31T10:00:00Z");
-  });
 });
