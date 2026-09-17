@@ -16,8 +16,8 @@ export function branchTimeZone(branch: string): string {
   return DEFAULT_TIME_ZONE;
 }
 
-/** Builds print metadata from the selected document date when provided. */
-export function createPrintTimestamp(branch: string, now = new Date(), dateOverride = ""): PrintTimestamp {
+/** Builds print metadata from the selected document date/time when provided. */
+export function createPrintTimestamp(branch: string, now = new Date(), dateOverride = "", timeOverride = ""): PrintTimestamp {
   const timeZone = branchTimeZone(branch);
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -40,9 +40,13 @@ export function createPrintTimestamp(branch: string, now = new Date(), dateOverr
         : "";
     })();
   const date = parsedOverride || systemDate;
-  const time = `${values.hour}:${values.minute}:${values.second}`;
-  // Keep the selected calendar date stable when jsPDF serializes /CreationDate.
-  const iso = date === systemDate ? now.toISOString() : `${date}T${time}Z`;
+  const systemTime = `${values.hour}:${values.minute}:${values.second}`;
+  const parsedTime = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(timeOverride);
+  const time = parsedTime
+    ? `${String(Number(parsedTime[1])).padStart(2, "0")}:${parsedTime[2]}:${parsedTime[3] || "00"}`
+    : systemTime;
+  // Keep the selected calendar date/time stable when jsPDF serializes /CreationDate.
+  const iso = date === systemDate && time === systemTime ? now.toISOString() : `${date}T${time}Z`;
   return { iso, date, time, timeZone };
 }
 

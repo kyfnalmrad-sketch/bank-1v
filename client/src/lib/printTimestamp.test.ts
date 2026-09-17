@@ -14,4 +14,12 @@ describe("print timestamp", () => {
 
     expect(timestamp.date).toBe("2026-09-08");
   });
+
+  it("uses the entered print time instead of the device clock time", () => {
+    const timestamp = createPrintTimestamp("Dubai Main Branch", new Date("2031-12-31T22:15:10Z"), "2026-09-23", "08:45");
+
+    expect(timestamp.time).toBe("08:45:00");
+    expect(timestamp.iso).toBe("2026-09-23T08:45:00Z");
+    expect(timestamp.timeZone).toBe("Asia/Dubai");
+  });
 });

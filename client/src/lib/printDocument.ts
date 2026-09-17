@@ -79,8 +79,8 @@ function printAfterAssetsLoad(printWindow: PrintableWindow) {
     .then(print);
 }
 
-export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref(), branch = "", printDate = "") {
-  const generatedAt = createPrintTimestamp(branch, new Date(), printDate);
+export function withPrintTitle(html: string, title: string, baseHref = currentBaseHref(), branch = "", printDate = "", printTime = "") {
+  const generatedAt = createPrintTimestamp(branch, new Date(), printDate, printTime);
   const issuanceMeta = `<meta name="issued-at" content="${safeTitle(generatedAt.iso)}"><meta name="issued-date" content="${safeTitle(generatedAt.date)}"><meta name="issued-time" content="${safeTitle(generatedAt.time)}"><meta name="issued-time-zone" content="${safeTitle(generatedAt.timeZone)}">`;
   return html.replace("<head>", `<head><base href="${safeTitle(baseHref)}"><title>${safeTitle(title)}</title>${issuanceMeta}${printAssetStyles}`);
 }
@@ -285,7 +285,7 @@ function waitForStableLayout() {
   });
 }
 
-export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "", previewDocument?: Document, branch = "", printDate = "") {
+export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string, customerName = "", previewDocument?: Document, branch = "", printDate = "", printTime = "") {
   if (!html || typeof window === "undefined") return false;
   const person = customerName.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ");
   const titleByKind: Record<PrintDocumentKind, string> = {
@@ -309,7 +309,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
       frame.style.cssText = "position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;opacity:1;pointer-events:none";
       document.body.appendChild(frame);
       const frameLoaded = waitForFrameLoad(frame);
-      frame.srcdoc = withPrintTitle(html, title, currentBaseHref(), branch, printDate);
+      frame.srcdoc = withPrintTitle(html, title, currentBaseHref(), branch, printDate, printTime);
       await frameLoaded;
       frameDocument = frame.contentDocument || undefined;
     }
@@ -353,7 +353,7 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
       pdf.addImage(imageData, "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
     }
 
-    const generatedAt = createPrintTimestamp(branch, new Date(), printDate);
+    const generatedAt = createPrintTimestamp(branch, new Date(), printDate, printTime);
     pdf.setCreationDate?.(new Date(generatedAt.iso));
     pdf.setProperties({
       title,
@@ -371,12 +371,12 @@ export async function downloadDocumentPdf(kind: PrintDocumentKind, html: string,
   }
 }
 
-export function openPrintWindow(html: string, title: string, host: PrintHost = window, branch = "", printDate = "") {
+export function openPrintWindow(html: string, title: string, host: PrintHost = window, branch = "", printDate = "", printTime = "") {
   if (!html) return false;
   const printWindow = host.open("", "_blank");
   if (!printWindow) return false;
   printWindow.document.open();
-  printWindow.document.write(withPrintTitle(html, title, currentBaseHref(), branch, printDate));
+  printWindow.document.write(withPrintTitle(html, title, currentBaseHref(), branch, printDate, printTime));
   printWindow.addEventListener("load", () => {
     printAfterAssetsLoad(printWindow);
   }, { once: true });
