@@ -36,6 +36,12 @@ describe("quick statement bank highlight configuration", () => {
     expect(new Set(Object.values(QUICK_HIGHLIGHT_CONFIG).map((config) => config.depositColor)).size).toBe(3);
   });
 
+  it("keeps an independent withdrawal color for each bank", () => {
+    expect(getQuickHighlightConfig("ycb").withdrawalColor).toBe("#dbeafe");
+    expect(getQuickHighlightConfig("karimi").withdrawalColor).toBe("#fee2e2");
+    expect(getQuickHighlightConfig("tadhamon").withdrawalColor).toBe("#ffed00");
+  });
+
   it("does not expose official-document colors as part of the config", () => {
     expect(Object.keys(QUICK_HIGHLIGHT_CONFIG)).toEqual(["tadhamon", "ycb", "karimi"]);
   });

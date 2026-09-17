@@ -25,7 +25,7 @@ function tableHeader() {
 }
 
 function row(item: YcbStatementTransaction, highlights: Record<string, string>) {
-  const highlightColor = (item.credit || 0) > 0 && /^#[0-9a-fA-F]{6}$/.test(highlights[item.reference] || "") ? highlights[item.reference] : "";
+  const highlightColor = ((item.credit || 0) > 0 || (item.debit || 0) > 0) && /^#[0-9a-fA-F]{6}$/.test(highlights[item.reference] || "") ? highlights[item.reference] : "";
   const highlight = highlightColor ? ` highlight" style="--highlight-color:${highlightColor}` : "";
   const deposit = (item.credit || 0) > 0 ? " deposit" : "";
   const cells = [dateText(item.date), item.reference, item.description, item.debit ? money(item.debit) : "", item.credit ? money(item.credit) : "", money(item.balance), ""];
