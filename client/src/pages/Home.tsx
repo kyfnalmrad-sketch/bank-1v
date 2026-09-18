@@ -486,8 +486,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const printDateDay = printDateValue ? new Date(`${printDateValue}T12:00:00`).getDay() : -1;
   const isPrintHoliday = printDateDay === 4 || printDateDay === 5;
   const printHolidayLabel = printDateDay === 4 ? "الخميس" : "الجمعة";
-  const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / MAX_TRANSACTIONS_PER_PAGE));
-  const statementPageGroups = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => statementRows.slice(pageIndex * MAX_TRANSACTIONS_PER_PAGE, (pageIndex + 1) * MAX_TRANSACTIONS_PER_PAGE)), [statementPageCount, statementRows]);
+  const statementPageSize = selectedBank === "karimi" ? 15 : MAX_TRANSACTIONS_PER_PAGE;
+  const statementPageCount = Math.max(1, Math.ceil(acceptedRows.length / statementPageSize));
+  const statementPageGroups = useMemo(() => Array.from({ length: statementPageCount }, (_, pageIndex) => statementRows.slice(pageIndex * statementPageSize, (pageIndex + 1) * statementPageSize)), [statementPageCount, statementPageSize, statementRows]);
   const statementPageSummaries = useMemo(() => statementPageGroups.map((rows, pageIndex) => {
     const previousRow = pageIndex > 0 ? statementPageGroups[pageIndex - 1]?.at(-1) : undefined;
     return {
@@ -1450,7 +1451,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>بداية الكشف / Statement Start Date<input type="date" lang="en-GB" value={client.periodStart} onChange={(event) => updateClient("periodStart", event.target.value)} /></label>
             <label>نهاية الكشف / Statement End Date<input type="date" lang="en-GB" value={client.periodEnd} onChange={(event) => updateClient("periodEnd", event.target.value)} /></label>
-            <div className="computed-field"><span>صفحات الكشف / Statement Pages</span><strong>{statementPageCount}</strong><small>حد أقصى 18 حركة / Maximum 18 transactions per page.</small></div>
+            <div className="computed-field"><span>صفحات الكشف / Statement Pages</span><strong>{statementPageCount}</strong><small>حد أقصى {statementPageSize} حركة / Maximum {statementPageSize} transactions per page.</small></div>
           </div>
         </section>
         <section className="panel">

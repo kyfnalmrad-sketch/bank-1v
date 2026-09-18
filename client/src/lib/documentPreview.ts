@@ -192,11 +192,11 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .tx-head tr,.transactions tr{display:grid;width:190mm;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm}
     .tx-head.with-branch tr,.transactions.with-branch tr{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}
     .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;min-width:0;line-height:1.1}
-    .transactions tr{break-inside:avoid;page-break-inside:avoid;height:9.3mm;min-height:9.3mm;max-height:9.3mm}
-    .transactions td{min-width:0;height:9.3mm;min-height:9.3mm;max-height:9.3mm;padding:.7mm .45mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .transactions tr{break-inside:avoid;page-break-inside:avoid;height:10mm;min-height:10mm;max-height:10mm}
+    .transactions td{min-width:0;height:10mm;min-height:10mm;max-height:10mm;padding:.9mm .55mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
     .date-cell{text-align:center;white-space:nowrap;font:400 10.5pt/10.5pt Calibri,Arial,sans-serif}
-    .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;padding:.65mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
+    .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.05pt/2.8mm Arial,Tahoma,sans-serif;padding:.8mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}
     .branch-cell{font:400 8pt/3.2mm Arial,Tahoma,sans-serif;white-space:normal;overflow-wrap:anywhere}
     .operation-cell{font:400 7.6pt/8pt Arial,Tahoma,sans-serif;white-space:nowrap;color:#6b5297}
     .number-cell{white-space:nowrap;font:400 9.2pt/9.2pt "Courier New",Courier,monospace}
