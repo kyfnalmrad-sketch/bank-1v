@@ -20,9 +20,9 @@ const renderRow = (item: YcbStatementTransaction, highlight = "") => {
   return `<div class="row${item.credit ? " credit-row" : ""}${safeHighlight ? " custom-row" : ""}" data-reference="${reference}"${style}${click}><div class="cell centered"${cellStyle}>${escapeHtml(item.date)}</div><div class="cell centered"${cellStyle}>${reference}</div><div class="cell"${cellStyle}>${escapeHtml(item.description)}</div><div class="cell amount"${cellStyle}>${item.credit ? money(item.credit) : "—"}</div><div class="cell amount"${cellStyle}>${item.debit ? money(item.debit) : "—"}</div><div class="cell amount balance"${cellStyle}>${money(item.balance)}</div></div>`;
 };
 const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
- .page > .top{height:68mm!important}
- .page > .summary{margin-top:3mm!important}
- .page > .table{margin-top:3mm!important}
+ .page > .top{height:76mm!important;min-height:76mm!important}
+ .page > .summary{position:relative;z-index:1;margin-top:5mm!important;margin-bottom:4mm!important;clear:both}
+ .page > .table{position:relative;z-index:1;margin-top:0!important;clear:both}
 	.address-qr-wrap{position:relative;display:block;width:20mm;height:20mm;flex:0 0 20mm}
 	.address-qr-wrap .address-qr{position:absolute;inset:0;width:20mm;height:20mm;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
 	.address-qr-logo{position:absolute;left:50%;top:50%;width:5.8mm;height:3.8mm;object-fit:contain;transform:translate(-50%,-50%);opacity:.98}
@@ -41,7 +41,7 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
  .row.credit-row .cell.amount:first-of-type{color:#117A65;font-weight:700}
  .row.custom-row .cell{background-color:var(--custom-row-color)!important;background:var(--custom-row-color)!important;color:#1B365D!important}
  .row.custom-row .balance{background-color:var(--custom-row-color)!important;background:var(--custom-row-color)!important;color:#1B365D!important}
- @media print{.page{margin:0!important}.page > .top{height:68mm!important}.page > .summary{margin-top:3mm!important}.page > .table{margin-top:3mm!important}.page > .notes{margin-top:3mm!important}}
+ @media print{.page{margin:0!important}.page > .top{height:76mm!important;min-height:76mm!important}.page > .summary{margin-top:5mm!important;margin-bottom:4mm!important}.page > .table{margin-top:0!important}.page > .notes{margin-top:3mm!important}}
 </style>`;
 
 export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, transactions: YcbStatementTransaction[], pageNumber: number, pageCount: number, qrUri = "", barcodeUri = "", rowHighlights: Record<string, string> = {}, pageTotals?: Pick<YcbStatementProfile, "totalCredit" | "totalDebit" | "closingBalance">) {
@@ -83,11 +83,11 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   if (summaryStart >= 0 && tableStart > summaryStart && notesStart > tableStart) {
     return withCodeAssets(`${page.slice(0, summaryStart)}${summary}${table}${page.slice(notesStart)}`)
       .replace("</head>", `${ycbLayoutOverrides}</head>`)
-      .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/ycb-logo-transparent.png" alt="YCB logo" /></span>`)
+      .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1></span>`)
       .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22')
       .replace(/Page 1 of 1/g, `Page ${pageNumber} of ${pageCount}`);
   }
   return withCodeAssets(page.replace("</head>", `${ycbLayoutOverrides}</head>`))
-    .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1><img class="address-qr-logo" src="/assets/ycb-logo-transparent.png" alt="YCB logo" /></span>`)
+    .replace(/<img class="address-qr"([^>]+)>/, `<span class="address-qr-wrap"><img class="address-qr"$1></span>`)
     .replace('fill%3D%22%23172936%22', 'fill%3D%22%232d3192%22');
 }
