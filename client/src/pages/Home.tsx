@@ -1156,7 +1156,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const quickStatementHtml = useMemo(() => {
     if (!selectedBank) return "";
     const profile = selectedBank === "ycb"
-      ? { ...ycbStatementProfile, bankName: quickHighlightConfig.label, openingDate: ycbClient.customerSince || documentClient.customerSince, holderNameAr: "", statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo }
+      ? { ...ycbStatementProfile, bankName: quickHighlightConfig.label, openingDate: ycbClient.customerSince || documentClient.customerSince, holderNameAr: documentClient.nameAr, statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo }
       : { customerName: documentClient.name, passport: documentClient.momaizNo || documentClient.passport, address: documentClient.address, placeOfBirth: documentClient.placeOfBirth, dateOfBirth: formatEnglishGregorianDate(documentClient.dateOfBirth), branchName: documentClient.branch, accountNumber: documentClient.accountNumber, accountType: documentClient.accountType, currency: documentClient.currency, periodStart: documentPeriodStart, periodEnd: documentPeriodEnd, statementReference, openingBalance: money(documentClient.opening), closingBalance: reportedClosing, totalCredit: reportedTotalCredit, totalDebit: reportedTotalDebit, issueDate: documentPrintDate, openingDate: documentClient.customerSince, holderNameAr: selectedBank === "tadhamon" ? documentClient.nameAr : "", statementTime: formatMorningTime(documentClient.printTime), qrUri: statementQrSources.at(-1) || barcodeSources.at(-1) || referenceAssets.qrLogo, bankName: quickHighlightConfig.label };
     const rows = statementRows.map((row) => ({ date: displayStatementDate(row.date), reference: row.operationNumber, description: row.description, credit: row.credit, debit: row.debit, balance: row.balance, highlightColor: fastHighlightColors[row.rowNumber] || ((row.credit || 0) > 0 ? fastDepositColor : (row.debit || 0) > 0 ? fastWithdrawalColor : "") }));
     const keyword = fastKeyword.trim().toLocaleLowerCase();
@@ -1408,10 +1408,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>رقم الحساب / Account Number<input list="memory-account-number" dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /><datalist id="memory-account-number">{fieldMemory.accountNumber?.map((value) => <option key={value} value={value} />)}</datalist></label>
           </div>
         </section>
-        {selectedBank === "tadhamon" && <section className="panel tadhamon-entry-panel" aria-labelledby="tadhamon-customer-name-title">
-          <div className="panel-heading"><div><h2 id="tadhamon-customer-name-title">اسم العميل في كشف بنك التضامن / Tadhamon Statement Name</h2><p className="hint">أدخل الاسم بالعربية ليظهر مباشرة أسفل الاسم الإنجليزي في الكشف السريع لبنك التضامن. / Enter the Arabic name shown below the English name on the Tadhamon quick statement.</p></div></div>
-          <label htmlFor="tadhamon-arabic-name">الاسم بالعربية / Arabic customer name <span className="field-note">يظهر في الكشف السريع / Shown on quick statement</span></label>
-          <input id="tadhamon-arabic-name" aria-label="الاسم بالعربية / Arabic customer name" dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="اكتب الاسم بالعربية" />
+        {(selectedBank === "tadhamon" || selectedBank === "ycb") && <section className="panel bank-arabic-name-panel" aria-labelledby="bank-arabic-name-title">
+          <div className="panel-heading"><div><h2 id="bank-arabic-name-title">الاسم العربي في الكشف السريع / Arabic Quick Statement Name</h2><p className="hint">أدخل الاسم بالعربية ليظهر مباشرة أسفل الاسم الإنجليزي في الكشف السريع للبنك المحدد. / Enter the Arabic name shown below the English name on the selected bank’s quick statement.</p></div></div>
+          <label htmlFor="bank-arabic-name">الاسم بالعربية / Arabic customer name <span className="field-note">يظهر في الكشف السريع / Shown on quick statement</span></label>
+          <input id="bank-arabic-name" aria-label="الاسم بالعربية / Arabic customer name" dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="اكتب الاسم بالعربية" />
         </section>}
         {selectedBank === "ycb" && <>
           <section className="panel ycb-entry-panel">
