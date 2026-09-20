@@ -65,7 +65,17 @@ describe("Home applied transaction register", () => {
     expect(screen.getByText(/فترة كشف الحساب/)).toBeTruthy();
     expect(screen.getByPlaceholderText("Street, area, city")).toBeTruthy();
     expect(screen.getByPlaceholderText("City, country")).toBeTruthy();
+    expect(screen.getByLabelText("الاسم بالعربية / Arabic customer name")).toBeTruthy();
     expect(screen.getByText(/بيانات التوقيع \/ Signature Details/)).toBeTruthy();
+  });
+
+  it("passes the Tadhamon Arabic customer name into the quick statement", async () => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك التضامن/ }));
+    fireEvent.change(screen.getByLabelText("الاسم بالعربية / Arabic customer name"), { target: { value: "محمد أحمد" } });
+    fireEvent.click(screen.getByRole("button", { name: /طبعة كشف حساب سريع/ }));
+    const preview = await screen.findByTitle(/بنك التضامن quick account statement preview/);
+    expect(preview.getAttribute("srcdoc")).toContain("محمد أحمد");
   });
   it("applies an edited date to the printed account statement while each print button opens only its matching document", async () => {
     const host = mockPrintWindow();
