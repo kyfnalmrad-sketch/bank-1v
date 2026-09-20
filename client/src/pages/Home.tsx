@@ -1397,6 +1397,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <h2>المعلومات الشخصية / Customer Information</h2>
           <div className="grid">
             <label>اسم العميل / Customer name<input list="memory-name" value={client.name} onChange={(event) => updateClient("name", event.target.value)} placeholder="Name as shown on the statement" /><datalist id="memory-name">{fieldMemory.name?.map((value) => <option key={value} value={value} />)}</datalist></label>
+            {(selectedBank === "tadhamon" || selectedBank === "ycb") && <label>الاسم بالعربية / Arabic customer name <span className="field-note">يظهر في الكشف السريع / Shown on quick statement</span><input id="bank-arabic-name" aria-label="الاسم بالعربية / Arabic customer name" dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="اكتب الاسم بالعربية" /></label>}
             {selectedBank === "ycb" && <><label>العنوان / Address <span className="field-note">يظهر في الكشف / Shown on statement</span><input value={ycbClient.address} onChange={(event) => updateYcbClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>تاريخ الميلاد / Date of birth <span className="field-note">اختياري / Optional</span><input type="date" value={ycbClient.dateOfBirth} onChange={(event) => updateYcbClient("dateOfBirth", event.target.value)} /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={ycbClient.placeOfBirth} onChange={(event) => updateYcbClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank === "tadhamon" && <><label>العنوان / Address <span className="field-note">يظهر في كشف التضامن / Shown on Tadhamon statement</span><input value={client.address} onChange={(event) => updateClient("address", event.target.value)} placeholder="Street, area, city" /></label><label>مكان الميلاد / Place of birth <span className="field-note">اختياري / Optional</span><input value={client.placeOfBirth} onChange={(event) => updateClient("placeOfBirth", event.target.value)} placeholder="City, country" /></label></>}
             {selectedBank !== "ycb" && <label>رقم المميز / Momaiz No.<input dir="ltr" value={client.momaizNo} onChange={(event) => updateClient("momaizNo", event.target.value)} /></label>}
@@ -1408,11 +1409,6 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
             <label>رقم الحساب / Account Number<input list="memory-account-number" dir="ltr" value={client.accountNumber} onChange={(event) => updateClient("accountNumber", event.target.value)} /><datalist id="memory-account-number">{fieldMemory.accountNumber?.map((value) => <option key={value} value={value} />)}</datalist></label>
           </div>
         </section>
-        {(selectedBank === "tadhamon" || selectedBank === "ycb") && <section className="panel bank-arabic-name-panel" aria-labelledby="bank-arabic-name-title">
-          <div className="panel-heading"><div><h2 id="bank-arabic-name-title">الاسم العربي في الكشف السريع / Arabic Quick Statement Name</h2><p className="hint">أدخل الاسم بالعربية ليظهر مباشرة أسفل الاسم الإنجليزي في الكشف السريع للبنك المحدد. / Enter the Arabic name shown below the English name on the selected bank’s quick statement.</p></div></div>
-          <label htmlFor="bank-arabic-name">الاسم بالعربية / Arabic customer name <span className="field-note">يظهر في الكشف السريع / Shown on quick statement</span></label>
-          <input id="bank-arabic-name" aria-label="الاسم بالعربية / Arabic customer name" dir="rtl" value={client.nameAr} onChange={(event) => updateClient("nameAr", event.target.value)} placeholder="اكتب الاسم بالعربية" />
-        </section>}
         {selectedBank === "ycb" && <>
           <section className="panel ycb-entry-panel">
             <h2>معلومات الشهادة / Certificate Information</h2>
