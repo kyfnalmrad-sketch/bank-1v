@@ -113,21 +113,59 @@ function extractHtmlPart(html: string, tag: "head" | "body") {
     .join("\n");
 }
 
-function scopeCss(css: string, scope: string) {
-  return css.replace(/([^{}]+)\{([^{}]*)\}/g, (full, selector: string, declarations: string) => {
-    const trimmed = selector.trim();
-    if (!trimmed || trimmed.startsWith("@") || /^(from|to|\d+%)$/.test(trimmed)) return full;
-    const scoped = trimmed.split(",").map((part) => {
-      const item = part.trim();
-      if (!item) return item;
-      if (item === "html" || item === "body" || item === "html,body") return scope;
-      if (item.startsWith("html ")) return `${scope} ${item.slice(5)}`;
-      if (item.startsWith("body ")) return `${scope} ${item.slice(5)}`;
-      if (item === ":root") return scope;
-      return `${scope} ${item}`;
-    }).join(", ");
-    return `${scoped}{${declarations}}`;
-  });
+function scopeSelector(selector: string, scope: string) {
+  return selector.trim().split(",").map((part) => {
+    const item = part.trim();
+    if (!item) return item;
+    if (item === "html" || item === "body" || item === "html,body") return scope;
+    if (item.startsWith("html ")) return `${scope} ${item.slice(5)}`;
+    if (item.startsWith("body ")) return `${scope} ${item.slice(5)}`;
+    if (item === ":root") return scope;
+    return `${scope} ${item}`;
+  }).join(", ");
+}
+
+function findCssBlockEnd(css: string, openBrace: number) {
+  let depth = 0;
+  let quote = "";
+  for (let index = openBrace; index < css.length; index += 1) {
+    const character = css[index];
+    if (quote) {
+      if (character === quote && css[index - 1] !== "\\") quote = "";
+      continue;
+    }
+    if (character === '"' || character === "'") { quote = character; continue; }
+    if (character === "{") depth += 1;
+    if (character === "}" && --depth === 0) return index;
+  }
+  return -1;
+}
+
+/** Scope CSS without flattening nested at-rules such as @media print. */
+function scopeCss(css: string, scope: string): string {
+  let output = "";
+  let cursor = 0;
+  while (cursor < css.length) {
+    const openBrace = css.indexOf("{", cursor);
+    if (openBrace < 0) { output += css.slice(cursor); break; }
+    const closeBrace = findCssBlockEnd(css, openBrace);
+    if (closeBrace < 0) { output += css.slice(cursor); break; }
+    const preludeStart = css.lastIndexOf("}", openBrace - 1) + 1;
+    const prefix = css.slice(cursor, preludeStart);
+    const prelude = css.slice(preludeStart, openBrace);
+    const body = css.slice(openBrace + 1, closeBrace);
+    const trimmed = prelude.trim();
+    const leading = prelude.slice(0, prelude.indexOf(trimmed));
+    if (trimmed.startsWith("@media") || trimmed.startsWith("@supports") || trimmed.startsWith("@container") || trimmed.startsWith("@layer") || trimmed.startsWith("@document")) {
+      output += prefix + leading + trimmed + "{" + scopeCss(body, scope) + "}";
+    } else if (trimmed.startsWith("@") || /^(from|to|\d+%)$/.test(trimmed)) {
+      output += prefix + prelude + "{" + body + "}";
+    } else {
+      output += prefix + leading + scopeSelector(trimmed, scope) + "{" + body + "}";
+    }
+    cursor = closeBrace + 1;
+  }
+  return output;
 }
 
 function extractScopedStyles(html: string, scope: string) {

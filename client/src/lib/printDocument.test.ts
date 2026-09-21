@@ -55,6 +55,14 @@ describe("separate document printing", () => {
     expect(html).not.toContain("<iframe");
   });
 
+  it("keeps nested print media rules valid while scoping unified statement styles", () => {
+    const statement = "<html><head><style>.table{border:1px solid red}@media print{.head{display:flex!important}.cell{color:blue}}</style></head><body><section class=\"page\"><div class=\"table\"><div class=\"head\"><div class=\"cell\">Date</div></div></div></section></body></html>";
+    const html = assembleUnifiedDocumentHtml(statement, "<html><head></head><body><section class=\"page\">STATUS</section></body></html>");
+    expect(html).toContain("[data-print-part=account-statement] .table{border:1px solid red}");
+    expect(html).toContain("@media print{[data-print-part=account-statement] .head{display:flex!important}[data-print-part=account-statement] .cell{color:blue}}");
+    expect(html).not.toContain("@media print{.head{display:flex!important}.cell{color:blue}");
+  });
+
   it("prints every statement page in the unified package, not only the first page", () => {
     const statement = "<html><head><style>.statement{color:red}</style></head><body><section class=\"page\">STATEMENT PAGE 1</section><section class=\"page\">STATEMENT PAGE 2</section></body></html>";
     const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">ACCOUNT STATUS</section></body></html>";
