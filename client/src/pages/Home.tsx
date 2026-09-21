@@ -482,6 +482,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const documentPrintDate = documentClient.printDate ? displayStatementDate(documentClient.printDate) : "";
   const documentPeriodStart = displayStatementDate(periodStart);
   const documentPeriodEnd = displayStatementDate(periodEnd);
+  const statusIssueDate = documentClient.printDate || issueDate;
   const printDateValue = documentClient.printDate;
   const printDateDay = printDateValue ? new Date(`${printDateValue}T12:00:00`).getDay() : -1;
   const isPrintHoliday = printDateDay === 4 || printDateDay === 5;
@@ -542,9 +543,9 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     accountType: documentClient.accountType,
     currency: documentClient.currency,
     opening: String(reportedClosing),
-    issueDate: documentPrintDate,
-    periodStart: client.periodStart || documentPeriodStart,
-    periodEnd: client.periodEnd || documentPeriodEnd,
+    issueDate: statusIssueDate,
+    periodStart: client.periodStart || periodStart,
+    periodEnd: client.periodEnd || periodEnd,
   }, statusQrSource || "/assets/ycb-certificate-qr.png") : selectedBank === "tadhamon" ? renderTadhamonOfficialStatusPreview({
     backgroundUri: referenceAssets.tadhamonStatusBackground,
     bankName: "Tadhamon Bank",
@@ -1440,7 +1441,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
           <div className="grid">
             <label>تاريخ الإصدار / Issue Date<input type="date" lang="en-GB" value={client.issueDate} onChange={(event) => updateClient("issueDate", event.target.value)} /></label>
             <label>تاريخ الطباعة / Print Date <span className="field-note">اليوم الافتراضي / Today by default</span><input type="date" lang="en-GB" value={client.printDate} onChange={(event) => updateClient("printDate", event.target.value)} /><small style={{ color: isPrintHoliday ? "#b91c1c" : "#166534", fontWeight: 700 }}>{isPrintHoliday ? `تنبيه: ${printHolidayLabel} عطلة — الإصدار مرفوض.` : "يوم دوام — الإصدار مسموح."}</small></label>
-            <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(issueDate)} readOnly placeholder="Calculated from issue date" /></label>
+            <label>التاريخ الهجري / Hijri Issue Date <span className="field-note">تلقائي / Automatic</span><input dir="rtl" value={formatHijriDate(statusIssueDate)} readOnly placeholder="Calculated from issue date" /></label>
             <label>وقت الطباعة / Print Time<input type="time" lang="en-GB" value={client.printTime} onChange={(event) => updateClient("printTime", event.target.value)} /></label>
             <label>تاريخ المراسلة / Correspondence Date<input type="date" lang="en-GB" value={client.correspondenceDate} onChange={(event) => updateClient("correspondenceDate", event.target.value)} /></label>
           </div>
