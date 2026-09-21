@@ -156,12 +156,15 @@ function scopeCss(css: string, scope: string): string {
     const body = css.slice(openBrace + 1, closeBrace);
     const trimmed = prelude.trim();
     const leading = prelude.slice(0, prelude.indexOf(trimmed));
-    if (trimmed.startsWith("@media") || trimmed.startsWith("@supports") || trimmed.startsWith("@container") || trimmed.startsWith("@layer") || trimmed.startsWith("@document")) {
-      output += prefix + leading + trimmed + "{" + scopeCss(body, scope) + "}";
-    } else if (trimmed.startsWith("@") || /^(from|to|\d+%)$/.test(trimmed)) {
+    const commentPrefix = trimmed.match(/^(?:\/\*[\s\S]*?\*\/\s*)+/)?.[0] || "";
+    const normalizedPrelude = trimmed.slice(commentPrefix.length).trim();
+    const preservedComment = commentPrefix ? `${commentPrefix.trim()} ` : "";
+    if (normalizedPrelude.startsWith("@media") || normalizedPrelude.startsWith("@supports") || normalizedPrelude.startsWith("@container") || normalizedPrelude.startsWith("@layer") || normalizedPrelude.startsWith("@document")) {
+      output += prefix + leading + preservedComment + normalizedPrelude + "{" + scopeCss(body, scope) + "}";
+    } else if (normalizedPrelude.startsWith("@") || /^(from|to|\d+%)$/.test(normalizedPrelude)) {
       output += prefix + prelude + "{" + body + "}";
     } else {
-      output += prefix + leading + scopeSelector(trimmed, scope) + "{" + body + "}";
+      output += prefix + leading + preservedComment + scopeSelector(normalizedPrelude, scope) + "{" + body + "}";
     }
     cursor = closeBrace + 1;
   }

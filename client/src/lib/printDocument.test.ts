@@ -63,6 +63,13 @@ describe("separate document printing", () => {
     expect(html).not.toContain("@media print{.head{display:flex!important}.cell{color:blue}");
   });
 
+  it("scopes root variables even when the official template puts a comment before :root", () => {
+    const statement = "<html><head><style>/* official palette */ :root{--primary-dark:#1B365D}.head{background:var(--primary-dark)!important;color:#fff}</style></head><body><section class=\"page\"><div class=\"head\">Date</div></section></body></html>";
+    const html = assembleUnifiedDocumentHtml(statement, "<html><head></head><body><section class=\"page\">STATUS</section></body></html>");
+    expect(html).toContain("/* official palette */ [data-print-part=account-statement]{--primary-dark:#1B365D}");
+    expect(html).toContain("[data-print-part=account-statement] .head{background:var(--primary-dark)!important;color:#fff}");
+  });
+
   it("prints every statement page in the unified package, not only the first page", () => {
     const statement = "<html><head><style>.statement{color:red}</style></head><body><section class=\"page\">STATEMENT PAGE 1</section><section class=\"page\">STATEMENT PAGE 2</section></body></html>";
     const status = "<html><head><style>.status{color:blue}</style></head><body><section class=\"page\">ACCOUNT STATUS</section></body></html>";
