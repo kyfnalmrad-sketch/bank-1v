@@ -29,10 +29,17 @@ const ycbLayoutOverrides = `<style id="ycb-statement-layout-overrides">
 	.title-pdf417-wrap{display:inline-flex;flex-direction:column;align-items:center;width:52mm;max-width:52mm;vertical-align:top}
 	.title-pdf417{display:block;width:58mm!important;height:13mm!important;margin:1mm auto 0;object-fit:fill!important;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast}
 	.title-pdf417-name{display:block;width:52mm;max-width:52mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font:700 7pt/3.2mm Arial,sans-serif;color:#1B365D}
- .address-date-of-birth,.address-passport{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
+ .address-date-of-birth,.address-place-of-birth,.address-passport{display:block;margin-top:1.2mm;font-size:8pt;line-height:1.18}
  .address-date-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
- .address-date-of-birth .value,.address-passport .value{display:block;margin-top:.7mm;font-weight:400}
+ .address-place-of-birth .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
+ .address-date-of-birth .value,.address-place-of-birth .value,.address-passport .value{display:block;margin-top:.7mm;font-weight:400}
  .address-passport .label{display:block;font-weight:800;font-style:italic;text-transform:uppercase}
+ .page > .summary{border:1px solid #9db9d3!important;background:#f7faff!important;box-shadow:0 1mm 2mm rgba(23,42,99,.06)}
+ .page > .summary .sum{background:#f4f8fc!important;border-right:1px solid #c8d7e6!important}
+ .page > .summary .sum:nth-child(2){background:#f1faf7!important;border-top:1.2mm solid #75b9a5}
+ .page > .summary .sum:nth-child(3){background:#fffaf2!important;border-top:1.2mm solid #e0b36d}
+ .page > .summary .sum:nth-child(4){background:#eef3fb!important;color:#1f3b72;border-top:1.2mm solid #7e9fc4}
+ .page > .summary .sum:nth-child(4) .label,.page > .summary .sum:nth-child(4) strong{color:#1f3b72!important}
  .page > .notes{margin-top:3mm!important}
  .row:not(.head):not(.total){height:6.6mm;min-height:6.6mm;max-height:6.6mm}
  .row:not(.head):not(.total) .cell{height:6.6mm;min-height:6.6mm;max-height:6.6mm}
@@ -52,10 +59,11 @@ export function renderOriginalYcbStatementPage(profile: YcbStatementProfile, tra
   const pageCredit = money(pageTotals?.totalCredit ?? transactions.reduce((sum, item) => sum + (item.credit || 0), 0));
   const pageDebit = money(pageTotals?.totalDebit ?? transactions.reduce((sum, item) => sum + (item.debit || 0), 0));
   const pageClosing = money(pageTotals?.closingBalance ?? transactions.at(-1)?.balance ?? profile.closingBalance);
+  const placeOfBirthBlock = profile.placeOfBirth?.trim() ? `<div class="address-place-of-birth"><span class="label">Place of Birth:</span><span class="value">${escapeHtml(profile.placeOfBirth)}</span></div>` : "";
   const passportBlock = profile.passport?.trim() ? `<div class="address-passport"><span class="label">Passport Number:</span><span class="value">${escapeHtml(profile.passport)}</span></div>` : "";
   const page = originalTemplate
     .replace("Arafat Ali Saleh Dilla", escapeHtml(profile.customerName))
-    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>${passportBlock}</span>`)
+    .replace(/<div class="address-line">[\s\S]*?(?=<img class="address-qr")/, `<div class="address-line"><span>${escapeHtml(profile.address || "—")}<div class="address-date-of-birth"><span class="label">Date of Birth:</span><span class="value">${escapeHtml(profile.dateOfBirth || "—")}</span></div>${placeOfBirthBlock}${passportBlock}</span>`)
     .replace("Personal Current Account", escapeHtml(profile.accountType || "Personal Current Account"))
     .replace("<div style=\"font-size:7.5pt;color:#425766;margin-top:1.4mm\">Yemen Commercial Bank</div>", `<div style="font-size:7.5pt;color:#425766;margin-top:1.4mm">Yemen Commercial Bank</div><div style="font-size:6.8pt;color:#425766;margin-top:1mm">Issue Date: ${escapeHtml(profile.issueDate || "—")}</div>`)
     .replace("AL-ZUBAIRI", escapeHtml(profile.branchName))
