@@ -74,7 +74,7 @@ export type StatementPreviewInput = {
     firstReference: string;
     lastReference: string;
   };
-  descriptionMaxLines?: 2 | 3;
+  descriptionMaxLines?: 2 | 3 | 4;
   transactions: PreviewTransaction[];
 };
 
@@ -151,9 +151,11 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
 
 export function renderStatementPreview(data: StatementPreviewInput) {
   const rows = data.transactions.slice(0, MAX_TRANSACTIONS_PER_PAGE);
-  const descriptionMaxLines = data.descriptionMaxLines === 3 ? 3 : 2;
-  const descriptionHeight = descriptionMaxLines === 3 ? "8.55mm" : "5.7mm";
-  const compactDescriptionHeight = descriptionMaxLines === 3 ? "8.4mm" : "5.6mm";
+  const descriptionMaxLines = data.descriptionMaxLines === 4 ? 4 : data.descriptionMaxLines === 3 ? 3 : 2;
+  const descriptionHeight = descriptionMaxLines === 4 ? "11.4mm" : descriptionMaxLines === 3 ? "8.55mm" : "5.7mm";
+  const compactDescriptionHeight = descriptionMaxLines === 4 ? "11.2mm" : descriptionMaxLines === 3 ? "8.4mm" : "5.6mm";
+  const transactionRowSizing = descriptionMaxLines === 4 ? "height:auto;min-height:10mm;max-height:none" : "height:10mm;min-height:10mm;max-height:10mm";
+  const transactionCellSizing = descriptionMaxLines === 4 ? "height:auto;min-height:10mm;max-height:none" : "height:10mm;min-height:10mm;max-height:10mm";
   const includeBranch = Boolean(data.includeBranch);
   const tableClass = includeBranch ? "transactions with-branch" : "transactions";
   const headerClass = includeBranch ? "tx-head with-branch" : "tx-head";
@@ -187,7 +189,7 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .right-meta .date-row{grid-template-columns:max-content minmax(0,1fr)}
     .right-meta .meta-value{display:block;min-width:0;max-width:100%;max-height:5mm;line-height:4mm;white-space:nowrap;overflow:hidden;text-overflow:clip}
     .right-meta .branch-row .meta-value{font-size:8.5pt;letter-spacing:-.08pt}
-    .page-strip{position:absolute;left:55mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}.side-barcode{position:absolute;left:8mm;bottom:5.2mm;width:43mm;height:11.5mm;padding:1.2mm 1.5mm .8mm;border:1pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#6b5297;display:grid;grid-template-rows:7.3mm 2mm;gap:.4mm;text-align:center;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em;z-index:4}.barcode-frame{width:40mm;height:7.3mm;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center}.barcode-frame img{display:block;width:40mm;height:7.3mm;object-fit:fill;object-position:center;background:#fff}
+    .page-strip{position:absolute;left:55mm;right:8mm;bottom:5mm;height:10.5mm;border:.45pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#3f2b68;overflow:hidden;font:700 5.7pt/2.8mm Arial,Tahoma,sans-serif;z-index:4}.side-barcode{position:absolute;left:8mm;bottom:5.2mm;width:43mm;height:11.5mm;padding:1.2mm 1.5mm .8mm;border:1pt solid #6b5297;border-radius:1.5mm;background:#fff;color:#6b5297;display:grid;grid-template-rows:7.3mm 2mm;gap:.4mm;text-align:center;font:700 5.2pt/5.4pt Arial,Tahoma,sans-serif;letter-spacing:.02em;z-index:4;visibility:visible;opacity:1}.barcode-frame{width:40mm;height:7.3mm;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;visibility:visible;opacity:1}.barcode-frame img{display:block;width:40mm;height:7.3mm;object-fit:fill;object-position:center;background:#fff;visibility:visible;opacity:1;filter:none}
     .page-strip table{width:100%;height:100%;margin:0;border-collapse:collapse;table-layout:fixed}.page-strip tr:first-child{background:#eeeaf4;color:#3f2b68}.page-strip tr:last-child{background:#fff}.page-strip td{border-top:.35pt solid #c8bdd8}
     .page-strip td{padding:.45mm .7mm;border-left:.35pt solid #c8bdd8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:700}
     .page-strip td:first-child{border-left:0}
@@ -196,8 +198,8 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .tx-head tr,.transactions tr{display:grid;width:190mm;grid-template-columns:26.5mm 56mm 27mm 20mm 22mm 38.5mm}
     .tx-head.with-branch tr,.transactions.with-branch tr{grid-template-columns:21.5mm 62mm 24mm 23mm 18mm 19mm 22.5mm}
     .tx-head th{height:9.91mm;padding:0 1mm;border:1.44pt solid #767171;background:#e7e6e6;font:700 10.3pt/10.3pt Arial,sans-serif;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;min-width:0;line-height:1.1}
-    .transactions tr{break-inside:avoid;page-break-inside:avoid;height:10mm;min-height:10mm;max-height:10mm}
-    .transactions td{min-width:0;height:10mm;min-height:10mm;max-height:10mm;padding:.9mm .55mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .transactions tr{break-inside:avoid;page-break-inside:avoid;${transactionRowSizing}}
+    .transactions td{min-width:0;${transactionCellSizing};padding:.9mm .55mm;border:0;text-align:center;vertical-align:middle;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .transactions tr:nth-child(even) td{background:#e7e6e6}
     .date-cell{text-align:center;white-space:nowrap;font:400 10.5pt/10.5pt Calibri,Arial,sans-serif}
     .particular-cell{overflow:hidden;white-space:normal;text-align:left!important;font:700 8.05pt/2.8mm Arial,Tahoma,sans-serif;padding:.8mm 1.1mm!important;align-items:flex-start!important;justify-content:flex-start!important}

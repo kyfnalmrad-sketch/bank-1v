@@ -878,7 +878,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     customerName: documentClient.name,
     dateOfBirth: dateOfBirthPlacement === "statement" || dateOfBirthPlacement === "both" ? formatEnglishGregorianDate(documentClient.dateOfBirth) : "",
     includeBranch,
-    descriptionMaxLines: selectedBank === "karimi" ? 3 : 2,
+    descriptionMaxLines: selectedBank === "karimi" ? 4 : 2,
     accountNumber: documentClient.accountNumber,
     momaizNo: documentClient.momaizNo,
     branchName: documentClient.branch,
