@@ -58,4 +58,11 @@ describe("reference document previews", () => {
     expect((printable.match(/class="page"/g) || [])).toHaveLength(2);
     expect((printable.match(/data-operation="FT260816UAA"/g) || [])).toHaveLength(1);
   });
+
+  it("allows the Kuraimi statement description to display three lines when requested", () => {
+    const html = renderStatementPreview({ headerUri: "/header.png", qrUri: "/qr.png", customerName: "Client", accountNumber: "1", momaizNo: "2", branchName: "HADDAH", currency: "USD", issueDate: "15/08/2026", periodStart: "01/08/2026", periodEnd: "15/08/2026", statementReference: "BAK-ACCT-20260801-0001", pageNumber: 1, pageCount: 1, barcodeUri: "/barcode.svg", barcodeLabel: "REF P1 of 1", closing: 20, descriptionMaxLines: 3, transactions: [{ date: "15/08/2026", description: "A deliberately long transaction description that should remain readable across three lines in the Kuraimi statement", operationNumber: "FT260815AAA", debit: 0, credit: 20, balance: 20 }] });
+    expect(html).toContain("-webkit-line-clamp:3");
+    expect(html).toContain("max-height:8.55mm");
+    expect(html).toContain("max-height:8.4mm");
+  });
 });

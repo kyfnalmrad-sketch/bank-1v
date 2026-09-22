@@ -74,6 +74,7 @@ export type StatementPreviewInput = {
     firstReference: string;
     lastReference: string;
   };
+  descriptionMaxLines?: 2 | 3;
   transactions: PreviewTransaction[];
 };
 
@@ -150,6 +151,9 @@ export function renderAccountStatusPreview(data: AccountStatusPreviewInput) {
 
 export function renderStatementPreview(data: StatementPreviewInput) {
   const rows = data.transactions.slice(0, MAX_TRANSACTIONS_PER_PAGE);
+  const descriptionMaxLines = data.descriptionMaxLines === 3 ? 3 : 2;
+  const descriptionHeight = descriptionMaxLines === 3 ? "8.55mm" : "5.7mm";
+  const compactDescriptionHeight = descriptionMaxLines === 3 ? "8.4mm" : "5.6mm";
   const includeBranch = Boolean(data.includeBranch);
   const tableClass = includeBranch ? "transactions with-branch" : "transactions";
   const headerClass = includeBranch ? "tx-head with-branch" : "tx-head";
@@ -203,9 +207,9 @@ export function renderStatementPreview(data: StatementPreviewInput) {
     .credit-cell{white-space:nowrap;font:700 9.2pt/9.2pt Calibri,Arial,sans-serif}
     .balance-cell{white-space:nowrap;overflow:visible!important;font:400 10.2pt/10.2pt Calibri,Arial,sans-serif}
     .transactions td span{display:block;overflow:hidden;text-overflow:clip}
-    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-    .particular-cell .description-standard{font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;max-height:5.7mm}
-    .particular-cell .description-compact{font:700 7.55pt/2.8mm Arial,Tahoma,sans-serif;max-height:5.6mm}
+    .particular-cell .description-line{display:-webkit-box;color:#000;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:${descriptionMaxLines}}
+    .particular-cell .description-standard{font:700 8.05pt/2.85mm Arial,Tahoma,sans-serif;max-height:${descriptionHeight}}
+    .particular-cell .description-compact{font:700 7.55pt/2.8mm Arial,Tahoma,sans-serif;max-height:${compactDescriptionHeight}}
     .date-cell span{transform:translate(2.1pt,-2.73pt)}
     .particular-cell span{transform:translateX(1.61pt)}
     .number-cell span{transform:translate(1.88pt,-1.59pt)}
