@@ -341,11 +341,6 @@ function operationDateCode(value: string) {
   return "000000";
 }
 
-function operationInitials(...values: string[]) {
-  const initials = values.map((value) => String(value).trim()[0]?.toUpperCase()).filter(Boolean).join("");
-  return `${initials}XXX`.slice(0, 3);
-}
-
 function operationCodeFromDescription(description: string, personName: string, branch: string) {
   const segments = description.split(/\s+-\s+/).map((segment) => segment.trim()).filter(Boolean);
   const operationType = segments[0]?.split(/\s+/)[0] || description.split(/\s+/)[0] || "";
@@ -356,7 +351,54 @@ function operationCodeFromDescription(description: string, personName: string, b
     .map((segment) => segment.replace(/^(?:by|from)\s+/i, "").split(/\s+via\s+/i)[0].trim())
     .filter((segment) => segment && !/^A\/C$/i.test(segment));
   const contentName = candidates.find((candidate) => !/\bbranch\b/i.test(candidate)) || personName || "";
-  return operationInitials(operationType, contentName, branchName);
+  const letters = referenceLetters(`${description} ${contentName} ${branchName}`);
+  const firstTwo = [operationType, contentName, branchName]
+    .flatMap((value) => referenceLetters(value))
+    .slice(0, 2);
+  while (firstTwo.length < 2) firstTwo.push(letters[firstTwo.length] || "X");
+  return `${firstTwo.join("")}${letters.at(-1) || "X"}`;
+}
+
+function referenceLetters(value: string) {
+  return String(value).toUpperCase().match(/[A-Z\u0600-\u06FF]/g) || [];
+}
+
+function uniqueOperationCode(baseCode: string, seed: string, usedCodes: Set<string>, usedPrefixes: Set<string>) {
+  const normalized = String(baseCode || "XXX").toUpperCase().slice(0, 3).padEnd(3, "X");
+  if (!usedCodes.has(normalized) && !usedPrefixes.has(normalized.slice(0, 2)) && normalized[0] !== normalized[1]) {
+    usedCodes.add(normalized);
+    usedPrefixes.add(normalized.slice(0, 2));
+    return normalized;
+  }
+  const sourceLetters = referenceLetters(seed);
+  const letters = [...sourceLetters.slice().reverse(), ..."ABCDEFGHJKLMNPQRSTUVWXYZ".split("")];
+  const prefixes = [normalized.slice(0, 2)];
+  for (const first of letters) for (const second of letters) {
+    const prefix = `${first}${second}`;
+    if (!prefixes.includes(prefix)) prefixes.push(prefix);
+  }
+  const candidates = [...sourceLetters.slice().reverse(), ..."ABCDEFGHJKLMNPQRSTUVWXYZ".split("")];
+  for (const prefix of prefixes) {
+    if (usedPrefixes.has(prefix) || prefix[0] === prefix[1]) continue;
+    for (const candidate of candidates) {
+      const code = `${prefix}${candidate}`;
+      if (!usedCodes.has(code)) {
+        usedCodes.add(code);
+        usedPrefixes.add(prefix);
+        return code;
+      }
+    }
+  }
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let fallback = usedCodes.size;
+  let code = `${alphabet[fallback % alphabet.length]}${alphabet[(fallback + 1) % alphabet.length]}${alphabet[(fallback + 2) % alphabet.length]}`;
+  while (usedCodes.has(code) || usedPrefixes.has(code.slice(0, 2))) {
+    fallback += 1;
+    code = `${alphabet[fallback % alphabet.length]}${alphabet[(fallback + 1) % alphabet.length]}${alphabet[(fallback + 2) % alphabet.length]}`;
+  }
+  usedCodes.add(code);
+  usedPrefixes.add(code.slice(0, 2));
+  return code;
 }
 
 function threeLetters(seed: string) {
@@ -375,14 +417,15 @@ function threeLetters(seed: string) {
   return result;
 }
 
-function operationNumber(date: string, seed: string, used: Set<string>, bank: "karimi" | "ycb" | "tadhamon", operationCode: string) {
+function operationNumber(date: string, seed: string, used: Set<string>, usedCodes: Set<string>, usedPrefixes: Set<string>, bank: "karimi" | "ycb" | "tadhamon", operationCode: string) {
   const bankPrefix = bank === "tadhamon" ? "TDB" : bank === "ycb" ? "YCB" : "FT";
   const prefix = `${bankPrefix}${operationDateCode(date)}`;
+  const uniqueCode = uniqueOperationCode(operationCode, seed, usedCodes, usedPrefixes);
+  let reference = `${prefix}${uniqueCode}`;
   let collision = 0;
-  let reference = `${prefix}${operationCode}`;
   while (used.has(reference)) {
     collision += 1;
-    reference = `${prefix}${operationCode.slice(0, 2)}${threeLetters(`${seed}|${collision}`).slice(0, 1)}`;
+    reference = `${prefix}${uniqueCode.slice(0, 2)}${threeLetters(`${seed}|${collision}`).slice(0, 1)}`;
   }
   used.add(reference);
   return reference;
@@ -399,6 +442,8 @@ export function operationNumberWithDate(operationNumberValue: string, date: stri
 
 export function buildImportedTransactions(rows: unknown[][], map: StatementColumnMap, useExternalReference = false, bank: "karimi" | "ycb" | "tadhamon" = "karimi"): ImportedTransaction[] {
   const usedOperationNumbers = new Set<string>();
+  const usedOperationCodes = new Set<string>();
+  const usedOperationPrefixes = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => String(cell ?? "").trim() !== "") && operationDateCode(formatImportedDate(getCell(row, map.date))) !== "000000")
     .map((row, index) => {
@@ -416,7 +461,7 @@ export function buildImportedTransactions(rows: unknown[][], map: StatementColum
       const externalReference = String(getCell(row, map.reference) ?? "").trim();
       const branch = String(getCell(row, map.branch) ?? "").trim();
       const operationCode = operationCodeFromDescription(review.description, review.personName || "", branch);
-      const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${branch}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers, bank, operationCode);
+      const internalOperationNumber = operationNumber(date, `${review.personName || ""}|${branch}|${review.description}|${debit}|${credit}|${balance ?? ""}|${index}`, usedOperationNumbers, usedOperationCodes, usedOperationPrefixes, bank, operationCode);
       return {
         rowNumber: index + 1,
         date,

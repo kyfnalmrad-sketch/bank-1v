@@ -73,8 +73,8 @@ describe("statement Excel import", () => {
       ["04/02/2026", "Cash deposit", "EXCEL-REF-ONE", "", 100, 100],
       ["04/02/2026", "ATM withdrawal", "EXCEL-REF-TWO", 25, "", 75],
     ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 });
-    expect(transactions[0].operationNumber).toMatch(/^FT260204CXX$/);
-    expect(transactions[1].operationNumber).toMatch(/^FT260204AXX$/);
+    expect(transactions[0].operationNumber).toMatch(/^FT260204CA[A-Z]$/);
+    expect(transactions[1].operationNumber).toMatch(/^FT260204AT[A-Z]$/);
     expect(transactions[0].operationNumber).not.toBe(transactions[1].operationNumber);
     expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("EXCEL-REF");
     expect(transactions.map((transaction) => transaction.operationNumber).join(" ")).not.toContain("FT000001");
@@ -85,7 +85,7 @@ describe("statement Excel import", () => {
       ["46057", "Cash deposit", "EXCEL-REF", "", 100, 100],
     ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true, "karimi");
     expect(transactions[0].date).toBe("2026-02-04");
-    expect(transactions[0].operationNumber).toBe("FT260204CXX");
+    expect(transactions[0].operationNumber).toMatch(/^FT260204CA[A-Z]$/);
   });
 
   it("uses Excel dates with English month names for Operation No. imports", () => {
@@ -98,7 +98,7 @@ describe("statement Excel import", () => {
     const transaction = buildImportedTransactions(matrix.slice(1), discovered!.map, true, "karimi")[0];
     expect(transaction.date).toBe("2026-02-14");
     expect(transaction.externalReference).toBe("FT260214EMYF");
-    expect(transaction.operationNumber).toBe("FT260214IMX");
+    expect(transaction.operationNumber).toBe("FT260214INI");
   });
 
   it("does not turn a statement footer without a date into a fake transaction", () => {
@@ -107,7 +107,7 @@ describe("statement Excel import", () => {
       ["Please review this statement and report any discrepancy", "", "", "", "", ""],
     ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true, "karimi");
     expect(transactions).toHaveLength(1);
-    expect(transactions[0].operationNumber).toBe("FT260214IMX");
+    expect(transactions[0].operationNumber).toBe("FT260214INI");
     expect(transactions.some((transaction) => transaction.operationNumber.includes("000000"))).toBe(false);
   });
 
@@ -121,9 +121,25 @@ describe("statement Excel import", () => {
   it("uses FT for Karimi, YCB for Yemen Commercial Bank, and preserves Tadhamon TDB", () => {
     const map = { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 };
     const rows = [["04/02/2026", "Cash deposit", "EXCEL-REF", "", 100, 100]];
-    expect(buildImportedTransactions(rows, map, false, "karimi")[0].operationNumber).toBe("FT260204CXX");
-    expect(buildImportedTransactions(rows, map, false, "tadhamon")[0].operationNumber).toBe("TDB260204CXX");
-    expect(buildImportedTransactions(rows, map, false, "ycb")[0].operationNumber).toBe("YCB260204CXX");
+    expect(buildImportedTransactions(rows, map, false, "karimi")[0].operationNumber).toBe("FT260204CAT");
+    expect(buildImportedTransactions(rows, map, false, "tadhamon")[0].operationNumber).toBe("TDB260204CAT");
+    expect(buildImportedTransactions(rows, map, false, "ycb")[0].operationNumber).toBe("YCB260204CAT");
+  });
+
+  it("keeps readable codes and distinct two-letter prefixes for all three banks", () => {
+    const map = { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 };
+    const rows = [
+      ["04/02/2026", "Cash deposit - Alpha", "", "", 100, 100],
+      ["04/02/2026", "Cash deposit - Beta", "", "", 100, 200],
+    ];
+    for (const [bank, prefix] of [["karimi", "FT"], ["ycb", "YCB"], ["tadhamon", "TDB"]] as const) {
+      const references = buildImportedTransactions(rows, map, false, bank).map(transaction => transaction.operationNumber);
+      expect(references.every(reference => reference.startsWith(`${prefix}260204`))).toBe(true);
+      const codes = references.map(reference => reference.slice(-3));
+      expect(new Set(codes).size).toBe(codes.length);
+      expect(new Set(codes.map(code => code.slice(0, 2))).size).toBe(codes.length);
+      expect(codes.every(code => /^[A-Z]{3}$/.test(code) && code.at(-1) !== "X")).toBe(true);
+    }
   });
 
   it("uses one initial from the person, branch, and operation description", () => {
@@ -136,18 +152,18 @@ describe("statement Excel import", () => {
   it("derives ATM cash withdrawal references from the operation phrase", () => {
     const map = { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 };
     const rows = [["03/02/2026", "ATM Cash Withdrawal - Al-Zubairy Branch - TALEB MOHAMMED SAEED RABEA", "", 100, "", 900]];
-    expect(buildImportedTransactions(rows, map, false, "tadhamon")[0].operationNumber).toBe("TDB260203ATA");
+    expect(buildImportedTransactions(rows, map, false, "tadhamon")[0].operationNumber).toBe("TDB260203ATH");
   });
 
   it("organizes all ledger description families without using the Excel reference", () => {
     const map = { date: 0, description: 1, branch: 2, reference: 3, debit: 4, credit: 5, balance: 6 };
     const cases = [
-      ["Cash Deposit via Hadda Branch - by TALEB MOHAMMED SAEED RABEA - A/C ****6831", "Hadda Branch", "CTH"],
-      ["ATM Cash Withdrawal - Al-Zubairy Branch - TALEB MOHAMMED SAEED RABEA", "Al-Zubairy Branch", "ATA"],
-      ["Cash Transfer via Al Fawri Network - from Earth Alsaeida Water Factory - A/C ****6831", "Bait Baws Branch", "CEB"],
-      ["Cash Withdrawal at Taiz Street Branch - TALEB MOHAMMED SAEED RABEA", "Taiz Street Branch", "CTT"],
-      ["Incoming Cash Transfer - Earth Alsaeida Water Factory via Al-Zubairy Branch - A/C ****6831", "Al-Zubairy Branch", "IEA"],
-      ["Salary Credit - Earth Alsaeida Water Factory - TALEB MOHAMMED SAEED RABEA", "Hayel Branch", "SEH"],
+      ["Cash Deposit via Hadda Branch - by TALEB MOHAMMED SAEED RABEA - A/C ****6831", "Hadda Branch", "CAH"],
+      ["ATM Cash Withdrawal - Al-Zubairy Branch - TALEB MOHAMMED SAEED RABEA", "Al-Zubairy Branch", "ATH"],
+      ["Cash Transfer via Al Fawri Network - from Earth Alsaeida Water Factory - A/C ****6831", "Bait Baws Branch", "CAH"],
+      ["Cash Withdrawal at Taiz Street Branch - TALEB MOHAMMED SAEED RABEA", "Taiz Street Branch", "CAH"],
+      ["Incoming Cash Transfer - Earth Alsaeida Water Factory via Al-Zubairy Branch - A/C ****6831", "Al-Zubairy Branch", "INH"],
+      ["Salary Credit - Earth Alsaeida Water Factory - TALEB MOHAMMED SAEED RABEA", "Hayel Branch", "SAH"],
     ];
     for (const [description, branch, code] of cases) {
       const result = buildImportedTransactions([["04/02/2026", description, branch, "ESA-IGNORED", "", 100, 100]], map, true, "ycb")[0];
@@ -156,18 +172,31 @@ describe("statement Excel import", () => {
     }
   });
 
+  it("keeps the final readable letter unique when descriptions share the same first two letters", () => {
+    const rows = [
+      ["04/02/2026", "Cash deposit - Alpha", "", "", 100, 100],
+      ["04/02/2026", "Cash deposit - Beta", "", "", 100, 200],
+      ["04/02/2026", "Cash deposit - Gamma", "", "", 100, 300],
+    ];
+    const transactions = buildImportedTransactions(rows, { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 });
+    const codes = transactions.map((transaction) => transaction.operationNumber.slice(-3));
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(new Set(codes.map((code) => code.slice(0, 2))).size).toBe(codes.length);
+    expect(codes.every((code) => code.at(-1) !== "X")).toBe(true);
+  });
+
   it("keeps the Excel reference as metadata but generates the operation number from the description", () => {
     const transactions = buildImportedTransactions([
       ["04/02/2026", "Cash deposit", "TAD-OP-1001", "", 100, 100],
     ], { date: 0, description: 1, reference: 2, debit: 3, credit: 4, balance: 5 }, true);
-    expect(transactions[0]).toMatchObject({ externalReference: "TAD-OP-1001", operationNumber: "FT260204CXX" });
+    expect(transactions[0]).toMatchObject({ externalReference: "TAD-OP-1001", operationNumber: "FT260204CAT" });
   });
 
   it("recognizes Operation No. as the Excel operation reference column", () => {
     const matrix = [["Date", "Description", "Operation No.", "Debit", "Credit", "Balance"], ["2026-02-04", "Cash deposit", "TAD-000045", "", 100, 100]];
     const discovered = discoverStatementHeader(matrix);
     expect(discovered?.map.reference).toBe(2);
-    expect(buildImportedTransactions(matrix.slice(1), discovered!.map, true)[0]).toMatchObject({ externalReference: "TAD-000045", operationNumber: "FT260204CXX" });
+    expect(buildImportedTransactions(matrix.slice(1), discovered!.map, true)[0]).toMatchObject({ externalReference: "TAD-000045", operationNumber: "FT260204CAT" });
   });
 
   it("stores imported Excel dates in ISO format for native date editing", () => {

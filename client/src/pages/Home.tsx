@@ -408,6 +408,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const documentClient = useDeferredValue(client);
   const synchronizedDocuments = useMemo(() => synchronizeDocumentData(appliedTransactions, money(documentClient.opening)), [appliedTransactions, documentClient.opening]);
   const { acceptedRows, rejectedRows, statementRows, totalCredit, totalDebit, closing } = synchronizedDocuments;
+  const rowReference = (row: Transaction) => referenceSource === "excel" ? row.externalReference : row.operationNumber;
   const reportedTotalCredit = totalCreditOverride.trim() === "" ? totalCredit : money(totalCreditOverride);
   const reportedTotalDebit = totalDebitOverride.trim() === "" ? totalDebit : money(totalDebitOverride);
   const hasTotalsOverride = totalCreditOverride.trim() !== "" || totalDebitOverride.trim() !== "";
@@ -416,7 +417,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const financialAudit = useMemo(() => auditFinancialStatement({
     openingBalance: money(documentClient.opening),
     openingBalanceProvided: referenceSource !== "excel" && documentClient.opening.trim() !== "" || (referenceSource === "excel" && documentClient.opening.trim() !== "" && documentClient.opening.trim() !== "0.00"),
-    rows: statementRows.map((row) => ({ rowNumber: row.rowNumber, date: row.date, operationNumber: row.operationNumber, description: row.description, debit: row.debit, credit: row.credit, balance: row.balance, balanceProvided: row.balanceProvided })),
+    rows: statementRows.map((row) => ({ rowNumber: row.rowNumber, date: row.date, operationNumber: rowReference(row), description: row.description, debit: row.debit, credit: row.credit, balance: row.balance, balanceProvided: row.balanceProvided })),
     printedCredit: totalCreditOverride.trim() === "" ? undefined : reportedTotalCredit,
     printedDebit: totalDebitOverride.trim() === "" ? undefined : reportedTotalDebit,
     printedClosing: closingBalanceOverride.trim() === "" ? undefined : reportedClosing,
@@ -471,7 +472,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   ), [documentClient.accountNumber, documentClient.momaizNo, documentClient.name, selectedBank, statementRows]);
   const internalStatementReference = useMemo(() => generatedStatementReference || statementReferenceFromTransactions(appliedTransactions, documentClient.accountNumber || documentClient.momaizNo), [appliedTransactions, documentClient.accountNumber, documentClient.momaizNo, generatedStatementReference]);
   const excelStatementReference = useMemo(() => appliedTransactions.map((transaction) => transaction.externalReference).find(Boolean) || "", [appliedTransactions]);
-  const statementReference = statementReferenceOverride.trim() || internalStatementReference;
+  const statementReference = statementReferenceOverride.trim() || (referenceSource === "excel" ? excelStatementReference : internalStatementReference);
   const visibleMappedFields = useMemo(() => mappedFields.filter((field) => referenceSource === "excel" || field.key !== "reference"), [mappedFields, referenceSource]);
   const firstTransactionDate = acceptedRows.find((transaction) => transaction.date)?.date || "";
   const lastTransactionDate = [...acceptedRows].reverse().find((transaction) => transaction.date)?.date || "";
@@ -499,10 +500,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
       totalCredit: rows.reduce((sum, row) => sum + row.credit, 0),
       openingBalance: previousRow?.balance ?? money(documentClient.opening),
       closingBalance: rows.at(-1)?.balance ?? previousRow?.balance ?? money(documentClient.opening),
-      firstReference: rows.at(0)?.operationNumber || "",
-      lastReference: rows.at(-1)?.operationNumber || "",
+      firstReference: rows.at(0) ? rowReference(rows[0]) : "",
+      lastReference: rows.at(-1) ? rowReference(rows.at(-1)!) : "",
     };
-  }), [documentClient.opening, statementPageGroups]);
+  }), [documentClient.opening, referenceSource, statementPageGroups]);
   const ycbStatementProfile = useMemo<YcbStatementProfile>(() => ({
     customerName: documentClient.name,
     passport: documentClient.passport,
@@ -524,13 +525,13 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   }), [documentClient.accountNumber, documentClient.accountType, documentClient.branch, documentClient.currency, documentClient.name, documentClient.opening, documentClient.printDate, dateOfBirthPlacement, documentPrintDate, documentPeriodEnd, documentPeriodStart, reportedClosing, reportedTotalCredit, reportedTotalDebit, statementReference, ycbClient.address, ycbClient.dateOfBirth, ycbClient.placeOfBirth]);
   const ycbStatementTransactions = useMemo<YcbStatementTransaction[]>(() => statementRows.map((row) => ({
     date: displayStatementDate(row.date),
-    reference: row.operationNumber,
+    reference: rowReference(row),
     description: row.description,
     credit: row.credit,
     debit: row.debit,
     balance: row.balance,
     highlightColor: row.highlightColor,
-  })), [statementRows]);
+  })), [referenceSource, statementRows]);
   const accountStatusHtml = useMemo(() => selectedBank === "ycb" ? renderYcbCertificateHtml({
     ...ycbClient,
     name: documentClient.name,
@@ -893,8 +894,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
     barcodeLabel: `REF P${pageIndex + 1} of ${statementPageCount}`,
     closing: statementPageSummaries[pageIndex]?.closingBalance ?? closing,
     pageSummary: statementPageSummaries[pageIndex],
-      transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: row.operationNumber, debit: row.debit, credit: row.credit, balance: row.balance })),
-  })), [barcodeSources, documentClient, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
+      transactions: statementPageGroups[pageIndex].map((row) => ({ date: displayStatementDate(row.date), description: row.description, branch: row.branch, operationNumber: rowReference(row), debit: row.debit, credit: row.credit, balance: row.balance })),
+  })), [barcodeSources, documentClient, closing, dateOfBirthPlacement, documentIssueDate, documentPeriodEnd, documentPeriodStart, includeBranch, referenceSource, selectedBank, statementPageCount, statementPageGroups, statementPageSummaries, statementQrSources, statementReference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -921,7 +922,7 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
 
   useEffect(() => {
     const values = selectedBank === "ycb"
-      ? statementPageGroups.map((rows, pageIndex) => buildYcbStatementBarcodePayload({ customerName: ycbStatementProfile.customerName, passport: ycbStatementProfile.passport, address: ycbStatementProfile.address, accountNumber: ycbStatementProfile.accountNumber, branchName: ycbStatementProfile.branchName, currency: ycbStatementProfile.currency, statementReference: ycbStatementProfile.statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: ycbStatementProfile.periodStart, periodEnd: ycbStatementProfile.periodEnd, issueDate: ycbStatementProfile.issueDate, firstReference: rows[0]?.operationNumber, lastReference: rows.at(-1)?.operationNumber, transactionCount: rows.length, creditCount: rows.filter((row) => row.credit > 0).length, debitCount: rows.filter((row) => row.debit > 0).length, totalCredit: rows.reduce((sum, row) => sum + row.credit, 0), totalDebit: rows.reduce((sum, row) => sum + row.debit, 0), openingBalance: statementPageSummaries[pageIndex]?.openingBalance ?? ycbStatementProfile.openingBalance, closingBalance: statementPageSummaries[pageIndex]?.closingBalance ?? ycbStatementProfile.closingBalance }))
+      ? statementPageGroups.map((rows, pageIndex) => buildYcbStatementBarcodePayload({ customerName: ycbStatementProfile.customerName, passport: ycbStatementProfile.passport, address: ycbStatementProfile.address, accountNumber: ycbStatementProfile.accountNumber, branchName: ycbStatementProfile.branchName, currency: ycbStatementProfile.currency, statementReference: ycbStatementProfile.statementReference, pageNumber: pageIndex + 1, pageCount: statementPageCount, periodStart: ycbStatementProfile.periodStart, periodEnd: ycbStatementProfile.periodEnd, issueDate: ycbStatementProfile.issueDate, firstReference: rows[0] ? rowReference(rows[0]) : "", lastReference: rows.at(-1) ? rowReference(rows.at(-1)!) : "", transactionCount: rows.length, creditCount: rows.filter((row) => row.credit > 0).length, debitCount: rows.filter((row) => row.debit > 0).length, totalCredit: rows.reduce((sum, row) => sum + row.credit, 0), totalDebit: rows.reduce((sum, row) => sum + row.debit, 0), openingBalance: statementPageSummaries[pageIndex]?.openingBalance ?? ycbStatementProfile.openingBalance, closingBalance: statementPageSummaries[pageIndex]?.closingBalance ?? ycbStatementProfile.closingBalance }))
       : Array.from({ length: statementPageCount }, (_, pageIndex) => buildVerificationBarcodePayload(statementReference, pageIndex + 1, statementPageCount, selectedBank === "tadhamon" ? "TADHAMON BANK" : "KURAIMI ISLAMIC BANK", statementPageSummaries[pageIndex]?.lastReference, statementPageSummaries[pageIndex]?.closingBalance));
     const generated = values.map((value) => {
       const svg = bwipjs.toSVG({ bcid: "pdf417", text: value, scaleX: 2, scaleY: 2, padding: 4, includetext: false, backgroundcolor: "FFFFFF", barcolor: selectedBank === "ycb" ? "2D3192" : "6B5297" });
@@ -1053,10 +1054,10 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
   const updateTransaction = (rowNumber: number, field: "date" | "description" | "branch" | "externalReference" | "operationNumber" | "debit" | "credit" | "balance", input: string) => {
     setRegisterDirty(true);
     const editedTransaction = transactions.find((transaction) => transaction.rowNumber === rowNumber);
-    const updatedOperationNumber = field === "date" && editedTransaction
+    const updatedOperationNumber = referenceSource === "internal" && field === "date" && editedTransaction
       ? operationNumberWithDate(editedTransaction.operationNumber, input, selectedBank || "karimi")
       : undefined;
-    if (field === "date" && editedTransaction && updatedOperationNumber && updatedOperationNumber !== editedTransaction.operationNumber) {
+    if (referenceSource === "internal" && field === "date" && editedTransaction && updatedOperationNumber && updatedOperationNumber !== editedTransaction.operationNumber) {
       setImportNote(`تنبيه: تم تحديث الرقم المرجعي الداخلي تلقائيًا ليتوافق مع التاريخ الجديد: ${updatedOperationNumber}`);
     }
     setTransactions((current) => current.map((transaction) => {
@@ -1491,8 +1492,8 @@ function AuthenticatedHome({ user, logout }: { user: { name?: string | null; ema
         </section>}
         {transactions.length > 0 && <section className="panel preview-panel">
           <div className="panel-heading"><div><h2>Editable Transaction Register</h2><p className="hint">Edit the values directly, then apply the register to update the financial totals, documents, QR code, and print output together. Rejected transactions remain visible for review and are re-evaluated when the description changes.</p></div><span className="summary-chip">{transactions.filter((item) => !item.rejected).length} accepted · {draftRejectedRows.length} rejected</span></div>
-          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}<th>Operation No.</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Highlight</th><th>Status</th><th>إجراء</th></tr></thead><tbody>
-            {transactions.map((row) => <tr className={row.rejected || row.dateChangedFromExcel ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} />{row.dateChangedFromExcel && <small style={{ color: "#b91c1c", display: "block", fontWeight: 700 }}>تغير تاريخ Excel — راجع رقم المرجع</small>}</td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" && <td><input className="transaction-edit-input" dir="ltr" value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td>}<td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td><td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td><td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td><td><button type="button" className="secondary-button" title="حذف العملية" onClick={() => removeTransaction(row.rowNumber)}><Trash2 size={14} /> حذف</button></td></tr>)}
+          <div className="table-wrap"><table><thead><tr><th>Date</th><th>Description</th>{includeBranch && <th>Branch</th>}{referenceSource === "excel" && <th>Excel Reference</th>}{referenceSource === "internal" && <th>Operation No.</th>}<th>Debit</th><th>Credit</th><th>Balance</th><th>Highlight</th><th>Status</th><th>إجراء</th></tr></thead><tbody>
+            {transactions.map((row) => <tr className={row.rejected || row.dateChangedFromExcel ? "invalid-row" : ""} key={`${row.rowNumber}-${row.operationNumber}`}><td><input className="transaction-edit-input" type="date" lang="en-GB" value={row.date} onChange={(event) => updateTransaction(row.rowNumber, "date", event.target.value)} />{row.dateChangedFromExcel && <small style={{ color: "#b91c1c", display: "block", fontWeight: 700 }}>تغير تاريخ Excel — راجع رقم المرجع</small>}</td><td><div className="description-cell"><input className="transaction-edit-input" value={row.description} onChange={(event) => updateTransaction(row.rowNumber, "description", event.target.value)} />{!row.rejected && row.suggestedDescription && row.suggestedDescription !== row.description && <button type="button" className="description-suggestion" onClick={() => applySuggestedDescription(row.operationNumber)}>Use suggestion: <b dir="ltr">{row.suggestedDescription}</b></button>}</div></td>{includeBranch && <td><input className="transaction-edit-input" value={row.branch} onChange={(event) => updateTransaction(row.rowNumber, "branch", event.target.value)} /></td>}{referenceSource === "excel" ? <td><input className="transaction-edit-input" dir="ltr" aria-label={`Excel reference ${row.rowNumber}`} value={row.externalReference} onChange={(event) => updateTransaction(row.rowNumber, "externalReference", event.target.value)} /></td> : <td><input className="transaction-edit-input" dir="ltr" aria-label={`Operation number ${row.rowNumber}`} value={row.operationNumber} onChange={(event) => updateTransaction(row.rowNumber, "operationNumber", event.target.value)} /></td>}<td><input className="transaction-edit-input" type="number" step="0.01" value={row.debit || ""} onChange={(event) => updateTransaction(row.rowNumber, "debit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.credit || ""} onChange={(event) => updateTransaction(row.rowNumber, "credit", event.target.value)} /></td><td><input className="transaction-edit-input" type="number" step="0.01" value={row.balance ?? ""} onChange={(event) => updateTransaction(row.rowNumber, "balance", event.target.value)} /></td><td><label title="تلوين الحركة"><input aria-label={`Highlight ${row.operationNumber}`} type="checkbox" checked={Boolean(row.highlightColor)} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.checked ? "#FEF08A" : "")} /> ✓</label><input aria-label={`Highlight color ${row.operationNumber}`} type="color" value={row.highlightColor || "#FEF08A"} onChange={(event) => updateTransactionHighlight(row.rowNumber, event.target.value)} /></td><td>{row.rejected ? <span className="row-alert"><AlertTriangle size={14} /> Rejected</span> : <span className="row-ok"><CheckCircle2 size={14} /> Ready for review</span>}</td><td><button type="button" className="secondary-button" title="حذف العملية" onClick={() => removeTransaction(row.rowNumber)}><Trash2 size={14} /> حذف</button></td></tr>)}
           </tbody></table></div>
           <div className="actions"><button type="button" onClick={applyTransactionRegister} disabled={!registerDirty}><CheckCircle2 size={17} /> {registerDirty ? "Apply Register Changes" : "Register Applied"}</button></div>
         </section>}

@@ -119,6 +119,25 @@ describe("Home applied transaction register", () => {
     expect(statementHtml).toContain("05/08/2026");
   });
 
+  it("uses the Excel reference column and hides the generated operation number in Excel mode", async () => {
+    render(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /بنك الكريمي/ }));
+    fireEvent.change(screen.getByLabelText(/مصدر المرجع \/ Reference source/), { target: { value: "excel" } });
+    fireEvent.click(screen.getByRole("button", { name: "استيراد Excel / Excel Import" }));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [makeLedgerFile()] } });
+    await screen.findByText("Editable Transaction Register");
+
+    expect(screen.getByText("Excel Reference")).toBeTruthy();
+    expect(screen.queryByText("Operation No.")).toBeNull();
+    expect((screen.getByLabelText("Excel reference 1") as HTMLInputElement).value).toBe("EXT-1");
+    expect(screen.queryByLabelText("Operation number 1")).toBeNull();
+
+    const dateInput = screen.getByDisplayValue("2026-08-04") as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: "2026-08-05" } });
+    expect((screen.getByLabelText("Excel reference 1") as HTMLInputElement).value).toBe("EXT-1");
+  });
+
   it("keeps print and Save PDF available when the financial audit reports a warning", async () => {
     const host = mockPrintWindow();
     vi.stubGlobal("open", host.open);
