@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { passwordProtectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { PASSWORD_COOKIE_MAX_AGE, PASSWORD_SESSION_COOKIE, createPasswordSession, hasPasswordSession, passwordIsConfigured, passwordMatches } from "./_core/passwordAuth";
 import { createStatementHistory, databaseErrorMessage, deleteStatementHistory, ensureRenderStagingSchema, getDatabaseConnectionString, getRenderSnapshot, getStatementHistory, listStatementHistory, saveRenderSnapshot, updateStatementHistory } from "./renderPg";
+import { listBankMemoryValues, rememberBankMemoryValue } from "./memory";
 import { z } from "zod";
 
 export const appRouter = router({
@@ -49,6 +50,15 @@ export const appRouter = router({
     createHistory: passwordProtectedProcedure.input(z.object({ title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => createStatementHistory(input.payload, input.title, input.reference, input.customerName, input.accountNumber, input.workspaceKey)),
     updateHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().min(1).max(240), reference: z.string().max(120), customerName: z.string().max(500), accountNumber: z.string().max(120), workspaceKey: z.string().min(16).max(160), payload: z.record(z.string(), z.unknown()) })).mutation(({ input }) => updateStatementHistory(input.id, input.payload, input.title, input.reference, input.customerName, input.accountNumber, input.workspaceKey)),
     deleteHistory: passwordProtectedProcedure.input(z.object({ id: z.number().int().positive(), workspaceKey: z.string().min(16).max(160) })).mutation(({ input }) => deleteStatementHistory(input.id, input.workspaceKey)),
+  }),
+
+  memory: router({
+    list: passwordProtectedProcedure
+      .input(z.object({ moduleKey: z.string().min(1).max(80), fieldKey: z.string().min(1).max(80).optional(), limit: z.number().int().min(1).max(200).optional() }))
+      .query(({ input }) => listBankMemoryValues(input.moduleKey, input.fieldKey, input.limit)),
+    remember: passwordProtectedProcedure
+      .input(z.object({ moduleKey: z.string().min(1).max(80), fieldKey: z.string().min(1).max(80), value: z.string().max(500), labelAr: z.string().max(500).optional(), labelEn: z.string().max(500).optional() }))
+      .mutation(({ input }) => rememberBankMemoryValue(input)),
   }),
 
   // TODO: add feature routers here, e.g.
