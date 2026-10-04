@@ -11,6 +11,9 @@ vi.mock("@/lib/trpc", () => ({
     me: { useQuery: () => ({ isLoading: false, data: { name: "Test User", email: "test@example.com" } }) },
     login: { useMutation: () => ({ mutateAsync: vi.fn(async () => ({ authenticated: true })), isPending: false }) },
     logout: { useMutation: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }) },
+  }, memory: {
+    list: { useQuery: () => ({ data: { data: [] }, isLoading: false, isError: false }) },
+    remember: { useMutation: () => ({ mutateAsync: vi.fn(async () => ({ data: null, source: "fallback" })) }) },
   }, staging: {
     health: { useQuery: () => ({ isLoading: false, data: { tableCount: 8 } }) },
     loadSnapshot: { useQuery: () => ({ isLoading: false, isError: false, data: null }) },
